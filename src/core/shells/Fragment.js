@@ -74,11 +74,13 @@ defineClass({
           // parent.invalidate(FLAG_CHANGED_CHILDREN | FLAG_WAITING_TO_RENDER);
           parent.$flag |= FLAG_WAITING_TO_RENDER;
           parent.$flag |= FLAG_CHANGED_CHILDREN;
-          Schedule.insertRenderQueue(parent);
+          // Schedule.insertRenderQueue(parent);
+          parent.render();
         }
       }
       this.$flag |= FLAG_WAITING_TO_RENDER;
-      Schedule.insertRenderQueue(this);
+      // Schedule.insertRenderQueue(this);
+      this.render();
     }
     
     return true;

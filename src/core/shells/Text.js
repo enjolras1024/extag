@@ -54,7 +54,8 @@ defineClass({
     }
     if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
       this.$flag |= FLAG_WAITING_TO_RENDER;
-      Schedule.insertRenderQueue(this);
+      // Schedule.insertRenderQueue(this);
+      this.render();
     }
     return true;
   },

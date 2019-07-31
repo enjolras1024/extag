@@ -139,12 +139,12 @@ export default {
 
   copy: copy,
 
-  attach: function(shell, $skin, sync) {
-    shell.attach($skin);
-    if (sync) {
-      Schedule.flushQueues();
-    }
-  },
+  // attach: function(shell, $skin, sync) {
+  //   shell.attach($skin);
+  //   if (sync) {
+  //     Schedule.flushQueues();
+  //   }
+  // },
   
   version: __VERSION__
 }

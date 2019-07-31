@@ -9,7 +9,7 @@ var updateQueue = [];
 var renderQueue = [];
 var callbackQueue = [];
 var updateQueueCursor = 0;
-var renderQueueCursor = 0;
+// var renderQueueCursor = 0;
 var turn = 0;
 // var 
 var waiting = false;
@@ -34,8 +34,12 @@ function flushQueues() {
       // }
       
       shell = updateQueue[updateQueueCursor];
-      // console.log(turn, shell.$flag, shell.toString(), shell._children)
-      shell.update();
+      // console.log('update', turn, shell.$flag, shell.toString(), shell._children)
+      try {
+        shell.update();
+      } catch (e) {
+        logger.error(e);
+      }
       ++updateQueueCursor;
     }
   
@@ -48,12 +52,13 @@ function flushQueues() {
     
     // index = index ? 0 : 1;
   
-    for (i = 0, n = renderQueue.length; i < n; ++i) {
-      shell = renderQueue[i];
-      shell.render();
-    }
+    // for (i = 0, n = renderQueue.length; i < n; ++i) {
+    //   shell = renderQueue[i];
+    //   // console.log('render', turn, shell.$flag, shell.toString(), shell._children)
+    //   shell.render();
+    // }
   
-    renderQueue.length = 0;
+    // renderQueue.length = 0;
   
     for (i = callbackQueue.length - 1; i >= 0; --i) {
       callbackQueue[i]();
@@ -64,7 +69,7 @@ function flushQueues() {
   } catch (e) {
     updateQueueCursor = 0;
     updateQueue.length = 0;
-    renderQueue.length = 0;
+    // renderQueue.length = 0;
     callbackQueue.length = 0;
     updating = false;
     waiting = false;
@@ -120,21 +125,21 @@ function insertUpdateQueue(shell) {
  * Insert a shell into the renderQueue.
  * @param {Shell} shell 
  */
-function insertRenderQueue(shell) {
-  var i, n = renderQueue.length, id = shell.guid;
+// function insertRenderQueue(shell) {
+//   var i, n = renderQueue.length, id = shell.guid;
 
-  i = n - 1;
-  while (i >= 0 && id < renderQueue[i].guid) {
-    --i;
-  }
-  ++i;
+//   i = n - 1;
+//   while (i >= 0 && id < renderQueue[i].guid) {
+//     --i;
+//   }
+//   ++i;
 
-  if (i === n) {
-    renderQueue.push(shell);
-  } else {
-    renderQueue.splice(i, 0, shell);
-  }
-}
+//   if (i === n) {
+//     renderQueue.push(shell);
+//   } else {
+//     renderQueue.splice(i, 0, shell);
+//   }
+// }
 
 /**
  * Push a callback function into callbackQueue
@@ -145,9 +150,9 @@ function pushCallbackQueue(callback) {
 }
 
 export default {
-  flushQueues: flushQueues,
+  // flushQueues: flushQueues,
   insertUpdateQueue: insertUpdateQueue,
-  insertRenderQueue: insertRenderQueue,
+  // insertRenderQueue: insertRenderQueue,
   pushCallbackQueue: pushCallbackQueue,
   /**
    * Insert a shell into the updateQueue for updating accoring to its guid.
