@@ -309,27 +309,6 @@ defineClass({
     return this;
   },
 
-  // /**
-  //  * It works like `on`. But the handler will be removed once it executes for the first time.
-  //  *
-  //  * @param {Object|string} type
-  //  * @param {Function} func
-  //  * @returns {self}
-  //  */
-  // once: function(type, func) {
-  //   return this.on(type, func, {once: true});
-  // },
-
-  // ison: function ison(type) {
-  //   var actions = this._actions;
-    
-  //   if (!actions) {
-  //     return false;
-  //   }
-
-  //   return !!actions[type];
-  // },
-
   /**
    * Dispatch custom event, handlers accept rest arguments.
    *
@@ -338,41 +317,41 @@ defineClass({
    * @returns {self}
    */
   emit: function emit(type/*, ...rest*/) {
-    
-    var actions = this._actions, action;
+    var actions = this._actions;
     
     if (!actions) { return this; }
 
     var keys = type.split('.');
-    if (keys.length > 1) {
-      var rest = slice(arguments, 1);
-      this.emit.apply(this, keys.slice(0, 1).concat(rest));
-      if (keys.length > 2) {
-        // keydown.ctrl.alt.a="" becomes kewdown.a.alt.ctrl
-        type = keys[0] + '.' + keys.slice(1).sort().join('.');
-      }
+
+    if (keys.length > 2) {
+      type = keys[0] + '.' + keys.slice(1).sort().join('.');
     }
 
-    action = actions[type];
+    var action = actions[type];
 
-    if (!action) { return this; }
+    if (action) {
+      var flag = action.listeners ? arguments[2] : 0;
+      // event.dispatcher = watcher;
+      var handler, handlers = action.handlers;
 
-    var flag = action.listeners ? arguments[2] : 0;
-
-    // event.dispatcher = watcher;
-    var handler, handlers = action.handlers;
-
-    for (var i = 0, n = handlers.length; i < n; ++i) {
-      handler = handlers[i];
-      if (handler /*&& (tail === handler.tail || !handler.tail)*/ 
-            && equalCapture(flag, handler.flag)) {
-        if (handler.flag & 4) { // once: 0b1xx
-          this.off(type, handler.func, handler.flag ? flag2opts(handler.flag) : null);
+      for (var i = 0, n = handlers.length; i < n; ++i) {
+        handler = handlers[i];
+        if (handler
+              && equalCapture(flag, handler.flag)) {
+          if (handler.flag & 4) { // once: 0b1xx
+            this.off(type, handler.func, handler.flag ? flag2opts(handler.flag) : null);
+          }
+          handler.func.apply(null, slice(arguments, 1));
         }
-        handler.func.apply(null, slice(arguments, 1));
       }
     }
 
+    if (keys.length > 1 && actions[keys[0]]) {
+      var args = slice(arguments, 1);
+      args.unshift(keys[0]);
+      this.emit.apply(this, args);
+    }
+    
     return this;
   }
 });
