@@ -85,7 +85,8 @@ defineClass({
       value = value.join('');
     }
 
-    Binding.assign(this.target, this.property, value, this);
+    // Binding.assign(this.target, this.property, value, this);
+    this.target.set(this.property, value);
 
     DirtyMarker.clean(cache);
   }

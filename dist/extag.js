@@ -1079,27 +1079,6 @@
       return this;
     },
 
-    // /**
-    //  * It works like `on`. But the handler will be removed once it executes for the first time.
-    //  *
-    //  * @param {Object|string} type
-    //  * @param {Function} func
-    //  * @returns {self}
-    //  */
-    // once: function(type, func) {
-    //   return this.on(type, func, {once: true});
-    // },
-
-    // ison: function ison(type) {
-    //   var actions = this._actions;
-      
-    //   if (!actions) {
-    //     return false;
-    //   }
-
-    //   return !!actions[type];
-    // },
-
     /**
      * Dispatch custom event, handlers accept rest arguments.
      *
@@ -1108,41 +1087,41 @@
      * @returns {self}
      */
     emit: function emit(type/*, ...rest*/) {
-      
-      var actions = this._actions, action;
+      var actions = this._actions;
       
       if (!actions) { return this; }
 
       var keys = type.split('.');
-      if (keys.length > 1) {
-        var rest = slice(arguments, 1);
-        this.emit.apply(this, keys.slice(0, 1).concat(rest));
-        if (keys.length > 2) {
-          // keydown.ctrl.alt.a="" becomes kewdown.a.alt.ctrl
-          type = keys[0] + '.' + keys.slice(1).sort().join('.');
-        }
+
+      if (keys.length > 2) {
+        type = keys[0] + '.' + keys.slice(1).sort().join('.');
       }
 
-      action = actions[type];
+      var action = actions[type];
 
-      if (!action) { return this; }
+      if (action) {
+        var flag = action.listeners ? arguments[2] : 0;
+        // event.dispatcher = watcher;
+        var handler, handlers = action.handlers;
 
-      var flag = action.listeners ? arguments[2] : 0;
-
-      // event.dispatcher = watcher;
-      var handler, handlers = action.handlers;
-
-      for (var i = 0, n = handlers.length; i < n; ++i) {
-        handler = handlers[i];
-        if (handler /*&& (tail === handler.tail || !handler.tail)*/ 
-              && equalCapture(flag, handler.flag)) {
-          if (handler.flag & 4) { // once: 0b1xx
-            this.off(type, handler.func, handler.flag ? flag2opts(handler.flag) : null);
+        for (var i = 0, n = handlers.length; i < n; ++i) {
+          handler = handlers[i];
+          if (handler
+                && equalCapture(flag, handler.flag)) {
+            if (handler.flag & 4) { // once: 0b1xx
+              this.off(type, handler.func, handler.flag ? flag2opts(handler.flag) : null);
+            }
+            handler.func.apply(null, slice(arguments, 1));
           }
-          handler.func.apply(null, slice(arguments, 1));
         }
       }
 
+      if (keys.length > 1 && actions[keys[0]]) {
+        var args = slice(arguments, 1);
+        args.unshift(keys[0]);
+        this.emit.apply(this, args);
+      }
+      
       return this;
     }
   });
@@ -1884,70 +1863,72 @@
   }
 
   var Schedule = {
+    // /**
+    //  * Insert a shell into the updateQueue for updating accoring to its guid.
+    //  * In order to rendering top-down  (parent to child), 
+    //  * parent's guid must be less than its children's. 
+    //  * Indeed, component template engine obeys this rule. 
+    //  * If you do not obey this rule when creating elements and component manually by yourself, 
+    //  * rendering maybe wrong.
+    //  * @param {Shell} shell
+    //  */
+    // insert: function(shell) {
+    //   var i, n = updateQueue.length, id = shell.guid;
+
+    //   if (!updating) {
+    //     i = n - 1;
+    //     while (i >= 0 && id < updateQueue[i].guid) {
+    //       --i;
+    //     }
+    //     ++i;
+    //   } else { // the method `invalidate` maybe called when updating
+    //     i = updateQueueCursor + 1;
+    //     // if (id < updateQueue[updateQueueCursor].guid) {
+    //     //   if ("development" === 'development') {
+    //     //     logger.warn('Do not change properties or emit event to parent component on updating.');
+    //     //   }
+    //     //   throw new Error(shell.toString() + ' should not update after some child component has updated.');
+    //     // }
+    //     while (i < n && id >= updateQueue[i].guid) {
+    //       ++i;
+    //     }
+    //   }
+
+    //   if (i === n) {
+    //     updateQueue.push(shell);
+    //   } else {
+    //     updateQueue.splice(i, 0, shell);
+    //   }
+
+    //   if (!waiting) {
+    //     waiting = true;
+    //     setImmediate(flushQueues);
+    //     // console.log('##########');
+    //   }
+
+    //   // console.log(updateQueue.length, id)
+    // },
+
+    // /**
+    //  * Append a shell into a renderQueue for rendering.
+    //  * @param {Shell} shell
+    //  */
+    // append: function(shell) {
+    //   // var renderQueue = buffers[index];
+    //   renderQueue.push(shell);
+    // },
+
+    // /**
+    //  * Push a function into callbackQueue
+    //  * @param {Function} func 
+    //  */
+    // push: function(func) {
+    //   callbackQueue.push(func);
+    // },
     // flushQueues: flushQueues,
     insertUpdateQueue: insertUpdateQueue,
     // insertRenderQueue: insertRenderQueue,
-    pushCallbackQueue: pushCallbackQueue,
-    /**
-     * Insert a shell into the updateQueue for updating accoring to its guid.
-     * In order to rendering top-down  (parent to child), 
-     * parent's guid must be less than its children's. 
-     * Indeed, component template engine obeys this rule. 
-     * If you do not obey this rule when creating elements and component manually by yourself, 
-     * rendering maybe wrong.
-     * @param {Shell} shell
-     */
-    insert: function(shell) {
-      var i, n = updateQueue.length, id = shell.guid;
-
-      if (!updating) {
-        i = n - 1;
-        while (i >= 0 && id < updateQueue[i].guid) {
-          --i;
-        }
-        ++i;
-      } else { // the method `invalidate` maybe called when updating
-        i = updateQueueCursor + 1;
-        // if (id < updateQueue[updateQueueCursor].guid) {
-        //   if ("development" === 'development') {
-        //     logger.warn('Do not change properties or emit event to parent component on updating.');
-        //   }
-        //   throw new Error(shell.toString() + ' should not update after some child component has updated.');
-        // }
-        while (i < n && id >= updateQueue[i].guid) {
-          ++i;
-        }
-      }
-
-      if (i === n) {
-        updateQueue.push(shell);
-      } else {
-        updateQueue.splice(i, 0, shell);
-      }
-
-      if (!waiting) {
-        waiting = true;
-        setImmediate(flushQueues);
-        // console.log('##########');
-      }
-
-      // console.log(updateQueue.length, id)
-    },
-
-    /**
-     * Append a shell into a renderQueue for rendering.
-     * @param {Shell} shell
-     */
-    append: function(shell) {
-    },
-
-    /**
-     * Push a function into callbackQueue
-     * @param {Function} func 
-     */
-    push: function(func) {
-      callbackQueue.push(func);
-    }
+    pushCallbackQueue: pushCallbackQueue
   };
 
   // src/core/models/Store.js
@@ -3696,34 +3677,22 @@
 
   // src/core/bindings/Binding.js
 
-  // var LETTERS = '0123456789ABCDEFGHIGKLMOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz';
-
   var Binding = defineClass({
     constructor: function Binding() {},
 
     statics: {
-      // guid: function guid(length) {
-      //   // var LETTERS = '0123456789ABCDEFGHIGKLMOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz';
-      //   var r = Math.random() * Math.pow(10, length), i = Date.now() % 1000, s = '';
-      //   while (s.length < length) {
-      //     i += r % 10;
-      //     s += LETTERS.charAt(i % LETTERS.length);
-      //     r = (r - r % 10) / 10;
+      // assign: function assign(target, key, val, binding) {
+      //   if (binding.locked) {
+      //     return;
       //   }
-      //   return s;
+      //   binding.locked = true;
+      //   if (target.set) {
+      //     target.set(key, val);
+      //   } else {
+      //     target[key] = val;
+      //   }
+      //   binding.locked = false;
       // },
-      assign: function assign(target, key, val, binding) {
-        if (binding.locked) {
-          return;
-        }
-        binding.locked = true;
-        if (target.set) {
-          target.set(key, val);
-        } else {
-          target[key] = val;
-        }
-        binding.locked = false;
-      },
 
       record: function record(target, binding) {
         var _bindings = target._bindings;
@@ -3743,18 +3712,6 @@
         if (_bindings && _bindings.length) {
           _bindings.splice(_bindings.lastIndexOf(binding), 1);
         }
-      },
-
-      search: function search(target, targetProp) {
-        var _bindings = target._bindings;
-        
-        if (_bindings && _bindings.length) {
-          for (var i = _bindings.length - 1; i >= 0; --i) {
-            if (_bindings[i].targetProp === targetProp) {
-              return _bindings[i];
-            }
-          }
-        }
       }
     }
   });
@@ -3764,15 +3721,11 @@
   var MODES = { ASSIGN: -1, ONE_TIME: 0, ONE_WAY: 1, TWO_WAY: 2, ANY_WAY: 3 };
 
   function DataBinding(pattern) {
-    this.pattern = pattern;
-    // this.id = Binding.guid(8);
-    this.flag = 0;
-    // this.active = true;
-    // this.mode = pattern.mode;
-    // this.paths = pattern.paths;
-    // this.event = pattern.event;
-    // this.evaluator = pattern.evaluator;
-    // this.converters = pattern.converters;
+    this.mode = pattern.mode;
+    this.paths = pattern.paths;
+    this.evaluator = pattern.evaluator;
+    this.converters = pattern.converters;
+    this.identifiers = pattern.identifiers;
   }
 
   defineClass({
@@ -3789,21 +3742,17 @@
       },
 
       destroy: function(binding) {
-        var pattern = binding.pattern,
-          source = binding.source,
-          target = binding.target,
-          scopes = binding.scopes;
+        var target = binding.target, scopes = binding.scopes;
 
-        //if (mode === MODES.ONE_TIME) { return; }
-
-        if (pattern.mode === MODES.TWO_WAY)  {
-          // target.off && target.off('changed.' + binding.targetProp, binding.back);
+        if (binding.mode === MODES.TWO_WAY)  {
           if (isBindable(binding.target, binding.targetProp)) {
             binding.target.off('changed.' + binding.targetProp, binding.back);
           }
         }
 
-        scopes[0].off(binding.event ? binding.event : 'update', binding.exec);
+        if (!binding.sync) {
+          scopes[0].off('update', binding.exec);
+        }
         
         Binding.remove(target, binding);
 
@@ -3812,38 +3761,34 @@
     },
 
     link: function(property, target, scopes) {
-      var pattern = this.pattern;
-
       this.flag = 0;
+      this.sync = true;
       this.scopes = scopes;
       this.target = target;
       this.targetProp = property;
 
-      // this.exec();
-
-      if (pattern.mode === MODES.ASSIGN) {
-        // this.invalidate(1);
-        Binding.assign(this.target, this.targetProp, this.eval(), this);
+      if (this.mode === MODES.ASSIGN) {
+        // Binding.assign(this.target, this.targetProp, this.eval(), this);
+        this.target.set(this.targetProp, this.eval());
         return;
       }
 
-      // this.invalidate = this.invalidate.bind(this);
+      this.exec = this.exec.bind(this);
 
-      this.exec = this.exec.bind(this); // TODO: use different exec in different mode
-
-      var event = pattern.event;
-      if (event) ; else {
-        addDeps(this);
-        if (this.deps) { // TODO: on different event according to deps
-          Binding.record(target, this);
+      addDeps(this);
+      var deps = this.deps;
+      if (deps && deps.length) {
+        Binding.record(target, this);
+        if (deps.length > 1) {
+          this.sync = false;
           this.scopes[0].on('update', this.exec);
         }
       }
 
-      if (pattern.mode === MODES.TWO_WAY) {
+      if (this.mode === MODES.TWO_WAY) {
         this.back = this.back.bind(this);
-        var path = Path.parse(pattern.paths[0]);
-        var from = pattern.identifiers.indexOf(path[0]);
+        var path = Path.parse(this.paths[0]);
+        var from = this.identifiers.indexOf(path[0]);
         this.sourceProp = path[path.length - 1];
         this.source = Path.search(path.slice(1, path.length - 1), scopes[from], true);
 
@@ -3852,16 +3797,14 @@
         }
       }
 
-      // this.exec();
-      // this.invalidate(1);
-      Binding.assign(this.target, this.targetProp, this.eval(), this);
+      // Binding.assign(this.target, this.targetProp, this.eval(), this);
+      this.target.set(this.targetProp, this.eval());
     },
 
     eval: function(back) {
-      var pattern = this.pattern;
-      var converters = pattern.converters;
+      var converters = this.converters;
 
-      if (pattern.mode === MODES.TWO_WAY) {
+      if (this.mode === MODES.TWO_WAY) {
         if (converters && converters.length) {
           if (back) {
             return converters[1].compile(this.scopes, this.target[this.targetProp]);
@@ -3878,61 +3821,57 @@
       } 
 
       if (converters && converters.length) {
-        return applyConverters(converters, this.scopes, pattern.evaluator.compile(this.scopes));
+        return applyConverters(converters, this.scopes, this.evaluator.compile(this.scopes));
       } else {
-        return pattern.evaluator.compile(this.scopes);
+        return this.evaluator.compile(this.scopes);
       }
     },
 
     exec: function exec() {
-      // console.log('exec', this.flag, this.targetProp, this.target.toString(), this.pattern.event)
-      if (!this.pattern.event && !this.flag) {
+      if (this.flag === 0) {
         return;
       }
-      
-      
-
-      if (this.flag > 1) {
+      if (this.flag === 1) {
+        this.target.set(this.targetProp, this.eval());
+        // Binding.assign(this.target, this.targetProp, this.eval(), this);
+      } else if (this.flag === 2) {
         DataBinding.destroy(this);
         DataBinding.compile(this.pattern, this.targetProp, this.target, this.scopes);
-      } else {
-        Binding.assign(this.target, this.targetProp, this.eval(), this);
       }
-      // console.log(this.target, this.targetProp, this.target[this.targetProp]);
+
       // if (this.flag > 1) {
         this.flag = 0;
       // }
 
-      if (this.pattern.mode === MODES.ONE_TIME) {
-        this.scopes[0].off('update', this.exec);
+      if (this.mode === MODES.ONE_TIME) {
+        DataBinding.destroy(this);
       }
     },
 
     back: function back() {
-      Binding.assign(this.source, this.sourceProp, this.eval(true), this);
+      // Binding.assign(this.source, this.sourceProp, this.eval(true), this);
+      this.source.set(this.sourceProp, this.eval(true));
     },
 
     invalidate: function(flag) {
-      // console.log('invalidate', flag, this.targetProp, this.target.toString())
-      this.scopes[0].invalidate(FLAG_CHANGED);
       if (this.flag < flag) {
         this.flag = flag;
+      }
+      if (this.sync) {
+        this.exec();
+      } else {
+        this.scopes[0].invalidate(FLAG_CHANGED);
       }
     }
   });
 
-  function depend(i, prop, paths, source, origin) {
-    // var descriptors = source.__extag_descriptors__;
-
-    var desc = Accessor.getAttrDesc(source, prop); //descriptors && descriptors[prop];
+  function depend(i, prop, paths, source) {
+    var desc = Accessor.getAttrDesc(source, prop);
 
     if (desc && desc.depends) {
       var j, n, depends = desc.depends;
 
       for (j = 0, n = depends.length; j < n; ++j) {
-        // path = Path.parse(depends[j]); 
-        // path.unshift(origin);
-        // paths.push(path);
         paths.push(CONTEXT_SYMBOL + '.' + depends[j]);
       }
 
@@ -3948,12 +3887,11 @@
   }
 
   function addDeps(binding) {
-    var pattern = binding.pattern;
-    var identifiers = pattern.identifiers;
-    var paths = pattern.paths;
+    var identifiers = binding.identifiers;
     var scopes =  binding.scopes;
+    var paths = binding.paths;
     if (!scopes || !paths || !paths.length) { return; }
-    // Dep.begin(binding);
+
     var i, j, k, path, temp, deps, scope;
     paths = paths.slice(0);
     for (i = 0; i < paths.length; ++i) {
@@ -3972,7 +3910,7 @@
       
       deps = [];
       scope = scopes[k];
-      // console.log('path', path)
+
       for (j = 1; j < path.length; ++j) {
         if (!(scope instanceof Object)) {
           break;
@@ -4017,22 +3955,21 @@
         binding.deps.push.apply(binding.deps, deps);
       }
     }
-    // Dep.end();
-    // return flag;
   }
 
   function delDeps(binding) {
     var i, dep, deps = binding.deps;
-    for (i = 0; i < deps.length; ++i) {
-      dep = deps[i];
-      dep.src.off('changed.' + dep.prop, dep.func);
+    if (deps) {
+      for (i = 0; i < deps.length; ++i) {
+        dep = deps[i];
+        dep.src.off('changed.' + dep.prop, dep.func);
+      }
+      deps.length = 0;
+      delete binding.deps;
     }
-    deps.length = 0;
-    delete binding.deps;
   }
 
   function applyConverters(converters, scopes, value) {
-    if (!converters || !converters.length) { return value; }
     for (var i = 0; i < converters.length; ++i) {
       value = converters[i].compile(scopes, value);
     }
@@ -4245,7 +4182,8 @@
         value = value.join('');
       }
 
-      Binding.assign(this.target, this.property, value, this);
+      // Binding.assign(this.target, this.property, value, this);
+      this.target.set(this.property, value);
 
       DirtyMarker.clean(cache);
     }
@@ -4910,16 +4848,17 @@
       if (expression[0] === BINDING_OPERATORS.TWO_WAY) {              // <text-box model@="@text"/>
         mode = DATA_BINDING_MODES.TWO_WAY;
         expression = expression.slice(1, n); 
-      } else if (expression[0] === BINDING_OPERATORS.ANY_WAY) {       // <h1 title@="^title">@{^title}</h1>
+      } else if (expression[n-1] === BINDING_OPERATORS.ANY_WAY) {     // <h1 title@="title ^">@{title ^}</h1>
         mode = DATA_BINDING_MODES.ANY_WAY;
         expression = expression.slice(1, n);
-      } else if (expression[n-1] === BINDING_OPERATORS.ASSIGN) {      // <h1 title@="title!">@{title!}</h1>
+        event = 'update';
+      } else if (expression[n-1] === BINDING_OPERATORS.ASSIGN) {      // <h1 title@="title!">@{title !}</h1>
         mode = DATA_BINDING_MODES.ASSIGN;
         expression = expression.slice(0, n-1);
-      } else if (expression[n-1] === BINDING_OPERATORS.ONE_TIME) {    // <div x-type="Panel" x-once@="showPanel?"></div>
+      } else if (expression[n-1] === BINDING_OPERATORS.ONE_TIME) {    // <div x:type="Panel" x:if@="showPanel ?"></div>
         mode = DATA_BINDING_MODES.ONE_TIME;
         expression = expression.slice(0, n-1);
-      } else {                                                  // <h1 title@="title">@{title}</h1>
+      } else {                                                        // <h1 title@="title">@{title}</h1>
         mode = DATA_BINDING_MODES.ONE_WAY;
       }
 
@@ -4930,8 +4869,8 @@
 
       collectPaths(evaluator, paths);
       
+      var converters, converter, piece;
       if (pieces.length > 1) {
-        var converters;
         if (mode === DATA_BINDING_MODES.TWO_WAY) {
           if (pieces.length > 2) {
             logger.warn(('Only one two-way converter is supported in two-way binding expression, but ' + (pieces.length - 1) + ' converters are detected in `' + expression + '`'));
@@ -4942,8 +4881,7 @@
             logger.warn('There is an empty converter in the expression `' + expression + '`');
             throw new Error('Converter must not be empty!');
           }
-          // if (!/[$_\w]+\.call\(?/.test(piece)) {
-            if (!/[\$\_\w]+\.exec\(?/.test(piece)) { // TODO:
+          if (!/[\$\_\w]+\.exec\(?/.test(piece)) {
             logger.warn('`' + piece + '` is not a valid two-way converter expression in `' + expression + '`');
             throw new Error('Invalid two-way binding converter `' + piece + '`');
           }
@@ -4957,12 +4895,10 @@
             back = piece + '.back($_0)';
           } else {
             conv = piece;
-            // exec = piece.replace(/\?\s*(\,|\))/, '$_0$1');
-            // back = exec.replace(/\.\s*exec\s*\(/, '.back(');
-            exec = piece + '.exec($_0,' + piece.slice(index+1);
-            back = piece + '.back($_0,' + piece.slice(index+1);
+            exec = piece + '.exec($_0,' + piece.slice(index + 1);
+            back = piece + '.back($_0,' + piece.slice(index + 1);
           }
-          var converter = Path.search(conv, prototype.constructor.resources);
+          converter = Path.search(conv, prototype.constructor.resources);
           if (!converter) {
             logger.warn('Cannot find this converter named `' + conv + '`');
             throw new Error('Unknown converter named ' + conv);
@@ -4977,15 +4913,14 @@
           collectPaths(converters[0], paths);
         } else {
           for (i = 1; i < pieces.length; ++i) {
-            var piece = pieces[i].trim();
+            piece = pieces[i].trim();
             if (!piece) {
               logger.warn('There is an empty converter in the expression `' + expression + '`');
               throw new Error('Converter must not be empty!');
             }
             var index = piece.indexOf('(');
             if (index > 0) {
-              // piece = piece.replace(/\?\s*(\,|\))/, '$_0$1');
-              piece = piece.slice(0, index) + '($_0,' + piece.slice(index+1);
+              piece = piece.slice(0, index) + '($_0,' + piece.slice(index + 1);
             } else {
               piece = piece + '($_0)';
             }
@@ -4998,9 +4933,7 @@
       }
 
       return {
-        // type: DataBinding,
         mode: mode,
-        // event: event,
         paths: paths,
         evaluator: evaluator,
         converters: converters,

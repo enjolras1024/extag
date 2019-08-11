@@ -12,15 +12,11 @@ import { CONTEXT_SYMBOL, FLAG_CHANGED } from 'src/share/constants'
 var MODES = { ASSIGN: -1, ONE_TIME: 0, ONE_WAY: 1, TWO_WAY: 2, ANY_WAY: 3 };
 
 export default function DataBinding(pattern) {
-  this.pattern = pattern;
-  // this.id = Binding.guid(8);
-  this.flag = 0;
-  // this.active = true;
-  // this.mode = pattern.mode;
-  // this.paths = pattern.paths;
-  // this.event = pattern.event;
-  // this.evaluator = pattern.evaluator;
-  // this.converters = pattern.converters;
+  this.mode = pattern.mode;
+  this.paths = pattern.paths;
+  this.evaluator = pattern.evaluator;
+  this.converters = pattern.converters;
+  this.identifiers = pattern.identifiers;
 }
 
 defineClass({
@@ -37,21 +33,17 @@ defineClass({
     },
 
     destroy: function(binding) {
-      var pattern = binding.pattern,
-        source = binding.source,
-        target = binding.target,
-        scopes = binding.scopes;
+      var target = binding.target, scopes = binding.scopes;
 
-      //if (mode === MODES.ONE_TIME) { return; }
-
-      if (pattern.mode === MODES.TWO_WAY)  {
-        // target.off && target.off('changed.' + binding.targetProp, binding.back);
+      if (binding.mode === MODES.TWO_WAY)  {
         if (isBindable(binding.target, binding.targetProp)) {
           binding.target.off('changed.' + binding.targetProp, binding.back);
         }
       }
 
-      scopes[0].off(binding.event ? binding.event : 'update', binding.exec);
+      if (!binding.sync) {
+        scopes[0].off('update', binding.exec);
+      }
       
       Binding.remove(target, binding);
 
@@ -60,41 +52,34 @@ defineClass({
   },
 
   link: function(property, target, scopes) {
-    var pattern = this.pattern;
-
     this.flag = 0;
+    this.sync = true;
     this.scopes = scopes;
     this.target = target;
     this.targetProp = property;
 
-    // this.exec();
-
-    if (pattern.mode === MODES.ASSIGN) {
-      // this.invalidate(1);
-      Binding.assign(this.target, this.targetProp, this.eval(), this);
+    if (this.mode === MODES.ASSIGN) {
+      // Binding.assign(this.target, this.targetProp, this.eval(), this);
+      this.target.set(this.targetProp, this.eval());
       return;
     }
 
-    // this.invalidate = this.invalidate.bind(this);
+    this.exec = this.exec.bind(this);
 
-    this.exec = this.exec.bind(this); // TODO: use different exec in different mode
-
-    var event = pattern.event;
-    if (event) {
-      // Binding.record(target, this);
-      // this.scopes[0].on(event, this.exec);
-    } else {
-      addDeps(this);
-      if (this.deps) { // TODO: on different event according to deps
-        Binding.record(target, this);
+    addDeps(this);
+    var deps = this.deps;
+    if (deps && deps.length) {
+      Binding.record(target, this);
+      if (deps.length > 1) {
+        this.sync = false;
         this.scopes[0].on('update', this.exec);
       }
     }
 
-    if (pattern.mode === MODES.TWO_WAY) {
+    if (this.mode === MODES.TWO_WAY) {
       this.back = this.back.bind(this);
-      var path = Path.parse(pattern.paths[0]);
-      var from = pattern.identifiers.indexOf(path[0]);
+      var path = Path.parse(this.paths[0]);
+      var from = this.identifiers.indexOf(path[0]);
       if (from < 0) {
 
       }
@@ -106,16 +91,14 @@ defineClass({
       }
     }
 
-    // this.exec();
-    // this.invalidate(1);
-    Binding.assign(this.target, this.targetProp, this.eval(), this);
+    // Binding.assign(this.target, this.targetProp, this.eval(), this);
+    this.target.set(this.targetProp, this.eval());
   },
 
   eval: function(back) {
-    var pattern = this.pattern;
-    var converters = pattern.converters;
+    var converters = this.converters;
 
-    if (pattern.mode === MODES.TWO_WAY) {
+    if (this.mode === MODES.TWO_WAY) {
       if (converters && converters.length) {
         if (back) {
           return converters[1].compile(this.scopes, this.target[this.targetProp]);
@@ -132,61 +115,57 @@ defineClass({
     } 
 
     if (converters && converters.length) {
-      return applyConverters(converters, this.scopes, pattern.evaluator.compile(this.scopes));
+      return applyConverters(converters, this.scopes, this.evaluator.compile(this.scopes));
     } else {
-      return pattern.evaluator.compile(this.scopes);
+      return this.evaluator.compile(this.scopes);
     }
   },
 
   exec: function exec() {
-    // console.log('exec', this.flag, this.targetProp, this.target.toString(), this.pattern.event)
-    if (!this.pattern.event && !this.flag) {
+    if (this.flag === 0) {
       return;
     }
-    
-    
-
-    if (this.flag > 1) {
+    if (this.flag === 1) {
+      this.target.set(this.targetProp, this.eval());
+      // Binding.assign(this.target, this.targetProp, this.eval(), this);
+    } else if (this.flag === 2) {
       DataBinding.destroy(this);
       DataBinding.compile(this.pattern, this.targetProp, this.target, this.scopes);
-    } else {
-      Binding.assign(this.target, this.targetProp, this.eval(), this);
     }
-    // console.log(this.target, this.targetProp, this.target[this.targetProp]);
+
     // if (this.flag > 1) {
       this.flag = 0;
     // }
 
-    if (this.pattern.mode === MODES.ONE_TIME) {
-      this.scopes[0].off('update', this.exec);
+    if (this.mode === MODES.ONE_TIME) {
+      DataBinding.destroy(this);
     }
   },
 
   back: function back() {
-    Binding.assign(this.source, this.sourceProp, this.eval(true), this);
+    // Binding.assign(this.source, this.sourceProp, this.eval(true), this);
+    this.source.set(this.sourceProp, this.eval(true));
   },
 
   invalidate: function(flag) {
-    // console.log('invalidate', flag, this.targetProp, this.target.toString())
-    this.scopes[0].invalidate(FLAG_CHANGED);
     if (this.flag < flag) {
       this.flag = flag;
+    }
+    if (this.sync) {
+      this.exec();
+    } else {
+      this.scopes[0].invalidate(FLAG_CHANGED);
     }
   }
 });
 
-function depend(i, prop, paths, source, origin) {
-  // var descriptors = source.__extag_descriptors__;
-
-  var desc = Accessor.getAttrDesc(source, prop); //descriptors && descriptors[prop];
+function depend(i, prop, paths, source) {
+  var desc = Accessor.getAttrDesc(source, prop);
 
   if (desc && desc.depends) {
     var j, n, path, depends = desc.depends;
 
     for (j = 0, n = depends.length; j < n; ++j) {
-      // path = Path.parse(depends[j]); 
-      // path.unshift(origin);
-      // paths.push(path);
       paths.push(CONTEXT_SYMBOL + '.' + depends[j]);
     }
 
@@ -202,12 +181,11 @@ function isBindable(src, prop) {
 }
 
 function addDeps(binding) {
-  var pattern = binding.pattern;
-  var identifiers = pattern.identifiers;
-  var paths = pattern.paths;
+  var identifiers = binding.identifiers;
   var scopes =  binding.scopes;
+  var paths = binding.paths;
   if (!scopes || !paths || !paths.length) { return; }
-  // Dep.begin(binding);
+
   var i, j, k, path, temp, deps, desc, scope;
   paths = paths.slice(0);
   for (i = 0; i < paths.length; ++i) {
@@ -226,7 +204,7 @@ function addDeps(binding) {
     
     deps = [];
     scope = scopes[k];
-    // console.log('path', path)
+
     for (j = 1; j < path.length; ++j) {
       if (!(scope instanceof Object)) {
         break;
@@ -271,22 +249,21 @@ function addDeps(binding) {
       binding.deps.push.apply(binding.deps, deps);
     }
   }
-  // Dep.end();
-  // return flag;
 }
 
 function delDeps(binding) {
   var i, dep, deps = binding.deps;
-  for (i = 0; i < deps.length; ++i) {
-    dep = deps[i];
-    dep.src.off('changed.' + dep.prop, dep.func);
+  if (deps) {
+    for (i = 0; i < deps.length; ++i) {
+      dep = deps[i];
+      dep.src.off('changed.' + dep.prop, dep.func);
+    }
+    deps.length = 0;
+    delete binding.deps;
   }
-  deps.length = 0;
-  delete binding.deps;
 }
 
 function applyConverters(converters, scopes, value) {
-  if (!converters || !converters.length) { return value; }
   for (var i = 0; i < converters.length; ++i) {
     value = converters[i].compile(scopes, value);
   }
