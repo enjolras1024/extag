@@ -46,8 +46,9 @@ export default {
       mode = DATA_BINDING_MODES.ONE_WAY;
     }
 
-    var pieces = expression.indexOf(BINDING_OPERATORS.CONVERTER) < 0 ? 
-                  [expression] : expression.split(BINDING_OPERATORS.CONVERTER); // EvaluatorParser.splitExpr(expression);
+    var pieces = mode === DATA_BINDING_MODES.TWO_WAY 
+                  || expression.indexOf(BINDING_OPERATORS.CONVERTER) < 0 ? 
+                    [expression] : expression.split(BINDING_OPERATORS.CONVERTER); // EvaluatorParser.splitExpr(expression);
 
     var evaluator = EvaluatorParser.parse(pieces[0], prototype, identifiers);
 
@@ -55,47 +56,47 @@ export default {
     
     var converters, converter, piece;
     if (pieces.length > 1) {
-      if (mode === DATA_BINDING_MODES.TWO_WAY) {
-        if (pieces.length > 2) {
-          logger.warn(('Only one two-way converter is supported in two-way binding expression, but ' + (pieces.length - 1) + ' converters are detected in `' + expression + '`'))
-          throw new Error('Invalid two-way binding expression `' + expression + '`');
-        }
-        piece = pieces[1].trim();
-        if (!piece) {
-          logger.warn('There is an empty converter in the expression `' + expression + '`');
-          throw new Error('Converter must not be empty!');
-        }
-        if (!/[\$\_\w]+\.exec\(?/.test(piece)) {
-          logger.warn('`' + piece + '` is not a valid two-way converter expression in `' + expression + '`');
-          throw new Error('Invalid two-way binding converter `' + piece + '`');
-        }
-        index = piece.indexOf('.exec');
-        var conv = piece.slice(0, index);
-        index = piece.indexOf('(', index+5);
-        var exec, back;
-        if (index < 0) {
-          conv = piece;
-          exec = piece + '.exec($_0)';
-          back = piece + '.back($_0)';
-        } else {
-          conv = piece;
-          exec = piece + '.exec($_0,' + piece.slice(index + 1);
-          back = piece + '.back($_0,' + piece.slice(index + 1);
-        }
-        converter = Path.search(conv, prototype.constructor.resources);
-        if (!converter) {
-          logger.warn('Cannot find this converter named `' + conv + '`');
-          throw new Error('Unknown converter named ' + conv);
-        } else if (!converter.exec || !converter.back) {
-          logger.warn('`' + conv + '` is not a valid two-way converter');
-          throw new Error('Invalid two-way converter named `' + conv + '`');
-        }
-        converters = [ 
-          EvaluatorParser.parse(exec, prototype, identifiers),
-          EvaluatorParser.parse(back, prototype, identifiers)
-        ];
-        collectPaths(converters[0], paths);
-      } else {
+      // if (mode === DATA_BINDING_MODES.TWO_WAY) {
+      //   if (pieces.length > 2) {
+      //     logger.warn(('Only one two-way converter is supported in two-way binding expression, but ' + (pieces.length - 1) + ' converters are detected in `' + expression + '`'))
+      //     throw new Error('Invalid two-way binding expression `' + expression + '`');
+      //   }
+      //   piece = pieces[1].trim();
+      //   if (!piece) {
+      //     logger.warn('There is an empty converter in the expression `' + expression + '`');
+      //     throw new Error('Converter must not be empty!');
+      //   }
+      //   if (!/[\$\_\w]+\.exec\(?/.test(piece)) {
+      //     logger.warn('`' + piece + '` is not a valid two-way converter expression in `' + expression + '`');
+      //     throw new Error('Invalid two-way binding converter `' + piece + '`');
+      //   }
+      //   index = piece.indexOf('.exec');
+      //   var conv = piece.slice(0, index);
+      //   index = piece.indexOf('(', index+5);
+      //   var exec, back;
+      //   if (index < 0) {
+      //     conv = piece;
+      //     exec = piece + '.exec($_0)';
+      //     back = piece + '.back($_0)';
+      //   } else {
+      //     conv = piece;
+      //     exec = piece + '.exec($_0,' + piece.slice(index + 1);
+      //     back = piece + '.back($_0,' + piece.slice(index + 1);
+      //   }
+      //   converter = Path.search(conv, prototype.constructor.resources);
+      //   if (!converter) {
+      //     logger.warn('Cannot find this converter named `' + conv + '`');
+      //     throw new Error('Unknown converter named ' + conv);
+      //   } else if (!converter.exec || !converter.back) {
+      //     logger.warn('`' + conv + '` is not a valid two-way converter');
+      //     throw new Error('Invalid two-way converter named `' + conv + '`');
+      //   }
+      //   converters = [ 
+      //     EvaluatorParser.parse(exec, prototype, identifiers),
+      //     EvaluatorParser.parse(back, prototype, identifiers)
+      //   ];
+      //   collectPaths(converters[0], paths);
+      // } else {
         for (i = 1; i < pieces.length; ++i) {
           piece = pieces[i].trim();
           if (!piece) {
@@ -113,7 +114,7 @@ export default {
           converters = converters || [];
           converters.push(converter);
         }
-      }
+      // }
     }
 
     return {

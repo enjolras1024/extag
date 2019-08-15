@@ -66,13 +66,18 @@ defineClass({
 
     this.exec = this.exec.bind(this);
 
-    addDeps(this);
-    var deps = this.deps;
-    if (deps && deps.length) {
-      Binding.record(target, this);
-      if (deps.length > 1) {
-        this.sync = false;
-        this.scopes[0].on('update', this.exec);
+    if (this.mode === MODES.ANY_WAY) {
+      this.sync = false;
+      this.scopes[0].on('update', this.exec);
+    } else {
+      addDeps(this);
+      var deps = this.deps;
+      if (deps && deps.length) {
+        Binding.record(target, this);
+        if (deps.length > 1) {
+          this.sync = false;
+          this.scopes[0].on('update', this.exec);
+        }
       }
     }
 
@@ -96,24 +101,23 @@ defineClass({
   },
 
   eval: function(back) {
-    var converters = this.converters;
-
     if (this.mode === MODES.TWO_WAY) {
-      if (converters && converters.length) {
-        if (back) {
-          return converters[1].compile(this.scopes, this.target[this.targetProp]);
-        } else {
-          return converters[0].compile(this.scopes, this.source[this.sourceProp]);
-        }
-      } else {
+      // if (converters && converters.length) {
+      //   if (back) {
+      //     return converters[1].compile(this.scopes, this.target[this.targetProp]);
+      //   } else {
+      //     return converters[0].compile(this.scopes, this.source[this.sourceProp]);
+      //   }
+      // } else {
         if (back) {
           return this.target[this.targetProp];
         } else {
           return this.source[this.sourceProp];
         }
-      }
+      // }
     } 
 
+    var converters = this.converters;
     if (converters && converters.length) {
       return applyConverters(converters, this.scopes, this.evaluator.compile(this.scopes));
     } else {
