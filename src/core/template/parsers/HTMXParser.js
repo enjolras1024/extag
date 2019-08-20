@@ -26,6 +26,7 @@ import PrimaryLiteralParser from 'src/core/template/parsers/PrimaryLiteralParser
 // var TAGNAME_STOP = /[\s\/>]/
 // var FOR_LOOP_REGEXP = /^(([\_\$\w]+)|(\[\s*(\w+),\s*(\w+)\s*\]))\s+of\s+(.+)$/;
 var FOR_LOOP_REGEXP = /^([\_\$\w]+)\s+of\s+(.+)$/;
+var CAPITAL_REGEXP = /^[A-Z]/;
 var LETTER_REGEXP = /[a-z]/i;
 var TAGNAME_STOP = /[\s\/>]/;
 
@@ -360,15 +361,8 @@ function parseHTMX(htmx, prototype) {
             node.ns = parent.ns;
           }
         }
-        if (node.type == null && /^A-Z/.test(tagName)) {
-          // var type, ctor;
-          // if (tagName.indexOf('-') < 0) {
-          //   type = tagName;
-          // } else {
-          //   type = viewEngine.toCamelCase(tagName);
-          //   type = type[0].toUpperCase() + type.slice(1);
-          // }
-          var ctor = Path.search(type, prototype.constructor.resources);
+        if (node.type == null && CAPITAL_REGEXP.test(tagName)) {
+          var ctor = Path.search(tagName, prototype.constructor.resources);
           if (typeof ctor === 'function' && ctor.__extag_component_class__) {
             node.type = ctor;
           }

@@ -30,8 +30,8 @@ var elementPropto = Element.prototype;
 var fragmentProto = Fragment.prototype;
 // var emptyDesc = {};
 
-export default function Component(props, scope, locals) {
-  Component.initialize(this, props, scope, locals);
+export default function Component(props, scopes, template) {
+  Component.initialize(this, props, scopes, template);
 }
 
 defineClass({
@@ -308,13 +308,13 @@ defineClass({
    * @param {HTMLElement} $skin
    */
   attach: function attach($skin) {
-    Shell.prototype.attach.call(this, $skin);
-    // this.send('attached');
-    if (this.onAttached) {
-      this.onAttached($skin);
+    if (Shell.prototype.attach.call(this, $skin)) {
+      if (this.onAttached) {
+        this.onAttached($skin);
+      }
+      return true;
     }
-
-    // return this;
+    return false;
   },
 
   /**

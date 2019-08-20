@@ -2184,6 +2184,10 @@
      * @param {HTMLElement} $skin
      */
     attach: function attach($skin) {
+      if (this.type === 0) {
+        return false;
+      }
+      
       var viewEngine = Shell.getViewEngine(this);
       {
         if (!viewEngine) {
@@ -2216,12 +2220,7 @@
 
       this.invalidate(FLAG_CHANGED_CHILDREN);
 
-      // this.send('attached');
-      // if (this.onAttached) {
-      //   this.onAttached($skin);
-      // }
-
-      // return this;
+      return true;
     },
 
     /**
@@ -2868,8 +2867,8 @@
   // src/core/shells/Component.js
   // var emptyDesc = {};
 
-  function Component(props, scope, locals) {
-    Component.initialize(this, props, scope, locals);
+  function Component(props, scopes, template) {
+    Component.initialize(this, props, scopes, template);
   }
 
   defineClass({
@@ -3146,13 +3145,13 @@
      * @param {HTMLElement} $skin
      */
     attach: function attach($skin) {
-      Shell.prototype.attach.call(this, $skin);
-      // this.send('attached');
-      if (this.onAttached) {
-        this.onAttached($skin);
+      if (Shell.prototype.attach.call(this, $skin)) {
+        if (this.onAttached) {
+          this.onAttached($skin);
+        }
+        return true;
       }
-
-      // return this;
+      return false;
     },
 
     /**
@@ -3775,13 +3774,18 @@
 
       this.exec = this.exec.bind(this);
 
-      addDeps(this);
-      var deps = this.deps;
-      if (deps && deps.length) {
-        Binding.record(target, this);
-        if (deps.length > 1) {
-          this.sync = false;
-          this.scopes[0].on('update', this.exec);
+      if (this.mode === MODES.ANY_WAY) {
+        this.sync = false;
+        this.scopes[0].on('update', this.exec);
+      } else {
+        addDeps(this);
+        var deps = this.deps;
+        if (deps && deps.length) {
+          Binding.record(target, this);
+          if (deps.length > 1) {
+            this.sync = false;
+            this.scopes[0].on('update', this.exec);
+          }
         }
       }
 
@@ -5113,6 +5117,7 @@
   // var TAGNAME_STOP = /[\s\/>]/
   // var FOR_LOOP_REGEXP = /^(([\_\$\w]+)|(\[\s*(\w+),\s*(\w+)\s*\]))\s+of\s+(.+)$/;
   var FOR_LOOP_REGEXP = /^([\_\$\w]+)\s+of\s+(.+)$/;
+  var CAPITAL_REGEXP = /^[A-Z]/;
   var LETTER_REGEXP = /[a-z]/i;
   var TAGNAME_STOP = /[\s\/>]/;
 
@@ -5447,15 +5452,8 @@
               node.ns = parent.ns;
             }
           }
-          if (node.type == null && /^A-Z/.test(tagName)) {
-            // var type, ctor;
-            // if (tagName.indexOf('-') < 0) {
-            //   type = tagName;
-            // } else {
-            //   type = viewEngine.toCamelCase(tagName);
-            //   type = type[0].toUpperCase() + type.slice(1);
-            // }
-            var ctor = Path.search(type, prototype.constructor.resources);
+          if (node.type == null && CAPITAL_REGEXP.test(tagName)) {
+            var ctor = Path.search(tagName, prototype.constructor.resources);
             if (typeof ctor === 'function' && ctor.__extag_component_class__) {
               node.type = ctor;
             }

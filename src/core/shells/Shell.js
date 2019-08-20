@@ -106,6 +106,10 @@ defineClass({
    * @param {HTMLElement} $skin
    */
   attach: function attach($skin) {
+    if (this.type === 0) {
+      return false;
+    }
+    
     var viewEngine = Shell.getViewEngine(this);
     if (__ENV__ === 'development') {
       if (!viewEngine) {
@@ -138,12 +142,7 @@ defineClass({
 
     this.invalidate(FLAG_CHANGED_CHILDREN);
 
-    // this.send('attached');
-    // if (this.onAttached) {
-    //   this.onAttached($skin);
-    // }
-
-    // return this;
+    return true;
   },
 
   /**
