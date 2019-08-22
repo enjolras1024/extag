@@ -61,9 +61,9 @@ defineClass({
     flattenChildren: flattenChildren
   },
 
-  // getParent: function getParent(actual) {
-  //   return actual ? findParent(this) : this._parent;
-  // },
+  getParent: function (actual) {
+    return actual ? findParent(this) : this._parent;
+  },
 
   getChildren: function getChildren(actual) {
     if (actual) {

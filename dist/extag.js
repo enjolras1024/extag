@@ -454,7 +454,6 @@
   var FLAG_CHANGED = 1;
   var FLAG_CHANGED_CHILDREN = 2;
   var FLAG_CHANGED_COMMANDS = 4;
-  var FLAG_WAITING_TO_RENDER = 8;
 
   var VIEW_ENGINE = 'view-engine';
   var EMPTY_OBJECT = {};
@@ -557,9 +556,9 @@
       flattenChildren: flattenChildren
     },
 
-    // getParent: function getParent(actual) {
-    //   return actual ? findParent(this) : this._parent;
-    // },
+    getParent: function (actual) {
+      return actual ? findParent(this) : this._parent;
+    },
 
     getChildren: function getChildren(actual) {
       if (actual) {
@@ -2299,7 +2298,7 @@
      * order the skin to do something when rendering, so all commands are async in order.
      * @param {string} method - like 'focus', 'blur'... 
      */
-    order: function order(method/*, ...rest*/) {
+    cmd: function cmd(method/*, ...rest*/) {
       if (!this._commands) {
         this._commands = [];
       }
@@ -2503,11 +2502,12 @@
       if (this.$flag === FLAG_NORMAL) {
         return false;
       }
-      if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-        this.$flag |= FLAG_WAITING_TO_RENDER;
-        // Schedule.insertRenderQueue(this);
-        this.render();
-      }
+      // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+      //   this.$flag |= FLAG_WAITING_TO_RENDER;
+      //   // Schedule.insertRenderQueue(this);
+      //   this.render();
+      // }
+      this.render();
       return true;
     },
 
@@ -2515,15 +2515,20 @@
      * Render the dirty parts of this shell to the attached skin 
      */
     render: function render() {
-      if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0 || !this.$skin) {
-        this.$flag = FLAG_NORMAL;
+      // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0 || !this.$skin) {
+      //   this.$flag = FLAG_NORMAL;
+      //   return false;
+      // }
+      if (this.$flag === FLAG_NORMAL) {
         return false;
       }
 
-      var viewEngine = Shell.getViewEngine(this);
-      // if (!viewEngine) { return this; }
-      viewEngine.renderShell(this.$skin, this);
-      DirtyMarker.clean(this);
+      if (this.$skin) {
+        var viewEngine = Shell.getViewEngine(this);
+        // if (!viewEngine) { return this; }
+        viewEngine.renderShell(this.$skin, this);
+        DirtyMarker.clean(this);
+      }
 
       this.$flag = FLAG_NORMAL;
 
@@ -2651,14 +2656,14 @@
           DirtyMarker.clean(element, 'style');
           var style = _props.style;
           if (typeof style === 'object') {
-            element.style = style;
+            resetCache(element.style, style);
           } else if (typeof style === 'string') {
             // element.attrs.set('style', style);
             var viewEngine = Shell.getViewEngine(element);
             if (viewEngine) {
               style = toStyle(style, viewEngine);
             }
-            element.style = style;
+            resetCache(element.style, style);
           }
         }
         // if (element.hasDirty('attrs')) {
@@ -2675,7 +2680,7 @@
           if (typeof classes !== 'object') {
             classes = toClasses(classes);
           }
-          element.classes = classes;
+          resetCache(element.classes, classes);
         }
       },
 
@@ -2695,10 +2700,10 @@
                 });
               }
               return this._attrs;
-            },
-            set: function(value) {
-              resetCache(this.attrs, value);
-            }
+            }//,
+            // set: function(value) {
+            //   resetCache(this.attrs, value);
+            // }
           });
           defineProp(prototype, 'style', {
             get: function() {
@@ -2709,10 +2714,10 @@
                 });
               }
               return this._style;
-            },
-            set: function(value) {
-              resetCache(this.style, value);
-            }
+            }//,
+            // set: function(value) {
+            //   resetCache(this.style, value);
+            // }
           });
           defineProp(prototype, 'classes', {
             get: function() {
@@ -2723,10 +2728,10 @@
                 });
               }
               return this._classes;
-            },
-            set: function(value) {
-              resetCache(this.classes, value);
-            }
+            }//,
+            // set: function(value) {
+            //   resetCache(this.classes, value);
+            // }
           });
         }
       }    
@@ -2742,11 +2747,13 @@
 
       Element.convert(this);
 
-      if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-        this.$flag |= FLAG_WAITING_TO_RENDER;
-        // Schedule.insertRenderQueue(this);
-        this.render();
-      }
+      // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+      //   this.$flag |= FLAG_WAITING_TO_RENDER;
+      //   // Schedule.insertRenderQueue(this);
+      //   this.render();
+      // }
+
+      this.render();
       
       return true;
     },
@@ -2755,25 +2762,29 @@
      * Render the dirty parts of this shell to the attached skin 
      */
     render: function render() {
-      // console.log('render', this.$flag, this.toString(), this.$skin)
-      if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0 || !this.$skin) {
-        this.$flag = FLAG_NORMAL;
+      // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0 || !this.$skin) {
+      //   this.$flag = FLAG_NORMAL;
+      //   return false;
+      // }
+
+      if (this.$flag === FLAG_NORMAL) {
         return false;
       }
 
-      var viewEngine = Shell.getViewEngine(this);
-      // if (!viewEngine) { return this; }
+      if (this.$skin) {
+        var viewEngine = Shell.getViewEngine(this);
 
-      viewEngine.renderShell(this.$skin, this);
-      this._children && Parent.clean(this);
-      DirtyMarker.clean(this);
+        viewEngine.renderShell(this.$skin, this);
+        this._children && Parent.clean(this);
+        DirtyMarker.clean(this);
+    
+        this._attrs && DirtyMarker.clean(this._attrs);
+        this._style && DirtyMarker.clean(this._style);
+        this._classes && DirtyMarker.clean(this._classes);
 
-      this._attrs && DirtyMarker.clean(this._attrs);
-      this._style && DirtyMarker.clean(this._style);
-      this._classes && DirtyMarker.clean(this._classes);
-      // this._children && Collection.clean(this._children);
-      if (this._commands) {
-        this._commands = null;
+        if (this._commands) {
+          this._commands = null;
+        }
       }
 
       this.$flag = FLAG_NORMAL;
@@ -2832,31 +2843,42 @@
         JSXEngine.reflow(this.scopes[0], this, contents);
       }
 
-      if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-        if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-          // We should ask its parent to render parent's children, 
-          // since its children are belong to its parent actually.
-          // this._parent.invalidate(2); 
-          var parent = this._parent;
-          if ((parent.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-            // parent.invalidate(FLAG_CHANGED_CHILDREN | FLAG_WAITING_TO_RENDER);
-            parent.$flag |= FLAG_WAITING_TO_RENDER;
-            parent.$flag |= FLAG_CHANGED_CHILDREN;
-            // Schedule.insertRenderQueue(parent);
-            parent.render();
-          }
-        }
-        this.$flag |= FLAG_WAITING_TO_RENDER;
-        // Schedule.insertRenderQueue(this);
-        this.render();
+      if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+        this._parent.invalidate(FLAG_CHANGED_CHILDREN);
       }
+
+      // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+      //   if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+      //     // We should ask its parent to render parent's children, 
+      //     // since its children are belong to its parent actually.
+      //     // this._parent.invalidate(2); 
+      //     // var parent = this._parent;
+      //     // if ((parent.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+      //     //   // parent.invalidate(FLAG_CHANGED_CHILDREN | FLAG_WAITING_TO_RENDER);
+      //     //   parent.$flag |= FLAG_WAITING_TO_RENDER;
+      //     //   parent.$flag |= FLAG_CHANGED_CHILDREN;
+      //     //   // Schedule.insertRenderQueue(parent);
+      //     //   parent.render();
+      //     // }
+      //     var parent = this.getParent(true);
+      //     parent.invalidate(FLAG_CHANGED_CHILDREN);
+      //   }
+      //   this.$flag |= FLAG_WAITING_TO_RENDER;
+      //   // Schedule.insertRenderQueue(this);
+      //   this.render();
+      // }
+
+      this.render();
       
       return true;
     },
 
     render: function render() {
-      if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-        this.$flag = FLAG_NORMAL;
+      // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+      //   this.$flag = FLAG_NORMAL;
+      //   return false;
+      // }
+      if (this.$flag === FLAG_NORMAL) {
         return false;
       }
       this.$flag = FLAG_NORMAL;
@@ -2909,8 +2931,20 @@
         var attributes = constructor.attributes;
         var _template = constructor.__extag_template__;
 
+        {
+          if (typeof attributes === 'object') {
+            var keys = Array.isArray(attributes) ? attributes : Object.keys(attributes);
+            var keysPrevered = ['ns', 'tag', 'type', 'guid', '$flag'];
+            for (var i = 0; i < keysPrevered.length; ++i) {
+              if (keys.indexOf(keysPrevered[i]) >= 0) {
+                logger.warn('`' + keysPrevered[i] + '` is prevered property, cannot be an attribute.');
+              }
+            }
+          }
+          // TODO: check if some final methods are overrided
+        }
+
             // TODO: check attributes
-        
           // 1. initialize attribute descriptors once and only once.
         // if (!prototype.hasOwnProperty('__extag_descriptors__')) {
           Accessor.applyAttributeDescriptors(prototype, attributes, true); //
@@ -3191,26 +3225,32 @@
 
       this.emit('update');
 
-      Element.convert(this);
-
-      if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-        // If this type is 0, we should ask its parent to render parent's children,
-        // since its children are belong to its parent actually.
-        if (this.type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-          // this._parent.invalidate(2); 
-          var parent = this._parent;
-          if ((parent.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-            // parent.invalidate(FLAG_CHANGED_CHILDREN | FLAG_WAITING_TO_RENDER);
-            parent.$flag |= FLAG_WAITING_TO_RENDER;
-            parent.$flag |= FLAG_CHANGED_CHILDREN;
-            // Schedule.insertRenderQueue(parent);
-            parent.render();
-          }
-        }
-        this.$flag |= FLAG_WAITING_TO_RENDER;
-        // Schedule.insertRenderQueue(this);
-        this.render();
+      if (this.type !== 0) {
+        Element.convert(this);
+      } else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+        this._parent.invalidate(FLAG_CHANGED_CHILDREN);
       }
+
+      // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+      //   // If this type is 0, we should ask its parent to render parent's children,
+      //   // since its children are belong to its parent actually.
+      //   if (this.type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+      //     // this._parent.invalidate(2); 
+      //     var parent = this._parent;
+      //     if ((parent.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+      //       // parent.invalidate(FLAG_CHANGED_CHILDREN | FLAG_WAITING_TO_RENDER);
+      //       parent.$flag |= FLAG_WAITING_TO_RENDER;
+      //       parent.$flag |= FLAG_CHANGED_CHILDREN;
+      //       // Schedule.insertRenderQueue(parent);
+      //       parent.render();
+      //     }
+      //   }
+      //   this.$flag |= FLAG_WAITING_TO_RENDER;
+      //   // Schedule.insertRenderQueue(this);
+      //   this.render();
+      // }
+
+      this.render();
       
       return true;
     },
@@ -3219,17 +3259,20 @@
      * Render the dirty parts of this shell to the attached skin 
      */
     render: function render() {
-      if (this.type === 0) {
-        return Fragment.prototype.render.call(this);
-      } else if (Element.prototype.render.call(this)) {
-        if (this.onRendered && this.$skin) {
-          Schedule.pushCallbackQueue((function() {
-            this.onRendered(this.$skin);
-          }).bind(this));
-        }
-        return true;
+      if (this.$flag === FLAG_NORMAL) {
+        return false;
       }
-      return false;
+      if (this.type !== 0) {
+        Element.prototype.render.call(this);
+      } else {
+        Fragment.prototype.render.call(this);
+      }
+      if (this.onRendered) {
+        Schedule.pushCallbackQueue((function() {
+          this.onRendered(this.$skin);
+        }).bind(this));
+      }
+      return true;
     },
 
     getContents: function getContents() {

@@ -150,70 +150,70 @@ function pushCallbackQueue(callback) {
 }
 
 export default {
+  // /**
+  //  * Insert a shell into the updateQueue for updating accoring to its guid.
+  //  * In order to rendering top-down  (parent to child), 
+  //  * parent's guid must be less than its children's. 
+  //  * Indeed, component template engine obeys this rule. 
+  //  * If you do not obey this rule when creating elements and component manually by yourself, 
+  //  * rendering maybe wrong.
+  //  * @param {Shell} shell
+  //  */
+  // insert: function(shell) {
+  //   var i, n = updateQueue.length, id = shell.guid;
+
+  //   if (!updating) {
+  //     i = n - 1;
+  //     while (i >= 0 && id < updateQueue[i].guid) {
+  //       --i;
+  //     }
+  //     ++i;
+  //   } else { // the method `invalidate` maybe called when updating
+  //     i = updateQueueCursor + 1;
+  //     // if (id < updateQueue[updateQueueCursor].guid) {
+  //     //   if (__ENV__ === 'development') {
+  //     //     logger.warn('Do not change properties or emit event to parent component on updating.');
+  //     //   }
+  //     //   throw new Error(shell.toString() + ' should not update after some child component has updated.');
+  //     // }
+  //     while (i < n && id >= updateQueue[i].guid) {
+  //       ++i;
+  //     }
+  //   }
+
+  //   if (i === n) {
+  //     updateQueue.push(shell);
+  //   } else {
+  //     updateQueue.splice(i, 0, shell);
+  //   }
+
+  //   if (!waiting) {
+  //     waiting = true;
+  //     setImmediate(flushQueues);
+  //     // console.log('##########');
+  //   }
+
+  //   // console.log(updateQueue.length, id)
+  // },
+
+  // /**
+  //  * Append a shell into a renderQueue for rendering.
+  //  * @param {Shell} shell
+  //  */
+  // append: function(shell) {
+  //   // var renderQueue = buffers[index];
+  //   renderQueue.push(shell);
+  // },
+
+  // /**
+  //  * Push a function into callbackQueue
+  //  * @param {Function} func 
+  //  */
+  // push: function(func) {
+  //   callbackQueue.push(func);
+  // },
   // flushQueues: flushQueues,
   insertUpdateQueue: insertUpdateQueue,
   // insertRenderQueue: insertRenderQueue,
-  pushCallbackQueue: pushCallbackQueue,
-  /**
-   * Insert a shell into the updateQueue for updating accoring to its guid.
-   * In order to rendering top-down  (parent to child), 
-   * parent's guid must be less than its children's. 
-   * Indeed, component template engine obeys this rule. 
-   * If you do not obey this rule when creating elements and component manually by yourself, 
-   * rendering maybe wrong.
-   * @param {Shell} shell
-   */
-  insert: function(shell) {
-    var i, n = updateQueue.length, id = shell.guid;
-
-    if (!updating) {
-      i = n - 1;
-      while (i >= 0 && id < updateQueue[i].guid) {
-        --i;
-      }
-      ++i;
-    } else { // the method `invalidate` maybe called when updating
-      i = updateQueueCursor + 1;
-      // if (id < updateQueue[updateQueueCursor].guid) {
-      //   if (__ENV__ === 'development') {
-      //     logger.warn('Do not change properties or emit event to parent component on updating.');
-      //   }
-      //   throw new Error(shell.toString() + ' should not update after some child component has updated.');
-      // }
-      while (i < n && id >= updateQueue[i].guid) {
-        ++i;
-      }
-    }
-
-    if (i === n) {
-      updateQueue.push(shell);
-    } else {
-      updateQueue.splice(i, 0, shell);
-    }
-
-    if (!waiting) {
-      waiting = true;
-      setImmediate(flushQueues);
-      // console.log('##########');
-    }
-
-    // console.log(updateQueue.length, id)
-  },
-
-  /**
-   * Append a shell into a renderQueue for rendering.
-   * @param {Shell} shell
-   */
-  append: function(shell) {
-    // var renderQueue = buffers[index];
-    renderQueue.push(shell);
-  },
-
-  /**
-   * Push a function into callbackQueue
-   * @param {Function} func 
-   */
-  push: function(func) {
-    callbackQueue.push(func);
-  }
+  pushCallbackQueue: pushCallbackQueue
 };

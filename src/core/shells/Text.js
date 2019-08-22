@@ -7,9 +7,7 @@ import { defineClass } from 'src/share/functions'
 import {
   FLAG_NORMAL,
   FLAG_CHANGED,
-  FLAG_CHANGED_CHILDREN,
-  FLAG_CHANGED_COMMANDS,
-  FLAG_WAITING_TO_RENDER
+  FLAG_CHANGED_CHILDREN
 } from 'src/share/constants'
 
 export default function Text(data) {
@@ -52,11 +50,12 @@ defineClass({
     if (this.$flag === FLAG_NORMAL) {
       return false;
     }
-    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-      this.$flag |= FLAG_WAITING_TO_RENDER;
-      // Schedule.insertRenderQueue(this);
-      this.render();
-    }
+    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+    //   this.$flag |= FLAG_WAITING_TO_RENDER;
+    //   // Schedule.insertRenderQueue(this);
+    //   this.render();
+    // }
+    this.render();
     return true;
   },
 
@@ -64,15 +63,20 @@ defineClass({
    * Render the dirty parts of this shell to the attached skin 
    */
   render: function render() {
-    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0 || !this.$skin) {
-      this.$flag = FLAG_NORMAL;
+    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0 || !this.$skin) {
+    //   this.$flag = FLAG_NORMAL;
+    //   return false;
+    // }
+    if (this.$flag === FLAG_NORMAL) {
       return false;
     }
 
-    var viewEngine = Shell.getViewEngine(this);
-    // if (!viewEngine) { return this; }
-    viewEngine.renderShell(this.$skin, this);
-    DirtyMarker.clean(this);
+    if (this.$skin) {
+      var viewEngine = Shell.getViewEngine(this);
+      // if (!viewEngine) { return this; }
+      viewEngine.renderShell(this.$skin, this);
+      DirtyMarker.clean(this);
+    }
 
     this.$flag = FLAG_NORMAL;
 

@@ -16,13 +16,13 @@ import Fragment from 'src/core/shells/Fragment'
 
 // import Dep from 'src/core/Dep'
 import config from 'src/share/config'
+import logger from 'src/share/logger'
 import { slice, assign, defineProp, defineClass } from 'src/share/functions'
 import {
   FLAG_NORMAL,
   FLAG_CHANGED,
   FLAG_CHANGED_CHILDREN,
-  FLAG_CHANGED_COMMANDS,
-  FLAG_WAITING_TO_RENDER
+  FLAG_CHANGED_COMMANDS
 } from 'src/share/constants'
 
 var shellProto = Shell.prototype;
@@ -72,8 +72,20 @@ defineClass({
       var attributes = constructor.attributes;
       var _template = constructor.__extag_template__;
 
+      if (__ENV__ === 'development') {
+        if (typeof attributes === 'object') {
+          var keys = Array.isArray(attributes) ? attributes : Object.keys(attributes);
+          var keysPrevered = ['ns', 'tag', 'type', 'guid', '$flag'];
+          for (var i = 0; i < keysPrevered.length; ++i) {
+            if (keys.indexOf(keysPrevered[i]) >= 0) {
+              logger.warn('`' + keysPrevered[i] + '` is prevered property, cannot be an attribute.');
+            }
+          }
+        }
+        // TODO: check if some final methods are overrided
+      }
+
           // TODO: check attributes
-      
         // 1. initialize attribute descriptors once and only once.
       // if (!prototype.hasOwnProperty('__extag_descriptors__')) {
         Accessor.applyAttributeDescriptors(prototype, attributes, true); //
@@ -354,26 +366,32 @@ defineClass({
 
     this.emit('update');
 
-    Element.convert(this);
-
-    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-      // If this type is 0, we should ask its parent to render parent's children,
-      // since its children are belong to its parent actually.
-      if (this.type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-        // this._parent.invalidate(2); 
-        var parent = this._parent;
-        if ((parent.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-          // parent.invalidate(FLAG_CHANGED_CHILDREN | FLAG_WAITING_TO_RENDER);
-          parent.$flag |= FLAG_WAITING_TO_RENDER;
-          parent.$flag |= FLAG_CHANGED_CHILDREN;
-          // Schedule.insertRenderQueue(parent);
-          parent.render();
-        }
-      }
-      this.$flag |= FLAG_WAITING_TO_RENDER;
-      // Schedule.insertRenderQueue(this);
-      this.render();
+    if (this.type !== 0) {
+      Element.convert(this);
+    } else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+      this._parent.invalidate(FLAG_CHANGED_CHILDREN);
     }
+
+    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+    //   // If this type is 0, we should ask its parent to render parent's children,
+    //   // since its children are belong to its parent actually.
+    //   if (this.type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+    //     // this._parent.invalidate(2); 
+    //     var parent = this._parent;
+    //     if ((parent.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+    //       // parent.invalidate(FLAG_CHANGED_CHILDREN | FLAG_WAITING_TO_RENDER);
+    //       parent.$flag |= FLAG_WAITING_TO_RENDER;
+    //       parent.$flag |= FLAG_CHANGED_CHILDREN;
+    //       // Schedule.insertRenderQueue(parent);
+    //       parent.render();
+    //     }
+    //   }
+    //   this.$flag |= FLAG_WAITING_TO_RENDER;
+    //   // Schedule.insertRenderQueue(this);
+    //   this.render();
+    // }
+
+    this.render();
     
     return true;
   },
@@ -382,17 +400,20 @@ defineClass({
    * Render the dirty parts of this shell to the attached skin 
    */
   render: function render() {
-    if (this.type === 0) {
-      return Fragment.prototype.render.call(this);
-    } else if (Element.prototype.render.call(this)) {
-      if (this.onRendered && this.$skin) {
-        Schedule.pushCallbackQueue((function() {
-          this.onRendered(this.$skin);
-        }).bind(this));
-      }
-      return true;
+    if (this.$flag === FLAG_NORMAL) {
+      return false;
     }
-    return false;
+    if (this.type !== 0) {
+      Element.prototype.render.call(this);
+    } else {
+      Fragment.prototype.render.call(this);
+    }
+    if (this.onRendered) {
+      Schedule.pushCallbackQueue((function() {
+        this.onRendered(this.$skin);
+      }).bind(this));
+    }
+    return true;
   },
 
   getContents: function getContents() {

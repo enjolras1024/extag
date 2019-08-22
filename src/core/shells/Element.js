@@ -12,8 +12,7 @@ import {
   FLAG_NORMAL,
   FLAG_CHANGED,
   FLAG_CHANGED_CHILDREN,
-  FLAG_CHANGED_COMMANDS,
-  FLAG_WAITING_TO_RENDER
+  FLAG_CHANGED_COMMANDS
 } from 'src/share/constants'
 import config from 'src/share/config'
 // import HTMXEngine from '../template/HTMXEngine';
@@ -125,14 +124,14 @@ defineClass({
         DirtyMarker.clean(element, 'style');
         var style = _props.style;
         if (typeof style === 'object') {
-          element.style = style;
+          resetCache(element.style, style);
         } else if (typeof style === 'string') {
           // element.attrs.set('style', style);
           var viewEngine = Shell.getViewEngine(element);
           if (viewEngine) {
             style = toStyle(style, viewEngine);
           }
-          element.style = style;
+          resetCache(element.style, style);
         }
       }
       // if (element.hasDirty('attrs')) {
@@ -149,7 +148,7 @@ defineClass({
         if (typeof classes !== 'object') {
           classes = toClasses(classes);
         }
-        element.classes = classes;
+        resetCache(element.classes, classes);
       }
     },
 
@@ -169,10 +168,10 @@ defineClass({
               });
             }
             return this._attrs;
-          },
-          set: function(value) {
-            resetCache(this.attrs, value);
-          }
+          }//,
+          // set: function(value) {
+          //   resetCache(this.attrs, value);
+          // }
         });
         defineProp(prototype, 'style', {
           get: function() {
@@ -183,10 +182,10 @@ defineClass({
               });
             }
             return this._style;
-          },
-          set: function(value) {
-            resetCache(this.style, value);
-          }
+          }//,
+          // set: function(value) {
+          //   resetCache(this.style, value);
+          // }
         });
         defineProp(prototype, 'classes', {
           get: function() {
@@ -197,10 +196,10 @@ defineClass({
               });
             }
             return this._classes;
-          },
-          set: function(value) {
-            resetCache(this.classes, value);
-          }
+          }//,
+          // set: function(value) {
+          //   resetCache(this.classes, value);
+          // }
         });
       }
     }    
@@ -216,11 +215,13 @@ defineClass({
 
     Element.convert(this);
 
-    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-      this.$flag |= FLAG_WAITING_TO_RENDER;
-      // Schedule.insertRenderQueue(this);
-      this.render();
-    }
+    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+    //   this.$flag |= FLAG_WAITING_TO_RENDER;
+    //   // Schedule.insertRenderQueue(this);
+    //   this.render();
+    // }
+
+    this.render();
     
     return true;
   },
@@ -229,25 +230,29 @@ defineClass({
    * Render the dirty parts of this shell to the attached skin 
    */
   render: function render() {
-    // console.log('render', this.$flag, this.toString(), this.$skin)
-    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0 || !this.$skin) {
-      this.$flag = FLAG_NORMAL;
+    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0 || !this.$skin) {
+    //   this.$flag = FLAG_NORMAL;
+    //   return false;
+    // }
+
+    if (this.$flag === FLAG_NORMAL) {
       return false;
     }
 
-    var viewEngine = Shell.getViewEngine(this);
-    // if (!viewEngine) { return this; }
+    if (this.$skin) {
+      var viewEngine = Shell.getViewEngine(this);
 
-    viewEngine.renderShell(this.$skin, this);
-    this._children && Parent.clean(this);
-    DirtyMarker.clean(this);
+      viewEngine.renderShell(this.$skin, this);
+      this._children && Parent.clean(this);
+      DirtyMarker.clean(this);
+  
+      this._attrs && DirtyMarker.clean(this._attrs);
+      this._style && DirtyMarker.clean(this._style);
+      this._classes && DirtyMarker.clean(this._classes);
 
-    this._attrs && DirtyMarker.clean(this._attrs);
-    this._style && DirtyMarker.clean(this._style);
-    this._classes && DirtyMarker.clean(this._classes);
-    // this._children && Collection.clean(this._children);
-    if (this._commands) {
-      this._commands = null;
+      if (this._commands) {
+        this._commands = null;
+      }
     }
 
     this.$flag = FLAG_NORMAL;
