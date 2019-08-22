@@ -106,7 +106,7 @@ defineClass({
    * @param {HTMLElement} $skin
    */
   attach: function attach($skin) {
-    if (this.type === 0) {
+    if (this.$type === 0) {
       return false;
     }
     
@@ -181,7 +181,7 @@ defineClass({
    */
   toString: function toString() {
     var constructor = this.constructor;
-    return (constructor.fullName || constructor.name) + '<' + this.tag + '>(' + this.guid + ')';
+    return (constructor.fullName || constructor.name) + '<' + this.tag + '>(' + this.$guid + ')';
   },
 
   /**
@@ -221,7 +221,7 @@ defineClass({
    * order the skin to do something when rendering, so all commands are async in order.
    * @param {string} method - like 'focus', 'blur'... 
    */
-  order: function order(method/*, ...rest*/) {
+  cmd: function cmd(method/*, ...rest*/) {
     if (!this._commands) {
       this._commands = [];
     }
@@ -253,11 +253,11 @@ defineClass({
       //   value: '', writable: true, enumerable: false, configurable: false
       // });
 
-      defineProp(shell, 'guid', {
+      defineProp(shell, '$guid', {
         value: guid++, writable: false, enumerable: false, configurable: false
       }); // should be less than Number.MAX_SAFE_INTEGER
 
-      defineProp(shell, 'type', {
+      defineProp(shell, '$type', {
         value: type, writable: false, enumerable: false, configurable: false
       });
 

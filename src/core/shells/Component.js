@@ -75,7 +75,7 @@ defineClass({
       if (__ENV__ === 'development') {
         if (typeof attributes === 'object') {
           var keys = Array.isArray(attributes) ? attributes : Object.keys(attributes);
-          var keysPrevered = ['ns', 'tag', 'type', 'guid', '$flag'];
+          var keysPrevered = ['ns', 'tag', '$type', '$guid', '$flag'];
           for (var i = 0; i < keysPrevered.length; ++i) {
             if (keys.indexOf(keysPrevered[i]) >= 0) {
               logger.warn('`' + keysPrevered[i] + '` is prevered property, cannot be an attribute.');
@@ -366,7 +366,7 @@ defineClass({
 
     this.emit('update');
 
-    if (this.type !== 0) {
+    if (this.$type !== 0) {
       Element.convert(this);
     } else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
       this._parent.invalidate(FLAG_CHANGED_CHILDREN);
@@ -403,7 +403,7 @@ defineClass({
     if (this.$flag === FLAG_NORMAL) {
       return false;
     }
-    if (this.type !== 0) {
+    if (this.$type !== 0) {
       Element.prototype.render.call(this);
     } else {
       Fragment.prototype.render.call(this);

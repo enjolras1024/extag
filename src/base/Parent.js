@@ -15,7 +15,7 @@ export default function Parent() {
 
 function findParent(shell) {
   var temp = shell._parent;
-  while (temp && temp.type === 0) {
+  while (temp && temp.$type === 0) {
     temp = temp._parent;
   }
   return temp;
@@ -27,7 +27,7 @@ function flattenChildren(shell, array) {
   array = array || [];
   for (i = 0; i < n; ++i) {
     child = children[i];
-    if (child.type === 0) {
+    if (child.$type === 0) {
       flattenChildren(child, array);
     } else {
       array.push(child);

@@ -90,6 +90,6 @@ defineClass({
   toString: function() {
     var data = this.get('data');
     data = data == null ? '' : data.toString();
-    return '"' + (data.length < 24 ? data : (data.slice(0, 21) + '...'))  + '"(' + this.guid +')';
+    return '"' + (data.length < 24 ? data : (data.slice(0, 21) + '...'))  + '"(' + this.$guid +')';
   }
 });

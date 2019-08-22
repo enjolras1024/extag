@@ -510,7 +510,7 @@
 
   function findParent(shell) {
     var temp = shell._parent;
-    while (temp && temp.type === 0) {
+    while (temp && temp.$type === 0) {
       temp = temp._parent;
     }
     return temp;
@@ -522,7 +522,7 @@
     array = array || [];
     for (i = 0; i < n; ++i) {
       child = children[i];
-      if (child.type === 0) {
+      if (child.$type === 0) {
         flattenChildren(child, array);
       } else {
         array.push(child);
@@ -1799,23 +1799,23 @@
    * @param {Shell} shell
    */
   function insertUpdateQueue(shell) {
-    var i, n = updateQueue.length, id = shell.guid;
+    var i, n = updateQueue.length, id = shell.$guid;
 
     if (!updating) {
       i = n - 1;
-      while (i >= 0 && id < updateQueue[i].guid) {
+      while (i >= 0 && id < updateQueue[i].$guid) {
         --i;
       }
       ++i;
     } else { // the method `invalidate` maybe called when updating
       i = updateQueueCursor + 1;
-      // if (id < updateQueue[updateQueueCursor].guid) {
+      // if (id < updateQueue[updateQueueCursor].$guid) {
       //   if ("development" === 'development') {
       //     logger.warn('Do not change properties or emit event to parent component on updating.');
       //   }
       //   throw new Error(shell.toString() + ' should not update after some child component has updated.');
       // }
-      while (i < n && id >= updateQueue[i].guid) {
+      while (i < n && id >= updateQueue[i].$guid) {
         ++i;
       }
     }
@@ -1838,10 +1838,10 @@
    * @param {Shell} shell 
    */
   // function insertRenderQueue(shell) {
-  //   var i, n = renderQueue.length, id = shell.guid;
+  //   var i, n = renderQueue.length, id = shell.$guid;
 
   //   i = n - 1;
-  //   while (i >= 0 && id < renderQueue[i].guid) {
+  //   while (i >= 0 && id < renderQueue[i].$guid) {
   //     --i;
   //   }
   //   ++i;
@@ -1872,23 +1872,23 @@
     //  * @param {Shell} shell
     //  */
     // insert: function(shell) {
-    //   var i, n = updateQueue.length, id = shell.guid;
+    //   var i, n = updateQueue.length, id = shell.$guid;
 
     //   if (!updating) {
     //     i = n - 1;
-    //     while (i >= 0 && id < updateQueue[i].guid) {
+    //     while (i >= 0 && id < updateQueue[i].$guid) {
     //       --i;
     //     }
     //     ++i;
     //   } else { // the method `invalidate` maybe called when updating
     //     i = updateQueueCursor + 1;
-    //     // if (id < updateQueue[updateQueueCursor].guid) {
+    //     // if (id < updateQueue[updateQueueCursor].$guid) {
     //     //   if ("development" === 'development') {
     //     //     logger.warn('Do not change properties or emit event to parent component on updating.');
     //     //   }
     //     //   throw new Error(shell.toString() + ' should not update after some child component has updated.');
     //     // }
-    //     while (i < n && id >= updateQueue[i].guid) {
+    //     while (i < n && id >= updateQueue[i].$guid) {
     //       ++i;
     //     }
     //   }
@@ -2183,7 +2183,7 @@
      * @param {HTMLElement} $skin
      */
     attach: function attach($skin) {
-      if (this.type === 0) {
+      if (this.$type === 0) {
         return false;
       }
       
@@ -2258,7 +2258,7 @@
      */
     toString: function toString() {
       var constructor = this.constructor;
-      return (constructor.fullName || constructor.name) + '<' + this.tag + '>(' + this.guid + ')';
+      return (constructor.fullName || constructor.name) + '<' + this.tag + '>(' + this.$guid + ')';
     },
 
     /**
@@ -2330,11 +2330,11 @@
         //   value: '', writable: true, enumerable: false, configurable: false
         // });
 
-        defineProp(shell, 'guid', {
+        defineProp(shell, '$guid', {
           value: guid++, writable: false, enumerable: false, configurable: false
         }); // should be less than Number.MAX_SAFE_INTEGER
 
-        defineProp(shell, 'type', {
+        defineProp(shell, '$type', {
           value: type, writable: false, enumerable: false, configurable: false
         });
 
@@ -2542,7 +2542,7 @@
     toString: function() {
       var data = this.get('data');
       data = data == null ? '' : data.toString();
-      return '"' + (data.length < 24 ? data : (data.slice(0, 21) + '...'))  + '"(' + this.guid +')';
+      return '"' + (data.length < 24 ? data : (data.slice(0, 21) + '...'))  + '"(' + this.$guid +')';
     }
   });
 
@@ -2934,7 +2934,7 @@
         {
           if (typeof attributes === 'object') {
             var keys = Array.isArray(attributes) ? attributes : Object.keys(attributes);
-            var keysPrevered = ['ns', 'tag', 'type', 'guid', '$flag'];
+            var keysPrevered = ['ns', 'tag', '$type', '$guid', '$flag'];
             for (var i = 0; i < keysPrevered.length; ++i) {
               if (keys.indexOf(keysPrevered[i]) >= 0) {
                 logger.warn('`' + keysPrevered[i] + '` is prevered property, cannot be an attribute.');
@@ -3225,7 +3225,7 @@
 
       this.emit('update');
 
-      if (this.type !== 0) {
+      if (this.$type !== 0) {
         Element.convert(this);
       } else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
         this._parent.invalidate(FLAG_CHANGED_CHILDREN);
@@ -3262,7 +3262,7 @@
       if (this.$flag === FLAG_NORMAL) {
         return false;
       }
-      if (this.type !== 0) {
+      if (this.$type !== 0) {
         Element.prototype.render.call(this);
       } else {
         Fragment.prototype.render.call(this);

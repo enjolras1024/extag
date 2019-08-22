@@ -87,23 +87,23 @@ function flushQueues() {
  * @param {Shell} shell
  */
 function insertUpdateQueue(shell) {
-  var i, n = updateQueue.length, id = shell.guid;
+  var i, n = updateQueue.length, id = shell.$guid;
 
   if (!updating) {
     i = n - 1;
-    while (i >= 0 && id < updateQueue[i].guid) {
+    while (i >= 0 && id < updateQueue[i].$guid) {
       --i;
     }
     ++i;
   } else { // the method `invalidate` maybe called when updating
     i = updateQueueCursor + 1;
-    // if (id < updateQueue[updateQueueCursor].guid) {
+    // if (id < updateQueue[updateQueueCursor].$guid) {
     //   if (__ENV__ === 'development') {
     //     logger.warn('Do not change properties or emit event to parent component on updating.');
     //   }
     //   throw new Error(shell.toString() + ' should not update after some child component has updated.');
     // }
-    while (i < n && id >= updateQueue[i].guid) {
+    while (i < n && id >= updateQueue[i].$guid) {
       ++i;
     }
   }
@@ -126,10 +126,10 @@ function insertUpdateQueue(shell) {
  * @param {Shell} shell 
  */
 // function insertRenderQueue(shell) {
-//   var i, n = renderQueue.length, id = shell.guid;
+//   var i, n = renderQueue.length, id = shell.$guid;
 
 //   i = n - 1;
-//   while (i >= 0 && id < renderQueue[i].guid) {
+//   while (i >= 0 && id < renderQueue[i].$guid) {
 //     --i;
 //   }
 //   ++i;
@@ -160,23 +160,23 @@ export default {
   //  * @param {Shell} shell
   //  */
   // insert: function(shell) {
-  //   var i, n = updateQueue.length, id = shell.guid;
+  //   var i, n = updateQueue.length, id = shell.$guid;
 
   //   if (!updating) {
   //     i = n - 1;
-  //     while (i >= 0 && id < updateQueue[i].guid) {
+  //     while (i >= 0 && id < updateQueue[i].$guid) {
   //       --i;
   //     }
   //     ++i;
   //   } else { // the method `invalidate` maybe called when updating
   //     i = updateQueueCursor + 1;
-  //     // if (id < updateQueue[updateQueueCursor].guid) {
+  //     // if (id < updateQueue[updateQueueCursor].$guid) {
   //     //   if (__ENV__ === 'development') {
   //     //     logger.warn('Do not change properties or emit event to parent component on updating.');
   //     //   }
   //     //   throw new Error(shell.toString() + ' should not update after some child component has updated.');
   //     // }
-  //     while (i < n && id >= updateQueue[i].guid) {
+  //     while (i < n && id >= updateQueue[i].$guid) {
   //       ++i;
   //     }
   //   }

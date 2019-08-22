@@ -561,11 +561,11 @@
     array = array || [];
     for (i = 0; i < n; ++i) {
       child = children[i];
-      if (child.type === 0) {
+      if (child.$type === 0) {
         if (child._children) {
           flatten(child._children, array);
         }
-      } /*else if (child.type === 13) {
+      } /*else if (child.$type === 13) {
         if (child._content) {
           flatten([child._content], array);
         }
@@ -802,7 +802,7 @@
         }
       }
 
-      if (shell.type === 1 && shell.tag !== ExtagDom.getTagName($skin)) {
+      if (shell.$type === 1 && shell.tag !== ExtagDom.getTagName($skin)) {
         throw new Error('a shell can not attach a $skin that has a different tag');
       }
 
@@ -923,7 +923,7 @@
             classes = shell._classes,
             children = shell._children;
 
-        if (shell.type === 1) {
+        if (shell.$type === 1) {
           if (attrs && attrs._dirty) {
             ExtagDom.renderAttrs($skin, attrs._props, attrs._dirty);
           }
@@ -1141,7 +1141,7 @@
      */
     renderChildren: function renderChildren($skin, shell, children) {
       // console.log('renderChildren', shell.toString(), children.length, shell.children.length)
-      if (shell.type === 0) { return; }
+      if (shell.$type === 0) { return; }
 
       var i, n, m, child, $existed, $newChild, $oldChild, $removed, $children = $skin.childNodes;
 
@@ -1153,7 +1153,7 @@
           $newChild = child.$skin;
           $oldChild = $children[i];
           if (!$newChild) {
-            var ns = child.ns, tag = child.tag, type = child.type, _child;
+            var ns = child.ns, tag = child.tag, type = child.$type, _child;
             if (!$oldChild || tag !== ExtagDom.getTagName($oldChild) || ns !== ExtagDom.getNameSpace($oldChild)
               || ((_child = $oldChild ? ExtagDom.getShell($oldChild) : null) && _child !== child)) {
               $newChild = type === 1 ? ExtagDom.createElement(ns, tag, child._props && child._props.type) : ExtagDom.createText('');
