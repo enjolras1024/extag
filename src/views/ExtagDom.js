@@ -565,6 +565,28 @@ function flatten(children, array) {
   return array;
 }
 
+function mergeProps(outerProps, innerProps) {
+  if (innerProps) {
+    var key, props = {};
+    assign(props, outerProps);
+    for (key in innerProps) {
+      if (props[key] == null) {
+        props[key] = innerProps[key];
+      }
+    }
+    return props;
+    // assign({}, innerProps, outerProps);
+  }
+  return outerProps;
+}
+
+function mergeDirty(outerDirty, innerDirty) {
+  if (innerDirty) {
+    return assign({}, innerDirty, outerDirty);
+  }
+  return outerDirty;
+}
+
 var Array$slice = Array.prototype.slice;
 
 function ExtagDom() {
@@ -899,30 +921,80 @@ assign(ExtagDom, {
       throw new Error('the shell is not attached to this $skin');
     }
 
-    var dirty = shell._dirty, 
-        props = shell._props;
+    var props, dirty;
 
-    if (dirty) {
+    props = shell._props;
+    dirty = shell._dirty;
+    if (shell.__props) {
+      props = mergeProps(props, shell.__props._props);
+      dirty = mergeDirty(dirty, shell.__props._dirty);
+    }
+    if (props && dirty) {
       ExtagDom.renderProps($skin, props, dirty);
     }
 
     if (shell.tag) {
-      var attrs = shell._attrs,
-          style = shell._style,
-          classes = shell._classes,
-          children = shell._children;
+      var shadowMode = props.shadowMode;
+
+      var attrs = shell._attrs;
+      var style = shell._style;
+      var classes = shell._classes;
+      var children = shell._children;
 
       if (shell.$type === 1) {
-        if (attrs && attrs._dirty) {
-          ExtagDom.renderAttrs($skin, attrs._props, attrs._dirty);
+        // if (attrs && attrs._dirty) {
+        //   ExtagDom.renderAttrs($skin, attrs._props, attrs._dirty);
+        // }
+        // if (style && style._dirty) {
+        //   ExtagDom.renderStyle($skin, style._props, style._dirty);
+        // }
+        // if (classes && classes._dirty) {
+        //   ExtagDom.renderClasses($skin, classes._props, classes._dirty);
+        // }
+
+        if (attrs) {
+          props = attrs._props;
+          dirty = attrs._dirty;
+        } else {
+          props = null;
+          dirty = null;
+        }
+        if (shell.__attrs) {
+          props = mergeProps(props, shell.__attrs && shell.__attrs._props);
+          dirty = mergeDirty(dirty, shell.__attrs && shell.__attrs._dirty);
+        }
+        if (props && dirty) {
+          ExtagDom.renderAttrs($skin, props, dirty);
+        }
+        
+        if (style) {
+          props = style._props;
+          dirty = style._dirty;
+        } else {
+          props = null;
+          dirty = null;
+        }
+        if (shell.__style) {
+          props = mergeProps(props, shell.__style._props);
+          dirty = mergeDirty(dirty, shell.__style._dirty);
+        }
+        if (props && dirty) {
+          ExtagDom.renderStyle($skin, props, dirty);
         }
 
-        if (style && style._dirty) {
-          ExtagDom.renderStyle($skin, style._props, style._dirty);
+        if (classes) {
+          props = classes._props;
+          dirty = classes._dirty;
+        } else {
+          props = null;
+          dirty = null;
         }
-
-        if (classes && classes._dirty) {
-          ExtagDom.renderClasses($skin, classes._props, classes._dirty);
+        if (shell.__classes) {
+          props = mergeProps(props, shell.__classes._props);
+          dirty = mergeDirty(dirty, shell.__classes._dirty);
+        }
+        if (props && dirty) {
+          ExtagDom.renderClasses($skin, props, dirty);
         }
       }          
       
@@ -937,17 +1009,16 @@ assign(ExtagDom, {
         //     }
         //   }
         // }
-        var $shadow;
+        
         var $removed;
 
-        if (props.shadowMode && $skin.attachShadow) {
-          $shadow = $skin.shadowRoot;
-          if ($shadow == null) {
-            $shadow = $skin.attachShadow({mode: props.shadowMode});
-          }
-          $removed = ExtagDom.renderChildren($shadow, shell, flatten(children));
-        } else {
+        if (!shadowMode || !$skin.attachShadow) {
           $removed = ExtagDom.renderChildren($skin, shell, flatten(children));
+        } else {
+          if ($skin.shadowRoot == null) {
+            $skin.attachShadow({mode: shadowMode});
+          }
+          $removed = ExtagDom.renderChildren($skin.shadowRoot, shell, flatten(children));
         }
 
         if ($removed && $removed.length) {

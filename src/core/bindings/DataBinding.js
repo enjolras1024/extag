@@ -24,12 +24,12 @@ defineClass({
   statics: {
     MODES: MODES,
 
-    create: function(pattern) {
-      return new DataBinding(pattern);
-    },
+    // create: function(pattern) {
+    //   return new DataBinding(pattern);
+    // },
 
     compile: function(pattern, property, target, scopes) {
-      return DataBinding.create(pattern).link(property, target, scopes);
+      return (new DataBinding(pattern)).link(property, target, scopes);
     },
 
     destroy: function(binding) {

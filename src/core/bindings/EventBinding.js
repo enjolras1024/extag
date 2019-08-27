@@ -11,12 +11,12 @@ defineClass({
   constructor: EventBinding,
 
   statics: {
-    create: function(pattern) {
-      return new EventBinding(pattern);
-    },
+    // create: function(pattern) {
+    //   return new EventBinding(pattern);
+    // },
 
     compile: function(pattern, type, target, scopes) {
-      EventBinding.create(pattern).link(type, target, scopes);
+      (new EventBinding(pattern)).link(type, target, scopes);
     }
   },
 

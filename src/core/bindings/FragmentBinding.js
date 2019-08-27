@@ -1,10 +1,10 @@
 // src/core/bindings/FragmentBinding.js
 
-import Binding from 'src/core/bindings/Binding'
-import DataBinding from 'src/core/bindings/DataBinding'
 import Cache from 'src/core/models/Cache'
-import Expression from 'src/base/Expression'
 import DirtyMarker from 'src/base/DirtyMarker'
+import Binding from 'src/core/bindings/Binding'
+import Expression from 'src/core/template/Expression'
+import DataBinding from 'src/core/bindings/DataBinding'
 import { defineClass, slice } from 'src/share/functions'
 
 // var Array$join = Array.prototype.join;
@@ -20,12 +20,12 @@ defineClass({
   constructor: FragmentBinding,
 
   statics: {
-    create: function(pattern) {
-      return new FragmentBinding(pattern);
-    },
+    // create: function(pattern) {
+    //   return new FragmentBinding(pattern);
+    // },
 
     compile: function(pattern, property, target, scopes) {
-      FragmentBinding.create(pattern).link(property, target, scopes);
+      (new FragmentBinding(pattern)).link(property, target, scopes);
     },
 
     destroy: function(binding) {

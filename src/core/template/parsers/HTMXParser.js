@@ -11,7 +11,7 @@ import Path from 'src/base/Path'
 import View from 'src/core/shells/View'
 import Slot from 'src/core/shells/Slot'
 import Block from 'src/core/shells/Block'
-import Expression from 'src/base/Expression'
+import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
 // import TextBinding from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
@@ -119,7 +119,7 @@ function parseDirective(name, expr, node, prototype, identifiers) {
     result = DataBindingParser.parse(matches[2], prototype, identifiers);
 
     if (result) {
-      getGroup(node, 'ctrls').xFor = Expression.create(DataBinding, result);
+      getGroup(node, 'ctrls').xFor = new Expression(DataBinding, result);
     } else {
       logger.warn('Illegal x:for="' + expr + '"');
       return;
@@ -143,7 +143,7 @@ function parseDirective(name, expr, node, prototype, identifiers) {
     result = DataBindingParser.parse(matches[6], prototype, identifiers);
 
     if (result) {
-      getGroup(node, 'ctrls').xFor = Expression.create(DataBinding, result);
+      getGroup(node, 'ctrls').xFor = new Expression(DataBinding, result);
     } else {
       logger.warn('Illegal x:for="' + expr + '"');
       return;
@@ -158,7 +158,7 @@ function parseDirective(name, expr, node, prototype, identifiers) {
   } else if (name === 'x:if') {
     result = DataBindingParser.parse(expr, prototype, identifiers);
     if (result) {
-      getGroup(node, 'ctrls').xIf = Expression.create(DataBinding, result);
+      getGroup(node, 'ctrls').xIf = new Expression(DataBinding, result);
     }
   } else if (name === 'x:ns') {
     node.ns = expr;
@@ -173,7 +173,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
     group = getGroup(node, 'actions');
     key = viewEngine.toCamelCase(attrName.slice(0, -1));
     result = EventBindingParser.parse(attrValue, prototype, identifiers);
-    group[key] = Expression.create(EventBinding, result);
+    group[key] = new Expression(EventBinding, result);
   } else {
     group = attrName.indexOf(':') < 0 ? getGroup(node, 'props') : getGroup(node, 'attrs');
     switch (lastChar) {
@@ -184,7 +184,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
           group[key] = result;
         } else {
           result = DataBindingParser.parse(attrValue, prototype, identifiers);
-          group[key] = Expression.create(DataBinding, result);
+          group[key] = new Expression(DataBinding, result);
         }
         break;
       case '#': 
@@ -192,7 +192,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         result = FragmentBindingParser.parse(attrValue, prototype, identifiers);
         if (result) {
           result.asStr = true;
-          group[key] = Expression.create(FragmentBinding, result);
+          group[key] = new Expression(FragmentBinding, result);
         } else {
           group[key] = attrValue;
         }
@@ -200,7 +200,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
       // case '+':
       //   name = viewEngine.toCamelCase(attrName.slice(0, -1));
       //   result = EventBindingParser.parse(attrValue, prototype, identifiers);
-      //   getGroup(node, 'actions')[name] = Expression.create(EventBinding, result);
+      //   getGroup(node, 'actions')[name] = new Expression(EventBinding, result);
       //   break;
       default:
         key = viewEngine.toCamelCase(attrName);
@@ -293,7 +293,7 @@ function parseTextNode(text, parent, prototype, identifiers) {
   if (FragmentBindingParser.like(text)) {
     var result = FragmentBindingParser.parse(text, prototype, identifiers);
     if (result) {
-      children.push(Expression.create(FragmentBinding, result));
+      children.push(new Expression(FragmentBinding, result));
     } else {
       children.push(text);
     }

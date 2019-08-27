@@ -4,7 +4,6 @@ import Parent from 'src/base/Parent'
 import Schedule from 'src/core/Schedule'
 import Shell from 'src/core/shells/Shell'
 import Cache from 'src/core/models/Cache'
-import Expression from 'src/base/Expression'
 import DirtyMarker from 'src/base/DirtyMarker'
 import { assign, defineProp, defineClass, toClasses } from 'src/share/functions'
 import {
@@ -57,13 +56,17 @@ function toStyle(cssText, viewEngine) {
 
 /**
  * 
- * @param {string} ns       - namespace, e.g. 'svg' for <rect>, '' for <div>
- * @param {string} tag      - tag name
+ * @param {string} tag      - tag name, with a namespace as prefix, e.g. 'svg:rect'
  * @param {Object} props 
  * @param {Component} scope 
  * @param {Array} locals 
  */
-export default function Element(ns, tag, props, scopes, template) {
+export default function Element(tag, props, scopes, template) {
+  var idx = tag.indexOf(':'), ns = '';
+  if (idx > 0) {
+    ns = tag.slice(0, idx);
+    tag = tag.slice(idx + 1);
+  }
   Element.initialize(this, ns, tag, props, scopes, template);
 }
 
@@ -82,7 +85,6 @@ defineClass({
 
       Element.defineMembers(element);
 
-      
       if (scopes && template) {
         var HTMXEngine = config.HTMXEngine;
         if (props && template.props) {
@@ -105,12 +107,7 @@ defineClass({
      * @param {Array} locals    - Local varibles in the scope, including scope self and iterator varible when using 'x-for' in component template
      */
     create: function create(tag, props, scope, locals) {
-      var idx = tag.indexOf(':');
-      if (idx > 0) {
-        var ns = tag.slice(0, idx);
-        tag = tag.slice(idx + 1);
-      }
-      return new Element(ns || '', tag, props, scope, locals);
+      return new Element(tag, props, scope, locals);
     },
 
     /**

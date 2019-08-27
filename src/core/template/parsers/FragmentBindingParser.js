@@ -1,6 +1,6 @@
 // src/core/template/parsers/FragmentBindingParser.js
 
-import Expression from 'src/base/Expression'
+import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
 import { BINDING_OPERATORS, ONE_WAY_BINDING_BRACKETS } from 'src/share/constants'
@@ -30,7 +30,7 @@ export default {
             }
             template.push(
               // DataBindingParser.parse(expression.slice(stop+2, i), prototype, identifiers)
-              Expression.create(DataBinding, DataBindingParser.parse(expression.slice(stop+2, i), prototype, identifiers))
+              new Expression(DataBinding, DataBindingParser.parse(expression.slice(stop+2, i), prototype, identifiers))
             );
             start = stop = i + 1;
             b2 = false;

@@ -6,7 +6,7 @@ import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
 import FragmentBinding from 'src/core/bindings/FragmentBinding'
 import DataBinding from 'src/core/bindings/DataBinding'
 // import TextBinding from 'src/core/bindings/TextBinding'
-import Expression from 'src/base/Expression'
+import Expression from 'src/core/template/Expression'
 
 export default {
   /**
@@ -54,7 +54,7 @@ export default {
             group[name.slice(0, m-1)] = result;
           } else {
             result = DataBindingParser.parse(expr, prototype, identifiers);
-            group[name.slice(0, m-1)] = Expression.create(DataBinding, result);
+            group[name.slice(0, m-1)] = new Expression(DataBinding, result);
           }
           break;
         case '#':
@@ -62,7 +62,7 @@ export default {
           result = FragmentBindingParser.parse(expr, prototype, identifiers);
           if (result) {
             result.asStr = true;
-            group[name.slice(0, m-1)] = Expression.create(FragmentBinding, result);
+            group[name.slice(0, m-1)] = new Expression(FragmentBinding, result);
           } else {
             group[name.slice(0, m-1)] = expr;
           }

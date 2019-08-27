@@ -1,11 +1,11 @@
 // src/core/shells/Block.js
 
 // import RES from 'src/base/RES'
-import Expression from 'src/base/Expression'
 // import List from 'src/core/models/List'
 import Shell from 'src/core/shells/Shell'
 import Fragment from 'src/core/shells/Fragment'
 import Component from 'src/core/shells/Component'
+import Expression from 'src/core/template/Expression'
 // import HTMXEngine from 'src/core/template/HTMXEngine'
 import { assign, defineClass } from 'src/share/functions'
 import config from 'src/share/config'

@@ -3,7 +3,7 @@
 import { defineClass } from 'src/share/functions'
 
 /**
- * Expression parsed from `checked@="selected"` and so on, in the component pattern.
+ * Expression parsed from 'checked@="selected"' and so on, in the component pattern.
  * 
  * @class
  * @constructor
@@ -23,9 +23,9 @@ defineClass({
      *  @param {Object} binding
       * @param {Object} pattern
       */
-    create: function(binding, pattern) {
-      return new Expression(binding, pattern);
-    },
+    // create: function(binding, pattern) {
+    //   return new Expression(binding, pattern);
+    // },
     // /**
     //  * Compile all expressions related to the target in the scope.
     //  * @param {Object} expressions  - all expressions

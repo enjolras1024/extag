@@ -176,25 +176,25 @@ function matchesChild(oldChild, newChild) {
  * @param {Component} scope   - scope component
  */
 function createChild(node, target, scope) {
-  var child, ns;
+  var child, ctor, ns;
   if (node == null) {
-    child = Text.create('');
+    child = new Text('');
     return child;
   } else if (node.type) {
-    child = Component.create(
-      node.type, 
+    ctor = node.type;
+    child = new ctor(
       node.props, 
       [scope]//, node
     );
   } else if (node.tag) {
     ns = node.ns || target.ns;
-    child = Element.create(
+    child = new Element(
       ns ? ns + ':' + node.tag : node.tag, 
       node.props, 
       [scope]//, node
     );
   } else {
-    child = Text.create(node);
+    child = new Text(node);
     return child;
   }
 

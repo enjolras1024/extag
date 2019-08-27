@@ -2,7 +2,7 @@
 // src/core/template/parsers/TextBindingParser.js
 //######################################################################################################################
 import config from 'src/share/config'
-import Expression from 'src/base/Expression'
+import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
 import TextBinding from 'src/core/bindings/TextBinding'
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'

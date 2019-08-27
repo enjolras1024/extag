@@ -9,7 +9,7 @@ import Component from 'src/core/shells/Component'
 // import ForBlock from 'src/core/blocks/ForBlock'
 // import SlotBlock from 'src/core/blocks/SlotBlock'
 // import TypeBlock from 'src/core/blocks/TypeBlock'
-import Expression from 'src/base/Expression'
+import Expression from 'src/core/template/Expression'
 
 
 import { defineProp } from 'src/share/functions'
@@ -104,6 +104,25 @@ function initOthers(node, scopes, target) {
   }
 }
 
+function driveChildren(children, scopes, target) {
+  var contents = makeContents(children, scopes);
+  target.setChildren(contents);
+}
+
+function driveContents(children, scopes, target) {
+  var contents = makeContents(children, scopes);
+  target.setContents(contents);
+}
+
+function initContents(node, scopes, target) {
+  var contents = makeContents(node.children, scopes);
+  if (node.type) {
+    target.setContents(contents);
+  } else {
+    target.setChildren(contents);
+  }
+}
+
 function makeContents(children, scopes) {
   var i, n, content, contents = [];
 
@@ -124,20 +143,20 @@ function makeContent(node, scopes) {
   var tag = node.tag, type, content;
 
   if (typeof node === 'string') {
-    content = Text.create(node);
+    content = new Text(node);
   } else if (node instanceof Expression) { // like "hello, @{ $.name }..."
-    content = Fragment.create(null, scopes, node);
+    content = new Fragment(null, scopes, node);
     // node.compile('contents', content, scopes);
   } else if (node.ctrls == null && node.tag !== '!') {
     type = node.type;
     if (type) {
       // TODO: Component.create(type, props, options, scopes);
-      content = Component.create(type, null, scopes, node);
+      content = new type(null, scopes, node);
     } else if (node.tag !== '!') {
       // if (node.ns == null) {
       //   node.ns = node.ns;
       // }
-      content = Element.create(node.ns ? node.ns + ':' + tag : tag, null, scopes, node);
+      content = new Element(node.ns ? node.ns + ':' + tag : tag, null, scopes, node);
     }
     // start(node, content, scopes);
     if (content && node.name) {
@@ -147,7 +166,7 @@ function makeContent(node, scopes) {
       });
     }
   } else if (node.ctrls) {
-    content = Component.create(Block, null, scopes, node);
+    content = new Block(null, scopes, node);
   }
 
   return content;
@@ -187,9 +206,19 @@ function makeContent(node, scopes) {
 // }
 
 var HTMXEngine = {
+  // driveProps, driveEvents, driveContents, driveChildren, buildContent
+  driveProps: initProps,
+  driveEvents: initActions,
+  driveContents: driveContents,
+  driveChildren: driveChildren,
+  buildContent: makeContent,
+
   initProps: initProps,
   initOthers: initOthers,
-  makeContent: makeContent
+  initActions: initActions,
+  initContents: initContents,
+  makeContent: makeContent,
+  makeContents: makeContents
 };
 
 config.HTMXEngine = HTMXEngine;

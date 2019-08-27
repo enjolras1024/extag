@@ -1,8 +1,8 @@
 // src/core/shells/View.js
 
-import Expression from 'src/base/Expression'
 import Shell from 'src/core/shells/Shell'
 import Component from 'src/core/shells/Component'
+import Expression from 'src/core/template/Expression'
 import HTMXEngine from 'src/core/template/HTMXEngine'
 import { FLAG_CHANGED } from 'src/share/constants'
 import { assign, defineClass } from 'src/share/functions'
@@ -76,7 +76,7 @@ defineClass({
     
     template.tag = '?';
     template.type = ctor;
-    content = HTMXEngine.build(template, scopes);
+    content = HTMXEngine.makeContent(template, scopes);
     fragment.push(content);
 
     this.setChildren(fragment);

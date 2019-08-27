@@ -3,9 +3,8 @@
 import Parent from 'src/base/Parent'
 import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
-import Expression from 'src/base/Expression'
-import DirtyMarker from 'src/base/DirtyMarker'
 import Schedule from 'src/core/Schedule'
+import Cache from 'src/core/models/Cache'
 import Shell from 'src/core/shells/Shell'
 import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
@@ -52,12 +51,12 @@ defineClass({
     /**
      * Factory method for creating a component
      *
-     * @param {Function} ClassRef
+     * @param {Function} ctor
      * @param {Object} props
      * @returns {Component}
      */
-    create: function create(ClassRef, props, scopes, template) {
-      return new ClassRef(props, scopes, template);
+    create: function create(ctor, props, scopes, template) {
+      return new ctor(props, scopes, template);
     },
 
     /**
@@ -94,7 +93,7 @@ defineClass({
       // 2. initialize the attribute default values
       var defaults = Accessor.getAttributeDefaultValues(component);
       defineProp(component, '$props', {
-        value: defaults, writable: false, enumerable: false, configurable: false
+        value: defaults, writable: false, enumerable: false, configurable: true
       });
 
       // 3. compile the template once and only once.
@@ -108,7 +107,7 @@ defineClass({
         if (_template) {
           // constructor._template = _template;
           defineProp(constructor, '__extag_template__', {
-            value: _template, writable: false, enumerable: false, configurable: false
+            value: _template, writable: false, enumerable: false, configurable: true
           })
         } else {
           throw new TypeError('The template must be legal HTML string or DOM element');
@@ -155,7 +154,14 @@ defineClass({
 
       var HTMXEngine = config.HTMXEngine;
 
-      HTMXEngine.initProps(_template.props, [component], component);
+      if (_template.props) {
+        defineProp(component, '__props', {
+          value: new Cache(component), 
+          configurable: true
+        });
+        HTMXEngine.initProps(_template.props, [component], component.__props);
+      }
+      // HTMXEngine.initProps(_template.props, [component], component);
 
       if (template && template.props) {
         if (props) {
@@ -186,9 +192,42 @@ defineClass({
         component.setup();
       }
 
-      if (_template) {
-        HTMXEngine.initOthers(_template, [component], component);
+      // if (_template) {
+      //   HTMXEngine.initOthers(_template, [component], component);
+      // }
+      if (_template.attrs) {
+        defineProp(component, '__attrs', {
+          value: new Cache(component), 
+          configurable: true
+        });
+        HTMXEngine.initProps(_template.attrs, [component], component.__attrs);
       }
+      if (_template.style) {
+        defineProp(component, '__style', {
+          value: new Cache(component), 
+          configurable: true
+        });
+        HTMXEngine.initProps(_template.style, [component], component.__style);
+      }
+      if (_template.classes) {
+        defineProp(component, '__classes', {
+          value: new Cache(component), 
+          configurable: true
+        });
+        HTMXEngine.initProps(_template.classes, [component], component.__classes);
+      }
+      // if (_template.actions) {
+      //   HTMXEngine.initActions(_template.actions, [component], component)
+      // }
+
+      // var contents = HTMXEngine.makeContents(_template.children, [component]);
+      // if (_template.type) {
+      //   component.setContents(contents);
+      // } else {
+      //   component.setChildren(contents);
+      // }
+      HTMXEngine.initActions(_template.actions, [component], component)
+      HTMXEngine.initContents(_template, [component], component);
 
       if (scopes && template) {
         HTMXEngine.initOthers(template, scopes, component);
@@ -245,7 +284,7 @@ defineClass({
       // }
       return !desc.get ? 
                 this.$props[key] : 
-                  desc.get.call(this, this.$props, key);
+                  desc.get.call(this, key, this.$props);
     }
     return this._props[key];
   },
@@ -290,9 +329,9 @@ defineClass({
         this.emit('changed.' + key, key, val, this);
       }
     } else if (desc.set) { // else, `get`, `set` and `get` again, then check if the property value is changed.
-      old = desc.get.call(this, props, key);
+      old = desc.get.call(this, key, props);
       desc.set.call(this, val, props);
-      val = desc.get.call(this, props, key);
+      val = desc.get.call(this, key, props);
       if (old !== val) {
         this.invalidate(FLAG_CHANGED);
         this.emit('changed.' + key, key, val, this);

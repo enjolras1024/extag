@@ -30,7 +30,7 @@ function makeSetter(key) {
 }
 
 var EMPTY_DESC = {};
-var SHARED_GET = function(props, key) { return props[key]; }
+var SHARED_GET = function(key, props) { return props[key]; }
 
 function defineGetterSetter(prototype, key) {
   descriptorShared.get = makeGetter(key);
