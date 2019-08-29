@@ -427,26 +427,6 @@
     };
   }
 
-  var WHITE_SPACES_REGEXG = /\s+/;
-  /**
-   * Convert the class list to a class map.
-   * @param {Array|string} classList 
-   */
-  function toClasses(classList) {
-    if (typeof classList === 'string') {
-      classList = classList.trim().split(WHITE_SPACES_REGEXG);
-    }
-    if (Array.isArray(classList)) {
-      var i, classes = {};
-      for (i = 0; i < classList.length; ++i) {
-        if (classList[i]) {
-          classes[classList[i]] = true;
-        }
-      }
-      return classes;
-    }
-  }
-
   // src/share/constants.js 
 
   // flags
@@ -1997,6 +1977,20 @@
         this._owner.invalidate(FLAG_CHANGED);
         DirtyMarker.check(this, key, val, old);
       }
+    },
+
+    reset: function(props) {
+      var _props = this._props, key;
+      if (_props) {
+        for (key in _props) {
+          if (!props || !(key in props)) {
+            this.set(key, null);
+          }
+        }
+      }
+      if (props) {
+        this.assign(props);
+      }
     }
   });
 
@@ -2222,32 +2216,34 @@
        * @param {string} ns     - namespace, defalut '', can be 'svg', 'math'...
        */
       initialize: function initialize(shell, type, tag, ns) {
-        defineProp(shell, '_props', {
-          value: {}, writable: false, enumerable: false, configurable: false
-        });
+        if (!shell.hasOwnProperty('_props')) {
+          defineProp(shell, '_props', {
+            value: {}, writable: false, enumerable: false, configurable: true
+          });
+        }
 
         defineProp(shell, '$flag', {
-          value: 0, writable: true, enumerable: false, configurable: false
+          value: 0, writable: true, enumerable: false, configurable: true
         });
 
         // defineProp(shell, '$symb', {
-        //   value: '', writable: true, enumerable: false, configurable: false
+        //   value: '', writable: true, enumerable: false, configurable: true
         // });
 
         defineProp(shell, '$guid', {
-          value: guid++, writable: false, enumerable: false, configurable: false
+          value: guid++, writable: false, enumerable: false, configurable: true
         }); // should be less than Number.MAX_SAFE_INTEGER
 
         defineProp(shell, '$type', {
-          value: type, writable: false, enumerable: false, configurable: false
+          value: type, writable: false, enumerable: false, configurable: true
         });
 
         defineProp(shell, 'tag', {
-          value: tag, writable: false, enumerable: false, configurable: false
+          value: tag, writable: false, enumerable: false, configurable: true
         });
 
         defineProp(shell, 'ns', {
-          value: ns, writable: true, enumerable: false, configurable: false
+          value: ns, writable: true, enumerable: false, configurable: true
         });
 
         // defineMembersOf(shell);
@@ -2451,7 +2447,6 @@
   });
 
   // src/core/shells/Element.js
-  // import HTMXEngine from '../template/HTMXEngine';
 
 
   // function buildCache(element) {
@@ -2459,37 +2454,6 @@
   //   cache.owner = element;
   //   return cache;
   // }
-
-  function resetCache(cache, props) {
-    var _props = cache._props, key;
-    if (props) {
-      cache.assign(props);
-    } else {
-      props = EMPTY_OBJECT;
-    }
-    if (_props) {
-      for (key in _props) {
-        if (!(key in props)) {
-          cache.set(key, null);
-        }
-      }
-    }
-  }
-
-  function toStyle(cssText, viewEngine) {
-    if (!viewEngine || typeof cssText !== 'string') {
-      return;
-    }
-    var style = {},  pieces = cssText.split(';'), piece, index, i;
-    for (i = pieces.length - 1; i >= 0; --i) {
-      piece = pieces[i];
-      index = piece.indexOf(':');
-      if (index > 0) {
-        style[viewEngine.toCamelCase(piece.slice(0, index).trim())] = piece.slice(index + 1).trim();
-      }
-    }
-    return style;
-  }
 
   /**
    * 
@@ -2522,17 +2486,7 @@
 
         Element.defineMembers(element);
 
-        if (scopes && template) {
-          var HTMXEngine = config.HTMXEngine;
-          if (props && template.props) {
-            HTMXEngine.initProps(assign({}, template.props, props), scopes, element);
-          } else if (template.props) {
-            HTMXEngine.initProps(template.props, scopes, element);
-          } else if (props) {
-            HTMXEngine.initProps(props, scopes, element);
-          }
-          HTMXEngine.initOthers(template, scopes, element);
-        } else if (props) {
+        if (scopes && template) ; else if (props) {
           element.assign(props);
         }
       },
@@ -2551,40 +2505,40 @@
        * Always update the style and classes through member variables.
        * @param {Element|Compoent} element 
        */
-      convert: function convert (element) {
-        var _props = element._props;
+      // convert: function convert (element) {
+      //   var _props = element._props;
       
-        if (element.hasDirty('style')) {
-          DirtyMarker.clean(element, 'style');
-          var style = _props.style;
-          if (typeof style === 'object') {
-            resetCache(element.style, style);
-          } else if (typeof style === 'string') {
-            // element.attrs.set('style', style);
-            var viewEngine = Shell.getViewEngine(element);
-            if (viewEngine) {
-              style = toStyle(style, viewEngine);
-            }
-            resetCache(element.style, style);
-          }
-        }
-        // if (element.hasDirty('attrs')) {
-        //   DirtyMarker.clean(element, 'attrs');
-        //   if (typeof _props.attrs === 'object') {
-        //     element.attrs = _props.attrs;
-        //   } else {
-        //     element.attrs = null;
-        //   }
-        // }
-        if (element.hasDirty('classes')) {
-          DirtyMarker.clean(element, 'classes');
-          var classes = _props.classes;
-          if (typeof classes !== 'object') {
-            classes = toClasses(classes);
-          }
-          resetCache(element.classes, classes);
-        }
-      },
+      //   if (element.hasDirty('style')) {
+      //     DirtyMarker.clean(element, 'style');
+      //     var style = _props.style;
+      //     if (typeof style === 'object') {
+      //       resetCache(element.style, style);
+      //     } else if (typeof style === 'string') {
+      //       // element.attrs.set('style', style);
+      //       var viewEngine = Shell.getViewEngine(element);
+      //       if (viewEngine) {
+      //         style = toStyle(style, viewEngine);
+      //       }
+      //       resetCache(element.style, style);
+      //     }
+      //   }
+      //   // if (element.hasDirty('attrs')) {
+      //   //   DirtyMarker.clean(element, 'attrs');
+      //   //   if (typeof _props.attrs === 'object') {
+      //   //     element.attrs = _props.attrs;
+      //   //   } else {
+      //   //     element.attrs = null;
+      //   //   }
+      //   // }
+      //   if (element.hasDirty('classes')) {
+      //     DirtyMarker.clean(element, 'classes');
+      //     var classes = _props.classes;
+      //     if (typeof classes !== 'object') {
+      //       classes = toClasses(classes);
+      //     }
+      //     resetCache(element.classes, classes);
+      //   }
+      // },
 
       /**
        * Define getter/setter for attrs, style and classes
@@ -2646,8 +2600,8 @@
       if (this.$flag === FLAG_NORMAL) {
         return false;
       }
-
-      Element.convert(this);
+      // Element.convert(this);
+      config.HTMXEngine.transferProperties(this);
 
       // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
       //   this.$flag |= FLAG_WAITING_TO_RENDER;
@@ -2789,6 +2743,10 @@
   });
 
   // src/core/shells/Component.js
+
+  var shellProto = Shell.prototype;
+  var elementPropto = Element.prototype;
+  var fragmentProto = Fragment.prototype;
   // var emptyDesc = {};
 
   function Component(props, scopes, template) {
@@ -2854,7 +2812,7 @@
 
         // 2. initialize the attribute default values
         var defaults = Accessor.getAttributeDefaultValues(component);
-        defineProp(component, '$props', {
+        defineProp(component, '_props', {
           value: defaults, writable: false, enumerable: false, configurable: true
         });
 
@@ -2881,69 +2839,6 @@
 
         Element.defineMembers(component);
 
-        // var key, value;
-        // 5. accept props
-        // if (_template.props) {
-        //   // component.assign(_template.props);
-        //   // if (_template.props.expressions) {
-        //   //   Expression.compile(_template.props.expressions, component, component, [component]);
-        //   // }
-          
-        //   for (key in _template.props) {
-        //     value = _template.props[key];
-        //     if (typeof value === 'object' && value instanceof Expression) {
-        //       value.compile(key, component, component, [component]);
-        //     } else {
-        //       component.set(key, value);
-        //     }
-        //   }
-        // }
-
-        // if (props) {
-        //   // component.assign(props);
-        //   // if (scope && locals && props.expressions) {
-        //   //   Expression.compile(props.expressions, component, scope, locals);
-        //   // }
-        //   for (key in props) {
-        //     value = props[key];
-        //     if (typeof value === 'object' && value instanceof Expression) {
-        //       value.compile(key, component, scope, locals);
-        //     } else {
-        //       component.set(key, value);
-        //     }
-        //   }
-        // }
-
-        var HTMXEngine = config.HTMXEngine;
-
-        if (_template.props) {
-          defineProp(component, '__props', {
-            value: new Cache(component), 
-            configurable: true
-          });
-          HTMXEngine.initProps(_template.props, [component], component.__props);
-        }
-        // HTMXEngine.initProps(_template.props, [component], component);
-
-        if (template && template.props) {
-          if (props) {
-            props = assign({}, template.props, props);
-          } else {
-            props = template.props;
-          }
-        }
-        {
-          Validator.validate0(component, props);
-        }
-        // TODO: HTMXEgine.initSelf()
-        if (scopes && template) {
-          HTMXEngine.initProps(props, scopes, component);
-        } else if (props) {
-          component.assign(props);
-        }     
-
-        // console.log(component.toString(), _template.props, props)
-
         // 6. setup
         if (scopes && scopes[0].context) {
           component.setup(scopes[0].context);
@@ -2954,69 +2849,15 @@
           component.setup();
         }
 
-        // if (_template) {
-        //   HTMXEngine.initOthers(_template, [component], component);
-        // }
-        if (_template.attrs) {
-          defineProp(component, '__attrs', {
-            value: new Cache(component), 
-            configurable: true
-          });
-          HTMXEngine.initProps(_template.attrs, [component], component.__attrs);
-        }
-        if (_template.style) {
-          defineProp(component, '__style', {
-            value: new Cache(component), 
-            configurable: true
-          });
-          HTMXEngine.initProps(_template.style, [component], component.__style);
-        }
-        if (_template.classes) {
-          defineProp(component, '__classes', {
-            value: new Cache(component), 
-            configurable: true
-          });
-          HTMXEngine.initProps(_template.classes, [component], component.__classes);
-        }
-        // if (_template.actions) {
-        //   HTMXEngine.initActions(_template.actions, [component], component)
-        // }
+        var HTMXEngine = config.HTMXEngine;
 
-        // var contents = HTMXEngine.makeContents(_template.children, [component]);
-        // if (_template.type) {
-        //   component.setContents(contents);
-        // } else {
-        //   component.setChildren(contents);
-        // }
-        HTMXEngine.initActions(_template.actions, [component], component);
-        HTMXEngine.initContents(_template, [component], component);
-
-        if (scopes && template) {
-          HTMXEngine.initOthers(template, scopes, component);
-        }
-
-        // TODO: HTMXEngine.initChildren
-        // TODO: HTMXEngine.buildChildren
-
-        // 7. start the template engine
-        // HTMXEngine.start(_template, component, component, [component]);
+        HTMXEngine.driveComponent(component, _template, scopes, template, props);
 
         // 8. initialized
         //component.send('initialized');
         if (component.onInited) {
           component.onInited();
         }
-
-        // 9. extras
-        // if (component.reflow) {
-        //   component.on('update', (function() {
-        //     var vnodes = this.reflow(JSXEngine.createElement);
-        //     if (vnodes) {
-        //       console.log('vnodes', vnodes)
-        //       JSXEngine.reflowComponent(this, vnodes);
-        //     }
-        //   }).bind(component));
-        // }
       }
 
     },
@@ -3035,20 +2876,21 @@
     // },
 
     /**
-     * Get property stored in _props or $props.
+     * Get property stored in _props or _props.
      * @param {string} key
      */
     get: function get(key) {
       var desc = Accessor.getAttrDesc(this, key);//this.__extag_descriptors__[key];
-      if (desc) {
-        // if (Dep.binding && !desc.compute) {
-        //   Dep.add(this, key);
-        // }
-        return !desc.get ? 
-                  this.$props[key] : 
-                    desc.get.call(this, key, this.$props);
-      }
-      return this._props[key];
+      // if (desc) {
+      //   // if (Dep.binding && !desc.compute) {
+      //   //   Dep.add(this, key);
+      //   // }
+      //   return !desc.get ? 
+      //             this._props[key] : 
+      //               desc.get.call(this, key, this._props);
+      // }
+      // return this._props[key];
+      return (desc && desc.get) ? desc.get.call(this, key, this._props) : this._props[key];
     },
 
     /**
@@ -3068,7 +2910,7 @@
       var desc = Accessor.getAttrDesc(this, key);//this.__extag_descriptors__[key];
       // DOM property, stored in _props
       if (!desc) {
-        Shell.prototype.set.call(this, key, val);
+        shellProto.set.call(this, key, val);
         return;
       }
       // validation in development 
@@ -3080,8 +2922,8 @@
         this[key] = val;
         return;
       }
-      // Custom attribute, stored in $props
-      var props = this.$props, old;
+      // Custom attribute, stored in _props
+      var props = this._props, old;
 
       if (!desc.get) { // usually, no custom `get` and `set`, checking if the property value is changed firstly.
         old = props[key];
@@ -3121,7 +2963,7 @@
      * @param {HTMLElement} $skin
      */
     attach: function attach($skin) {
-      if (Shell.prototype.attach.call(this, $skin)) {
+      if (shellProto.attach.call(this, $skin)) {
         if (this.onAttached) {
           this.onAttached($skin);
         }
@@ -3168,7 +3010,7 @@
       this.emit('update');
 
       if (this.$type !== 0) {
-        Element.convert(this);
+        config.HTMXEngine.transferProperties(this);
       } else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
         this._parent.invalidate(FLAG_CHANGED_CHILDREN);
       }
@@ -3205,9 +3047,9 @@
         return false;
       }
       if (this.$type !== 0) {
-        Element.prototype.render.call(this);
+        elementPropto.render.call(this);
       } else {
-        Fragment.prototype.render.call(this);
+        fragmentProto.render.call(this);
       }
       if (this.onRendered) {
         Schedule.pushCallbackQueue((function() {
@@ -3468,11 +3310,38 @@
   });
 
   // src/core/template/HTMXEngine.js
-  // import Block from './dynamic/Block';
-  // import Slot from './dynamic/Slot';
-  // import View from './dynamic/View';
 
-  function initProps(props, scopes, target) {
+  function toStyle(cssText, viewEngine) {
+    if (!viewEngine || typeof cssText !== 'string') {
+      return;
+    }
+    var style = {},  pieces = cssText.split(';'), piece, index, i;
+    for (i = pieces.length - 1; i >= 0; --i) {
+      piece = pieces[i];
+      index = piece.indexOf(':');
+      if (index > 0) {
+        style[viewEngine.toCamelCase(piece.slice(0, index).trim())] = piece.slice(index + 1).trim();
+      }
+    }
+    return style;
+  }
+
+  function toClasses(classList) {
+    if (typeof classList === 'string') {
+      classList = classList.trim().split(WHITE_SPACES_REGEXG);
+    }
+    if (Array.isArray(classList)) {
+      var i, classes = {};
+      for (i = 0; i < classList.length; ++i) {
+        if (classList[i]) {
+          classes[classList[i]] = true;
+        }
+      }
+      return classes;
+    }
+  }
+
+  function driveProps(target, props, scopes) {
     if (props) {
       var key, value;
       for (key in props) {
@@ -3486,25 +3355,7 @@
     }
   }
 
-  function initAttrs(attrs, scopes, target) {
-    if (attrs) {
-      initProps(attrs, scopes, target.attrs);
-    }
-  }
-
-  function initStyle(style, scopes, target) {
-    if (style) {
-      initProps(style, scopes, target.style);
-    }
-  }
-
-  function initClasses(classes, scopes, target) {
-    if (classes) {
-      initProps(classes, scopes, target.classes);
-    }
-  }
-
-  function initActions(actions, scopes, target) {
+  function driveEvents(target, actions, scopes) {
     if (actions) {
       var type, value;
       for (type in actions) {
@@ -3518,63 +3369,14 @@
     }
   }
 
-  // function initCache(props, member, scopes) {
-  //   var key, value;
-  //   for (key in props) {
-  //     value = props[key];
-  //     if (typeof value === 'object' && value instanceof Expression) {
-  //       value.compile(key, member, scopes);
-  //     } else {
-  //       member.set(key, value);
-  //     }
-  //   }
-  // }
-
-  // function initShell(target, props, scopes, node) {
-  //   if (props && node.props) {
-  //     props = assign({}, node.props, props);
-  //   }
-  //   // initProps(node.props, target, scopes);
-  //   initProps(props, target, scopes);
-  //   initAttrs(node.attrs, target, scopes);
-  //   initStyle(node.style, target, scopes);
-  //   initClasses(node.classes, target, scopes);
-  //   initActions(node.actions, target, scopes);
-  // }
-
-  // function initProps() {}
-
-  function initOthers(node, scopes, target) {
-    initAttrs(node.attrs, scopes, target);
-    initStyle(node.style, scopes, target);
-    initClasses(node.classes, scopes, target);
-    initActions(node.actions, scopes, target);
-    
-    var contents = makeContents(node.children, scopes);
-    if (node.type) {
-      target.setContents(contents);
-    } else {
-      target.setChildren(contents);
-    }
-  }
-
-  function driveChildren(children, scopes, target) {
+  function driveChildren(target, children, scopes) {
     var contents = makeContents(children, scopes);
     target.setChildren(contents);
   }
 
-  function driveContents(children, scopes, target) {
+  function driveContents(target, children, scopes) {
     var contents = makeContents(children, scopes);
     target.setContents(contents);
-  }
-
-  function initContents(node, scopes, target) {
-    var contents = makeContents(node.children, scopes);
-    if (node.type) {
-      target.setContents(contents);
-    } else {
-      target.setChildren(contents);
-    }
   }
 
   function makeContents(children, scopes) {
@@ -3604,15 +3406,32 @@
     } else if (node.ctrls == null && node.tag !== '!') {
       type = node.type;
       if (type) {
-        // TODO: Component.create(type, props, options, scopes);
         content = new type(null, scopes, node);
       } else if (node.tag !== '!') {
         // if (node.ns == null) {
         //   node.ns = node.ns;
         // }
         content = new Element(node.ns ? node.ns + ':' + tag : tag, null, scopes, node);
+        if (node.actions) {
+          driveEvents(content, node.actions, scopes);
+        }
+        if (node.props) {
+          driveProps(content, node.props, scopes);
+        }
+        if (node.attrs) {
+          driveProps(content.attrs, node.attrs, scopes);
+        }
+        if (node.style) {
+          driveProps(content.style, node.style, scopes);
+        }
+        if (node.classes) {
+          driveProps(content.classes, node.classes, scopes);
+        }
+        if (node.children) {
+          driveChildren(content, node.children, scopes);
+        }
       }
-      // start(node, content, scopes);
+
       if (content && node.name) {
         scopes[0].addNamedPart(node.name, content); // TODO: removeNamedPart
         defineProp(content, '$owner', {
@@ -3626,51 +3445,153 @@
     return content;
   }
 
-  // function start(node, target, scopes) { // TODO: host, data, event
-  //   scope = scope || target;
+  function driveComponent(target, _template, scopes, template, props) {
+    var _scopes = [target];
 
-  //   if (scope === target) {
-  //     locals = [scope];
-  //   }
+    if (template && scopes) {
+      if (props && template.props) {
+        driveProps(target, assign({}, template.props, props), scopes);
+      } else if (template.props) {
+        driveProps(target, template.props, scopes);
+      }
+      if (template.actions) {
+        driveEvents(target, template.actions, scopes);
+      }
+      if (template.attrs) {
+        driveProps(target.attrs, template.attrs, scopes);
+      }
+      if (template.style) {
+        driveProps(target.style, template.style, scopes);
+      }
+      if (template.classes) {
+        driveProps(target.classes, template.classes, scopes);
+      }
+      if (template.children) {
+        driveContents(target, template.children,scopes);
+      }
+    } else if (props) {
+      driveProps(target, props, scopes);
+    }
+    
+    if (_template.actions) {
+      driveEvents(target, _template.actions, _scopes);
+    }
+    if (_template.props) {
+      defineProp(target, '__props', {
+        value: new Cache(target), 
+        configurable: true
+      });
+      driveProps(target.__props, _template.props, _scopes);
+    }
+    if (_template.attrs) {
+      defineProp(target, '__attrs', {
+        value: new Cache(target), 
+        configurable: true
+      });
+      driveProps(target.__attrs, _template.attrs, _scopes);
+    }
+    if (_template.style) {
+      defineProp(target, '__style', {
+        value: new Cache(target), 
+        configurable: true
+      });
+      driveProps(target.__style, _template.style, _scopes);
+    }
+    if (_template.classes) {
+      defineProp(target, '__classes', {
+        value: new Cache(target), 
+        configurable: true
+      });
+      driveProps(target.__classes, _template.classes, _scopes);
+    }
+    if (_template.children) {
+      driveChildren(target, _template.children, _scopes);
+    }
+  }
 
-  //   build(node, target, scopes);
-  // }
+  function transferProperties(shell) {
+    if (!shell.tag) {
+      return;
+    }
 
+    var _props = shell._props;
+    var style, classes, viewEngine;
+      
+    if (shell.hasDirty('style')) {
+      DirtyMarker.clean(shell, 'style');
+      style = _props.style;
+      if (typeof style === 'object') {
+        shell.style.reset(style);
+      } else if (typeof style === 'string') {
+        viewEngine = Shell.getViewEngine(shell);
+        if (viewEngine) {
+          style = toStyle(style, viewEngine);
+        }
+        shell.style.reset(style);
+      }
+    }
+    if (shell.hasDirty('classes')) {
+      DirtyMarker.clean(shell, 'classes');
+      classes = _props.classes;
+      if (typeof classes !== 'object') {
+        classes = toClasses(classes);
+      }
+      shell.classes.reset(classes);
+    }
 
+    if (!shell.__props || !shell.constructor.__extag_component_class__) { 
+        return; 
+    }
 
-  // function fillShell(target, scopes, node) {
-  //   var i, n, content, contents = [], children = node.children;
-
-  //   if (!children || !children.length) { return; }
-
-  //   for (i = 0, n = children.length; i < n; ++i) {
-  //     content = makeShell(children[i], scopes);
-  //     if (content) {
-  //       contents.push(content);
-  //     }
-  //   }
-
-  //   /*if (target === scope) {
-  //     target._content.setChildren(contents);
-  //   } else*/ if (!node.type/* || target === scope*/) {
-  //     target.setChildren(contents);
-  //   } else {
-  //     target.setContents(contents);
-  //   }
-  // }
+    var __props = shell.__props;
+    
+    if (__props && __props.hasDirty('style')) {
+      var __style = shell.__style;
+      if (!__style) {
+        __style = new Cache(shell);
+        defineProp(target, '__style', {
+          value: __style, 
+          configurable: true
+        });
+      }
+      DirtyMarker.clean(__props, 'style');
+      style = __props.style;
+      if (typeof style === 'object') {
+        __style.reset(style);
+      } else if (typeof style === 'string') {
+        viewEngine = Shell.getViewEngine(shell);
+        if (viewEngine) {
+          style = toStyle(style, viewEngine);
+        }
+        __style.reset(style);
+      }
+    }
+    if (__props && __props.hasDirty('classes')) {
+      var __classes = shell.__classes;
+      if (!__classes) {
+        __classes = new Cache(shell);
+        defineProp(target, '__classes', {
+          value: __classes, 
+          configurable: true
+        });
+      }
+      DirtyMarker.clean(__props, 'classes');
+      classes = __props.classes;
+      if (typeof classes !== 'object') {
+        classes = toClasses(classes);
+      }
+      __classes.reset(classes);
+    }
+  }
 
   var HTMXEngine = {
-    // driveProps, driveEvents, driveContents, driveChildren, buildContent
-    driveProps: initProps,
-    driveEvents: initActions,
+    driveProps: driveProps,
+    driveEvents: driveEvents,
     driveContents: driveContents,
     driveChildren: driveChildren,
+    driveComponent: driveComponent,
+    transferProperties: transferProperties,
     buildContent: makeContent,
-
-    initProps: initProps,
-    initOthers: initOthers,
-    initActions: initActions,
-    initContents: initContents,
     makeContent: makeContent,
     makeContents: makeContents
   };
@@ -4345,7 +4266,7 @@
    */
   function node(type, params, children) {
     var node = {
-      __extag__node__: true
+      __extag_node__: true
     };
 
     var t = typeof type;
@@ -4361,7 +4282,7 @@
     } else if (t === 'function') {
       node.type = type;
     } else {
-      throw new TypeError('First argument must be string or constructor');
+      throw new TypeError('First argument must be class, string or constructor');
     }
 
     if (arguments.length === 2 && (Array.isArray(params) || typeof params !== 'object')) {
@@ -4507,25 +4428,15 @@
   }
 
   function updatePropsAndEvents(node, target, scope) {
-    var name;
+    var name, desc;
     var newProps = node.props;
-    var newEvents = newProps && newProps.events;
-    var oldProps = target._vnode && target._vnode.props;
-    var oldEvents = target._vnode && target._vnode.events;
-    
-    if (oldEvents) {
-      for (name in oldEvents) {
-        if (!newEvents || !(name in newEvents)) {
-          target.off(name, oldEvents[name]);
-        }
-      }
-    }
+    var newEvents = node.events;
+    var oldProps = target._props;
+    var oldEvents = target._events;
 
-    if (newEvents) {
-      target.on(newEvents);
-    }
-    
+    // update props
     if (oldProps) {
+      // firstly, remove redundant properties, or reset default property values.
       if (target instanceof Component) {
         for (name in oldProps) {
           if (!newProps || !(name in newProps)) {
@@ -4545,18 +4456,32 @@
         }
       }
     }
-    
     if (newProps) {
+      // assign new property values.
       target.assign(newProps);
     }
-    
-    if (target._vnode) {
-      target._vnode = node;
-    } else {
-      defineProp(target, '_vnode', {
-        value: node, writable: true, enumerable: false, configurable: true
-      });
+
+    // update events
+    if (oldEvents) {
+      // firstly, remove old event handlers
+      for (name in oldEvents) {
+        if (oldEvents[name]) {
+          target.off(name, oldEvents[name]);
+        }
+      }
     }
+    if (newEvents) {
+      // add new event handlers
+      target.on(newEvents);
+    }
+    
+    // if (target._vnode) {
+    //   target._vnode = node;
+    // } else {
+    //   defineProp(target, '_vnode', {
+    //     value: node, writable: true, enumerable: false, configurable: true
+    //   });
+    // }
   }
 
   function updateChildrenOrContents(node, target, scope) { // refer to Vue (http://vuejs.org/)
@@ -4652,7 +4577,7 @@
   }
 
   function updateShell(node, target, scope) {
-    if (typeof node === 'object' && node.__extag__node__) {
+    if (typeof node === 'object' && node.__extag_node__) {
       // updateSelf(node, target, scope);
       // updateProps(node.props, target, scope);
       // updateStyle(node.style, target, scope);
@@ -5539,7 +5464,7 @@
      
           node = {};
           node.tag = tagName;
-          node.__extag__node__ = true;
+          node.__extag_node__ = true;
 
           {
             node.range = [start, -1];

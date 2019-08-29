@@ -338,7 +338,7 @@ function parseHTMX(htmx, prototype) {
    
         node = {};
         node.tag = tagName;
-        node.__extag__node__ = true;
+        node.__extag_node__ = true;
 
         if (__ENV__ === 'development') {
           node.range = [start, -1];

@@ -43,6 +43,19 @@ defineClass({
       this._owner.invalidate(FLAG_CHANGED);
       DirtyMarker.check(this, key, val, old);
     }
+  },
+
+  reset: function(props) {
+    var _props = this._props, key;
+    if (_props) {
+      for (key in _props) {
+        if (!props || !(key in props)) {
+          this.set(key, null);
+        }
+      }
+    }
+    if (props) {
+      this.assign(props);
+    }
   }
 });
-  

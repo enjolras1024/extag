@@ -241,32 +241,34 @@ defineClass({
      * @param {string} ns     - namespace, defalut '', can be 'svg', 'math'...
      */
     initialize: function initialize(shell, type, tag, ns) {
-      defineProp(shell, '_props', {
-        value: {}, writable: false, enumerable: false, configurable: false
-      });
+      if (!shell.hasOwnProperty('_props')) {
+        defineProp(shell, '_props', {
+          value: {}, writable: false, enumerable: false, configurable: true
+        });
+      }
 
       defineProp(shell, '$flag', {
-        value: 0, writable: true, enumerable: false, configurable: false
+        value: 0, writable: true, enumerable: false, configurable: true
       });
 
       // defineProp(shell, '$symb', {
-      //   value: '', writable: true, enumerable: false, configurable: false
+      //   value: '', writable: true, enumerable: false, configurable: true
       // });
 
       defineProp(shell, '$guid', {
-        value: guid++, writable: false, enumerable: false, configurable: false
+        value: guid++, writable: false, enumerable: false, configurable: true
       }); // should be less than Number.MAX_SAFE_INTEGER
 
       defineProp(shell, '$type', {
-        value: type, writable: false, enumerable: false, configurable: false
+        value: type, writable: false, enumerable: false, configurable: true
       });
 
       defineProp(shell, 'tag', {
-        value: tag, writable: false, enumerable: false, configurable: false
+        value: tag, writable: false, enumerable: false, configurable: true
       });
 
       defineProp(shell, 'ns', {
-        value: ns, writable: true, enumerable: false, configurable: false
+        value: ns, writable: true, enumerable: false, configurable: true
       });
 
       // defineMembersOf(shell);

@@ -1,24 +1,48 @@
 // src/core/template/HTMXEngine.js
 
+import DirtyMarker from 'src/base/DirtyMarker'
+import Cache from 'src/core/models/Cache'
 import Text from 'src/core/shells/Text'
+import Shell from 'src/core/shells/Shell'
 import Block from 'src/core/shells/Block'
 import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
-import Component from 'src/core/shells/Component'
-// import IfBlock from 'src/core/blocks/IfBlock'
-// import ForBlock from 'src/core/blocks/ForBlock'
-// import SlotBlock from 'src/core/blocks/SlotBlock'
-// import TypeBlock from 'src/core/blocks/TypeBlock'
+// import Component from 'src/core/shells/Component'
 import Expression from 'src/core/template/Expression'
-
-
-import { defineProp } from 'src/share/functions'
+import { defineProp, assign } from 'src/share/functions'
 import config from 'src/share/config'
-// import Block from './dynamic/Block';
-// import Slot from './dynamic/Slot';
-// import View from './dynamic/View';
 
-function initProps(props, scopes, target) {
+function toStyle(cssText, viewEngine) {
+  if (!viewEngine || typeof cssText !== 'string') {
+    return;
+  }
+  var style = {},  pieces = cssText.split(';'), piece, index, i;
+  for (i = pieces.length - 1; i >= 0; --i) {
+    piece = pieces[i];
+    index = piece.indexOf(':');
+    if (index > 0) {
+      style[viewEngine.toCamelCase(piece.slice(0, index).trim())] = piece.slice(index + 1).trim();
+    }
+  }
+  return style;
+}
+
+function toClasses(classList) {
+  if (typeof classList === 'string') {
+    classList = classList.trim().split(WHITE_SPACES_REGEXG);
+  }
+  if (Array.isArray(classList)) {
+    var i, classes = {};
+    for (i = 0; i < classList.length; ++i) {
+      if (classList[i]) {
+        classes[classList[i]] = true;
+      }
+    }
+    return classes;
+  }
+}
+
+function driveProps(target, props, scopes) {
   if (props) {
     var key, value;
     for (key in props) {
@@ -32,25 +56,7 @@ function initProps(props, scopes, target) {
   }
 }
 
-function initAttrs(attrs, scopes, target) {
-  if (attrs) {
-    initProps(attrs, scopes, target.attrs);
-  }
-}
-
-function initStyle(style, scopes, target) {
-  if (style) {
-    initProps(style, scopes, target.style);
-  }
-}
-
-function initClasses(classes, scopes, target) {
-  if (classes) {
-    initProps(classes, scopes, target.classes);
-  }
-}
-
-function initActions(actions, scopes, target) {
+function driveEvents(target, actions, scopes) {
   if (actions) {
     var type, value;
     for (type in actions) {
@@ -64,63 +70,14 @@ function initActions(actions, scopes, target) {
   }
 }
 
-// function initCache(props, member, scopes) {
-//   var key, value;
-//   for (key in props) {
-//     value = props[key];
-//     if (typeof value === 'object' && value instanceof Expression) {
-//       value.compile(key, member, scopes);
-//     } else {
-//       member.set(key, value);
-//     }
-//   }
-// }
-
-// function initShell(target, props, scopes, node) {
-//   if (props && node.props) {
-//     props = assign({}, node.props, props);
-//   }
-//   // initProps(node.props, target, scopes);
-//   initProps(props, target, scopes);
-//   initAttrs(node.attrs, target, scopes);
-//   initStyle(node.style, target, scopes);
-//   initClasses(node.classes, target, scopes);
-//   initActions(node.actions, target, scopes);
-// }
-
-// function initProps() {}
-
-function initOthers(node, scopes, target) {
-  initAttrs(node.attrs, scopes, target);
-  initStyle(node.style, scopes, target);
-  initClasses(node.classes, scopes, target);
-  initActions(node.actions, scopes, target);
-  
-  var contents = makeContents(node.children, scopes);
-  if (node.type) {
-    target.setContents(contents);
-  } else {
-    target.setChildren(contents);
-  }
-}
-
-function driveChildren(children, scopes, target) {
+function driveChildren(target, children, scopes) {
   var contents = makeContents(children, scopes);
   target.setChildren(contents);
 }
 
-function driveContents(children, scopes, target) {
+function driveContents(target, children, scopes) {
   var contents = makeContents(children, scopes);
   target.setContents(contents);
-}
-
-function initContents(node, scopes, target) {
-  var contents = makeContents(node.children, scopes);
-  if (node.type) {
-    target.setContents(contents);
-  } else {
-    target.setChildren(contents);
-  }
 }
 
 function makeContents(children, scopes) {
@@ -150,15 +107,32 @@ function makeContent(node, scopes) {
   } else if (node.ctrls == null && node.tag !== '!') {
     type = node.type;
     if (type) {
-      // TODO: Component.create(type, props, options, scopes);
       content = new type(null, scopes, node);
     } else if (node.tag !== '!') {
       // if (node.ns == null) {
       //   node.ns = node.ns;
       // }
       content = new Element(node.ns ? node.ns + ':' + tag : tag, null, scopes, node);
+      if (node.actions) {
+        driveEvents(content, node.actions, scopes);
+      }
+      if (node.props) {
+        driveProps(content, node.props, scopes)
+      }
+      if (node.attrs) {
+        driveProps(content.attrs, node.attrs, scopes);
+      }
+      if (node.style) {
+        driveProps(content.style, node.style, scopes);
+      }
+      if (node.classes) {
+        driveProps(content.classes, node.classes, scopes);
+      }
+      if (node.children) {
+        driveChildren(content, node.children, scopes);
+      }
     }
-    // start(node, content, scopes);
+
     if (content && node.name) {
       scopes[0].addNamedPart(node.name, content); // TODO: removeNamedPart
       defineProp(content, '$owner', {
@@ -172,51 +146,153 @@ function makeContent(node, scopes) {
   return content;
 }
 
-// function start(node, target, scopes) { // TODO: host, data, event
-//   scope = scope || target;
+function driveComponent(target, _template, scopes, template, props) {
+  var _scopes = [target];
 
-//   if (scope === target) {
-//     locals = [scope];
-//   }
+  if (template && scopes) {
+    if (props && template.props) {
+      driveProps(target, assign({}, template.props, props), scopes);
+    } else if (template.props) {
+      driveProps(target, template.props, scopes);
+    }
+    if (template.actions) {
+      driveEvents(target, template.actions, scopes);
+    }
+    if (template.attrs) {
+      driveProps(target.attrs, template.attrs, scopes);
+    }
+    if (template.style) {
+      driveProps(target.style, template.style, scopes);
+    }
+    if (template.classes) {
+      driveProps(target.classes, template.classes, scopes);
+    }
+    if (template.children) {
+      driveContents(target, template.children,scopes);
+    }
+  } else if (props) {
+    driveProps(target, props, scopes);
+  }
+  
+  if (_template.actions) {
+    driveEvents(target, _template.actions, _scopes);
+  }
+  if (_template.props) {
+    defineProp(target, '__props', {
+      value: new Cache(target), 
+      configurable: true
+    });
+    driveProps(target.__props, _template.props, _scopes);
+  }
+  if (_template.attrs) {
+    defineProp(target, '__attrs', {
+      value: new Cache(target), 
+      configurable: true
+    });
+    driveProps(target.__attrs, _template.attrs, _scopes);
+  }
+  if (_template.style) {
+    defineProp(target, '__style', {
+      value: new Cache(target), 
+      configurable: true
+    });
+    driveProps(target.__style, _template.style, _scopes);
+  }
+  if (_template.classes) {
+    defineProp(target, '__classes', {
+      value: new Cache(target), 
+      configurable: true
+    });
+    driveProps(target.__classes, _template.classes, _scopes);
+  }
+  if (_template.children) {
+    driveChildren(target, _template.children, _scopes);
+  }
+}
 
-//   build(node, target, scopes);
-// }
+function transferProperties(shell) {
+  if (!shell.tag) {
+    return;
+  }
 
+  var _props = shell._props;
+  var style, classes, viewEngine;
+    
+  if (shell.hasDirty('style')) {
+    DirtyMarker.clean(shell, 'style');
+    style = _props.style;
+    if (typeof style === 'object') {
+      shell.style.reset(style);
+    } else if (typeof style === 'string') {
+      viewEngine = Shell.getViewEngine(shell);
+      if (viewEngine) {
+        style = toStyle(style, viewEngine);
+      }
+      shell.style.reset(style);
+    }
+  }
+  if (shell.hasDirty('classes')) {
+    DirtyMarker.clean(shell, 'classes');
+    classes = _props.classes;
+    if (typeof classes !== 'object') {
+      classes = toClasses(classes);
+    }
+    shell.classes.reset(classes);
+  }
 
+  if (!shell.__props || !shell.constructor.__extag_component_class__) { 
+      return; 
+  }
 
-// function fillShell(target, scopes, node) {
-//   var i, n, content, contents = [], children = node.children;
-
-//   if (!children || !children.length) { return; }
-
-//   for (i = 0, n = children.length; i < n; ++i) {
-//     content = makeShell(children[i], scopes);
-//     if (content) {
-//       contents.push(content);
-//     }
-//   }
-
-//   /*if (target === scope) {
-//     target._content.setChildren(contents);
-//   } else*/ if (!node.type/* || target === scope*/) {
-//     target.setChildren(contents);
-//   } else {
-//     target.setContents(contents);
-//   }
-// }
+  var __props = shell.__props;
+  
+  if (__props && __props.hasDirty('style')) {
+    var __style = shell.__style;
+    if (!__style) {
+      __style = new Cache(shell);
+      defineProp(target, '__style', {
+        value: __style, 
+        configurable: true
+      });
+    }
+    DirtyMarker.clean(__props, 'style');
+    style = __props.style;
+    if (typeof style === 'object') {
+      __style.reset(style);
+    } else if (typeof style === 'string') {
+      viewEngine = Shell.getViewEngine(shell);
+      if (viewEngine) {
+        style = toStyle(style, viewEngine);
+      }
+      __style.reset(style);
+    }
+  }
+  if (__props && __props.hasDirty('classes')) {
+    var __classes = shell.__classes;
+    if (!__classes) {
+      __classes = new Cache(shell);
+      defineProp(target, '__classes', {
+        value: __classes, 
+        configurable: true
+      });
+    }
+    DirtyMarker.clean(__props, 'classes');
+    classes = __props.classes;
+    if (typeof classes !== 'object') {
+      classes = toClasses(classes);
+    }
+    __classes.reset(classes);
+  }
+}
 
 var HTMXEngine = {
-  // driveProps, driveEvents, driveContents, driveChildren, buildContent
-  driveProps: initProps,
-  driveEvents: initActions,
+  driveProps: driveProps,
+  driveEvents: driveEvents,
   driveContents: driveContents,
   driveChildren: driveChildren,
+  driveComponent: driveComponent,
+  transferProperties: transferProperties,
   buildContent: makeContent,
-
-  initProps: initProps,
-  initOthers: initOthers,
-  initActions: initActions,
-  initContents: initContents,
   makeContent: makeContent,
   makeContents: makeContents
 };

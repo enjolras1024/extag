@@ -5,7 +5,7 @@ import Schedule from 'src/core/Schedule'
 import Shell from 'src/core/shells/Shell'
 import Cache from 'src/core/models/Cache'
 import DirtyMarker from 'src/base/DirtyMarker'
-import { assign, defineProp, defineClass, toClasses } from 'src/share/functions'
+import { assign, defineProp, defineClass } from 'src/share/functions'
 import {
   EMPTY_OBJECT,
   FLAG_NORMAL,
@@ -14,7 +14,6 @@ import {
   FLAG_CHANGED_COMMANDS
 } from 'src/share/constants'
 import config from 'src/share/config'
-// import HTMXEngine from '../template/HTMXEngine';
 
 
 // function buildCache(element) {
@@ -22,37 +21,6 @@ import config from 'src/share/config'
 //   cache.owner = element;
 //   return cache;
 // }
-
-function resetCache(cache, props) {
-  var _props = cache._props, key;
-  if (props) {
-    cache.assign(props);
-  } else {
-    props = EMPTY_OBJECT;
-  }
-  if (_props) {
-    for (key in _props) {
-      if (!(key in props)) {
-        cache.set(key, null);
-      }
-    }
-  }
-}
-
-function toStyle(cssText, viewEngine) {
-  if (!viewEngine || typeof cssText !== 'string') {
-    return;
-  }
-  var style = {},  pieces = cssText.split(';'), piece, index, i;
-  for (i = pieces.length - 1; i >= 0; --i) {
-    piece = pieces[i];
-    index = piece.indexOf(':');
-    if (index > 0) {
-      style[viewEngine.toCamelCase(piece.slice(0, index).trim())] = piece.slice(index + 1).trim();
-    }
-  }
-  return style;
-}
 
 /**
  * 
@@ -86,15 +54,15 @@ defineClass({
       Element.defineMembers(element);
 
       if (scopes && template) {
-        var HTMXEngine = config.HTMXEngine;
-        if (props && template.props) {
-          HTMXEngine.initProps(assign({}, template.props, props), scopes, element);
-        } else if (template.props) {
-          HTMXEngine.initProps(template.props, scopes, element);
-        } else if (props) {
-          HTMXEngine.initProps(props, scopes, element);
-        }
-        HTMXEngine.initOthers(template, scopes, element);
+        // var HTMXEngine = config.HTMXEngine;
+        // if (props && template.props) {
+        //   HTMXEngine.initProps(assign({}, template.props, props), scopes, element);
+        // } else if (template.props) {
+        //   HTMXEngine.initProps(template.props, scopes, element);
+        // } else if (props) {
+        //   HTMXEngine.initProps(props, scopes, element);
+        // }
+        // HTMXEngine.initOthers(template, scopes, element);
       } else if (props) {
         element.assign(props);
       }
@@ -114,40 +82,40 @@ defineClass({
      * Always update the style and classes through member variables.
      * @param {Element|Compoent} element 
      */
-    convert: function convert (element) {
-      var _props = element._props;
+    // convert: function convert (element) {
+    //   var _props = element._props;
     
-      if (element.hasDirty('style')) {
-        DirtyMarker.clean(element, 'style');
-        var style = _props.style;
-        if (typeof style === 'object') {
-          resetCache(element.style, style);
-        } else if (typeof style === 'string') {
-          // element.attrs.set('style', style);
-          var viewEngine = Shell.getViewEngine(element);
-          if (viewEngine) {
-            style = toStyle(style, viewEngine);
-          }
-          resetCache(element.style, style);
-        }
-      }
-      // if (element.hasDirty('attrs')) {
-      //   DirtyMarker.clean(element, 'attrs');
-      //   if (typeof _props.attrs === 'object') {
-      //     element.attrs = _props.attrs;
-      //   } else {
-      //     element.attrs = null;
-      //   }
-      // }
-      if (element.hasDirty('classes')) {
-        DirtyMarker.clean(element, 'classes');
-        var classes = _props.classes;
-        if (typeof classes !== 'object') {
-          classes = toClasses(classes);
-        }
-        resetCache(element.classes, classes);
-      }
-    },
+    //   if (element.hasDirty('style')) {
+    //     DirtyMarker.clean(element, 'style');
+    //     var style = _props.style;
+    //     if (typeof style === 'object') {
+    //       resetCache(element.style, style);
+    //     } else if (typeof style === 'string') {
+    //       // element.attrs.set('style', style);
+    //       var viewEngine = Shell.getViewEngine(element);
+    //       if (viewEngine) {
+    //         style = toStyle(style, viewEngine);
+    //       }
+    //       resetCache(element.style, style);
+    //     }
+    //   }
+    //   // if (element.hasDirty('attrs')) {
+    //   //   DirtyMarker.clean(element, 'attrs');
+    //   //   if (typeof _props.attrs === 'object') {
+    //   //     element.attrs = _props.attrs;
+    //   //   } else {
+    //   //     element.attrs = null;
+    //   //   }
+    //   // }
+    //   if (element.hasDirty('classes')) {
+    //     DirtyMarker.clean(element, 'classes');
+    //     var classes = _props.classes;
+    //     if (typeof classes !== 'object') {
+    //       classes = toClasses(classes);
+    //     }
+    //     resetCache(element.classes, classes);
+    //   }
+    // },
 
     /**
      * Define getter/setter for attrs, style and classes
@@ -209,8 +177,8 @@ defineClass({
     if (this.$flag === FLAG_NORMAL) {
       return false;
     }
-
-    Element.convert(this);
+    // Element.convert(this);
+    config.HTMXEngine.transferProperties(this);
 
     // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
     //   this.$flag |= FLAG_WAITING_TO_RENDER;

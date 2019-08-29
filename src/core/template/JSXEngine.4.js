@@ -69,7 +69,7 @@ function node(type, params, children) {
   } else if (t === 'function') {
     node.type = type;
   } else {
-    throw new TypeError('First argument must be string or constructor');
+    throw new TypeError('First argument must be class, string or constructor');
   }
 
   if (arguments.length === 2 && (Array.isArray(params) || typeof params !== 'object')) {
@@ -214,123 +214,16 @@ function createChild(node, target, scope) {
   return child;
 }
 
-/**
- * Update target's properties, including removing unuseful properties.
- * Update $props for component, _props for element.
- * 
- * @param {Object} props    - new props
- * @param {Shell} target    - child element or component
- * @param {Component} scope - scope component     
- */
-// function updateProps(props, target, scope) {
-//   var _props, $props, desc, key;
-
-//   if (target instanceof Component) {
-//     if (props) {
-//       for (key in props) {
-//         desc = Accessor.getAttrDesc(key);
-//         if (desc) {
-//           target.set(key, props[key]);
-//         }
-//       }
-//     } else {
-//       props = EMPTY_OBJECT;
-//     }
-
-//     $props = target.$props;
-//     if ($props) {
-//       for (key in $props) {
-//         if (!(key in props)) {
-//           desc = Accessor.getAttrDesc(key);
-//           if (desc) {
-//             target.set(key, Accessor.getAttributeDefaultValue(desc));
-//           }
-//         }
-//       }
-//     }
-//   } else {
-//     if (props) {
-//       target.assign(props);
-//     } else {
-//       props = EMPTY_OBJECT;
-//     }
-
-//     _props = target._props;
-//     if (_props) {
-//       for (key in _props) {
-//         if (!(key in props)) {
-//           target.set(key, null);
-//         }
-//       }
-//     }
-    
-//   } 
-// }
-
-function updateProps(props, target, scope) {
-  var _props, $props, desc, key;
-
-  if (target instanceof Component) {
-    if (props) {
-      for (key in props) {
-        desc = Accessor.getAttrDesc(key);
-        if (desc) {
-          target.set(key, props[key]);
-        }
-      }
-    } else {
-      props = EMPTY_OBJECT;
-    }
-    $props = target.$props;   
-    if ($props) {
-      for (key in $props) {
-        if (!(key in props)) {
-          desc = Accessor.getAttrDesc(key);
-          target.set(key, Accessor.getAttributeDefaultValue(desc));
-        }
-      }
-    }
-  } else {
-    if (props) {
-      target.assign(props);
-    } else {
-      props = EMPTY_OBJECT;
-    }
-    _props = target._props;
-    if (_props) {
-      for (key in _props) {
-        if (!(key in props)) {
-          target.set(key, null);
-        }
-      }
-    }
-  }
-}
-
-function updateStyle(style, target, scope) {
-  target.set('style', style);
-}
-
 function updatePropsAndEvents(node, target, scope) {
-  var name;
+  var name, desc;
   var newProps = node.props;
-  var newEvents = newProps && newProps.events;
-  var oldProps = target._vnode && target._vnode.props;
-  var oldEvents = target._vnode && target._vnode.events;
-  
-  if (oldEvents) {
-    for (name in oldEvents) {
-      if (!newEvents || !(name in newEvents)) {
-        target.off(name, oldEvents[name]);
-      }
-    }
-  }
+  var newEvents = node.events;
+  var oldProps = target._props;
+  var oldEvents = target._events;
 
-  if (newEvents) {
-    target.on(newEvents);
-  }
-  
+  // update props
   if (oldProps) {
+    // firstly, remove redundant properties, or reset default property values.
     if (target instanceof Component) {
       for (name in oldProps) {
         if (!newProps || !(name in newProps)) {
@@ -350,49 +243,32 @@ function updatePropsAndEvents(node, target, scope) {
       }
     }
   }
-  
   if (newProps) {
+    // assign new property values.
     target.assign(newProps);
   }
-  
-  if (target._vnode) {
-    target._vnode = node;
-  } else {
-    defineProp(target, '_vnode', {
-      value: node, writable: true, enumerable: false, configurable: true
-    });
-  }
-}
 
-function updateEvents(events, target, scope) {
-  var _events;
-  // if (target instanceof Component) {
-  //   _events = target._events;
-  //   target._events = events;
-  // } else {
-  //   _events = target._actions;
-  // }
-  _events = target._events;
-  events = events || EMPTY_OBJECT;
-  
-
-  // if (events) {
-  //   // target.on(events);
-  // } else {
-  //   events = EMPTY_OBJECT;
-  // }
-
-  if (_events) {
-    for (var name in _events) {
-      if (!(name in events)) {
-        target.off(name, _events[name]);
+  // update events
+  if (oldEvents) {
+    // firstly, remove old event handlers
+    for (name in oldEvents) {
+      if (oldEvents[name]) {
+        target.off(name, oldEvents[name]);
       }
     }
   }
-
-  target.on(events);
-
-  target._events = events;
+  if (newEvents) {
+    // add new event handlers
+    target.on(newEvents);
+  }
+  
+  // if (target._vnode) {
+  //   target._vnode = node;
+  // } else {
+  //   defineProp(target, '_vnode', {
+  //     value: node, writable: true, enumerable: false, configurable: true
+  //   });
+  // }
 }
 
 function updateChildrenOrContents(node, target, scope) { // refer to Vue (http://vuejs.org/)

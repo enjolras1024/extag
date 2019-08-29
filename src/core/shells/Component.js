@@ -92,7 +92,7 @@ defineClass({
 
       // 2. initialize the attribute default values
       var defaults = Accessor.getAttributeDefaultValues(component);
-      defineProp(component, '$props', {
+      defineProp(component, '_props', {
         value: defaults, writable: false, enumerable: false, configurable: true
       });
 
@@ -119,69 +119,6 @@ defineClass({
 
       Element.defineMembers(component);
 
-      // var key, value;
-      // 5. accept props
-      // if (_template.props) {
-      //   // component.assign(_template.props);
-      //   // if (_template.props.expressions) {
-      //   //   Expression.compile(_template.props.expressions, component, component, [component]);
-      //   // }
-        
-      //   for (key in _template.props) {
-      //     value = _template.props[key];
-      //     if (typeof value === 'object' && value instanceof Expression) {
-      //       value.compile(key, component, component, [component]);
-      //     } else {
-      //       component.set(key, value);
-      //     }
-      //   }
-      // }
-
-      // if (props) {
-      //   // component.assign(props);
-      //   // if (scope && locals && props.expressions) {
-      //   //   Expression.compile(props.expressions, component, scope, locals);
-      //   // }
-      //   for (key in props) {
-      //     value = props[key];
-      //     if (typeof value === 'object' && value instanceof Expression) {
-      //       value.compile(key, component, scope, locals);
-      //     } else {
-      //       component.set(key, value);
-      //     }
-      //   }
-      // }
-
-      var HTMXEngine = config.HTMXEngine;
-
-      if (_template.props) {
-        defineProp(component, '__props', {
-          value: new Cache(component), 
-          configurable: true
-        });
-        HTMXEngine.initProps(_template.props, [component], component.__props);
-      }
-      // HTMXEngine.initProps(_template.props, [component], component);
-
-      if (template && template.props) {
-        if (props) {
-          props = assign({}, template.props, props);
-        } else {
-          props = template.props;
-        }
-      }
-      if (__ENV__ === 'development') {
-        Validator.validate0(component, props);
-      }
-      // TODO: HTMXEgine.initSelf()
-      if (scopes && template) {
-        HTMXEngine.initProps(props, scopes, component);
-      } else if (props) {
-        component.assign(props);
-      }     
-
-      // console.log(component.toString(), _template.props, props)
-
       // 6. setup
       if (scopes && scopes[0].context) {
         component.setup(scopes[0].context);
@@ -192,69 +129,15 @@ defineClass({
         component.setup();
       }
 
-      // if (_template) {
-      //   HTMXEngine.initOthers(_template, [component], component);
-      // }
-      if (_template.attrs) {
-        defineProp(component, '__attrs', {
-          value: new Cache(component), 
-          configurable: true
-        });
-        HTMXEngine.initProps(_template.attrs, [component], component.__attrs);
-      }
-      if (_template.style) {
-        defineProp(component, '__style', {
-          value: new Cache(component), 
-          configurable: true
-        });
-        HTMXEngine.initProps(_template.style, [component], component.__style);
-      }
-      if (_template.classes) {
-        defineProp(component, '__classes', {
-          value: new Cache(component), 
-          configurable: true
-        });
-        HTMXEngine.initProps(_template.classes, [component], component.__classes);
-      }
-      // if (_template.actions) {
-      //   HTMXEngine.initActions(_template.actions, [component], component)
-      // }
+      var HTMXEngine = config.HTMXEngine;
 
-      // var contents = HTMXEngine.makeContents(_template.children, [component]);
-      // if (_template.type) {
-      //   component.setContents(contents);
-      // } else {
-      //   component.setChildren(contents);
-      // }
-      HTMXEngine.initActions(_template.actions, [component], component)
-      HTMXEngine.initContents(_template, [component], component);
-
-      if (scopes && template) {
-        HTMXEngine.initOthers(template, scopes, component);
-      }
-
-      // TODO: HTMXEngine.initChildren
-      // TODO: HTMXEngine.buildChildren
-
-      // 7. start the template engine
-      // HTMXEngine.start(_template, component, component, [component]);
+      HTMXEngine.driveComponent(component, _template, scopes, template, props);
 
       // 8. initialized
       //component.send('initialized');
       if (component.onInited) {
         component.onInited();
       }
-
-      // 9. extras
-      // if (component.reflow) {
-      //   component.on('update', (function() {
-      //     var vnodes = this.reflow(JSXEngine.createElement);
-      //     if (vnodes) {
-      //       console.log('vnodes', vnodes)
-      //       JSXEngine.reflowComponent(this, vnodes);
-      //     }
-      //   }).bind(component));
-      // }
     }
 
   },
@@ -273,20 +156,21 @@ defineClass({
   // },
 
   /**
-   * Get property stored in _props or $props.
+   * Get property stored in _props or _props.
    * @param {string} key
    */
   get: function get(key) {
     var desc = Accessor.getAttrDesc(this, key);//this.__extag_descriptors__[key];
-    if (desc) {
-      // if (Dep.binding && !desc.compute) {
-      //   Dep.add(this, key);
-      // }
-      return !desc.get ? 
-                this.$props[key] : 
-                  desc.get.call(this, key, this.$props);
-    }
-    return this._props[key];
+    // if (desc) {
+    //   // if (Dep.binding && !desc.compute) {
+    //   //   Dep.add(this, key);
+    //   // }
+    //   return !desc.get ? 
+    //             this._props[key] : 
+    //               desc.get.call(this, key, this._props);
+    // }
+    // return this._props[key];
+    return (desc && desc.get) ? desc.get.call(this, key, this._props) : this._props[key];
   },
 
   /**
@@ -306,7 +190,7 @@ defineClass({
     var desc = Accessor.getAttrDesc(this, key);//this.__extag_descriptors__[key];
     // DOM property, stored in _props
     if (!desc) {
-      Shell.prototype.set.call(this, key, val);
+      shellProto.set.call(this, key, val);
       return;
     }
     // validation in development 
@@ -318,8 +202,8 @@ defineClass({
       this[key] = val;
       return;
     }
-    // Custom attribute, stored in $props
-    var props = this.$props, old;
+    // Custom attribute, stored in _props
+    var props = this._props, old;
 
     if (!desc.get) { // usually, no custom `get` and `set`, checking if the property value is changed firstly.
       old = props[key];
@@ -359,7 +243,7 @@ defineClass({
    * @param {HTMLElement} $skin
    */
   attach: function attach($skin) {
-    if (Shell.prototype.attach.call(this, $skin)) {
+    if (shellProto.attach.call(this, $skin)) {
       if (this.onAttached) {
         this.onAttached($skin);
       }
@@ -406,7 +290,7 @@ defineClass({
     this.emit('update');
 
     if (this.$type !== 0) {
-      Element.convert(this);
+      config.HTMXEngine.transferProperties(this);
     } else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
       this._parent.invalidate(FLAG_CHANGED_CHILDREN);
     }
@@ -443,9 +327,9 @@ defineClass({
       return false;
     }
     if (this.$type !== 0) {
-      Element.prototype.render.call(this);
+      elementPropto.render.call(this);
     } else {
-      Fragment.prototype.render.call(this);
+      fragmentProto.render.call(this);
     }
     if (this.onRendered) {
       Schedule.pushCallbackQueue((function() {

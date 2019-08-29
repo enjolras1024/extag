@@ -39,7 +39,7 @@ import FragmentBinding from 'src/core/bindings/FragmentBinding'
 
 import Evaluator from 'src/core/template/Evaluator'
 import Expression from 'src/core/template/Expression'
-import JSXEngine from 'src/core/template/JSXEngine.3'
+import JSXEngine from 'src/core/template/JSXEngine.4'
 import HTMXEngine from 'src/core/template/HTMXEngine'
 // import HTMXTemplate from 'src/core/template/HTMXTemplate'
 // import HTMLParser from 'src/core/template/parsers/HTMLParser'
