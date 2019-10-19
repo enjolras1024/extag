@@ -21,7 +21,7 @@ defineClass({
    * @param {Array} scopes  - local varaibles
    * @param {*} value       - value returned by the prevoius evluator/converter in data-binding expression.
    */
-  compile: function(scopes, value) {
+  execute: function(scopes, value) {
     var args;
     if (arguments.length > 1) {
       args = scopes.slice(0);

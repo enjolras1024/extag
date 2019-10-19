@@ -157,7 +157,7 @@ defineClass({
       // newScopes = scopes.concat([i, item]);
   
       if (keyEval) {
-        key = keyEval.compile(newScopes);
+        key = keyEval.execute(newScopes);
         index = indices[key];
         if (index != null) {
           content = children[index];

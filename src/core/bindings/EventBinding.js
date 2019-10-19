@@ -67,9 +67,9 @@ defineClass({
       if (!modifiers || !modifiers.length) {
         target.on(type, function(event) {
           // if (event) {
-          //   evaluator.compile(scopes.concat([event]));
+          //   evaluator.execute(scopes.concat([event]));
           // } else {
-            evaluator.compile(scopes);
+            evaluator.execute(scopes);
           // }
         });
       } else {
@@ -77,9 +77,9 @@ defineClass({
           // process(event, type, target, wrapper, modifiers);
           processModifiers(modifiers, event);
           // if (event) {
-          //   evaluator.compile(scopes.concat([event]));
+          //   evaluator.execute(scopes.concat([event]));
           // } else {
-            evaluator.compile(scopes);
+            evaluator.execute(scopes);
           // }
         };
         target.on(type, wrapper, extractOptions(modifiers));

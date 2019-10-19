@@ -4,15 +4,19 @@ import Path from 'src/base/Path'
 import logger from 'src/share/logger'
 import Evaluator from 'src/core/template/Evaluator'
 import { EMPTY_OBJECT } from 'src/share/constants'
+import PropEvaluator from 'src/core/template/evaluators/PropEvaluator'
+import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator'
 
 var JS_KEYWORDS = 'abstract arguments boolean break byte case catch char class const continue debugger default delete do double else enum eval export extends false final finally float for function goto if implements import in instanceof int interface let long native new null package private protected public return short static super switch synchronized this throw throws transient true try typeof undefined var void volatile while with yield Array Date Infinity Math NaN Number Object String Boolean';
 var JS_KEYWORD_MAP = {};
 (function() {
   var keywords = JS_KEYWORDS.split(/\s+/);
-  for (var i = 0, n = 0; i < n; ++i) {
+  for (var i = 0, n = keywords.length; i < n; ++i) {
     JS_KEYWORD_MAP[keywords[i]] = true;
   }
 })();
+
+var PROP_EXPR_REGEXP = /^\s*[\$_a-zA-Z0-9]+\s*$/;
 
 function skipWhiteSpace(expression, index) {
   while (expression.charCodeAt(index) === 32) { // 32: ' '
@@ -77,70 +81,101 @@ export default {
    * @returns {Object}
    */
   parse: function parse(expression, prototype, identifiers) {
-    var paths = [], lines = [], expanded = 0, expr = expression, i = 0;
+    var evaluator;
+
+    if (PROP_EXPR_REGEXP.test(expression)) {
+      evaluator = new PropEvaluator(expression.trim());
+      evaluator.compile(prototype, identifiers);
+      return evaluator;
+    }
+
+    var paths = [], lines = [], expanded = 0, expr = expression;
     var resources = prototype.constructor.resources || EMPTY_OBJECT;
     var constructor = prototype.constructor;
     var indices = extract(expression);
+    var i, j;
 
-    var args = identifiers.slice(0);
-    args[0] = '$_0'; 
+    // var args = identifiers.slice(0);
+    // args[0] = '$_0'; 
 
     // if (__ENV__ === 'development') {
     //   lines.push('try {');
     // } 
 
-    for (i = 0; i < indices.length; i += 2) {
-      if (indices[i+1] < 0) { continue; }
-      var piece = expression.slice(indices[i] + expanded, indices[i+1] + expanded);
-      if (JS_KEYWORD_MAP.hasOwnProperty(piece)) {
+    // for (i = 0; i < indices.length; i += 2) {
+    //   if (indices[i+1] < 0) { continue; }
+    //   var piece = expression.slice(indices[i] + expanded, indices[i+1] + expanded);
+    //   if (JS_KEYWORD_MAP.hasOwnProperty(piece)) {
+    //     continue;
+    //   }
+    //   var path = Path.parse(piece);
+    //   // var k = identifiers.indexOf(path[0]);
+    //   if (identifiers.indexOf(path[0]) >= 0) {
+    //     paths.push(piece);
+    //   } else if (path[0] in prototype) {
+    //     expression = expression.slice(0, indices[i] + expanded) + 'this.' + piece + expression.slice(indices[i+1] + expanded);
+    //     paths.push('this.' + piece);
+    //     expanded += 5;
+    //   } /*else if (path[0] in resources) {
+    //     expression = expression.slice(0, indices[i] + expanded) + 'this.R.' + piece + expression.slice(indices[i+1] + expanded);
+    //     paths.push('this.R.' + piece);
+    //     expanded += 7;
+    //   } else if (path[0] in resources) {
+    //     lines.push('  var ' + path[0] + ' = this.res("' + path[0] + '");')
+    //   } */ else if (path[0] in resources) {
+    //     // lines.push('  var ' + path[0] + ' = this.$res("' + path[0] + '");'); // from local resources or global
+    //     lines.push('  var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
+    //   }
+    // }
+
+    // lines.push('  return ' + expression);
+
+    var params = ['$_0'], origins = [-2], piece, path;
+
+    for (j = 0; j < indices.length; j += 2) {
+      if (indices[j+1] < 0) { continue; }
+      piece = expression.slice(indices[j] + expanded, indices[j+1] + expanded);
+      path = Path.parse(piece);
+      if (JS_KEYWORD_MAP.hasOwnProperty(path[0])) {
         continue;
       }
-      var path = Path.parse(piece);
-      // var k = identifiers.indexOf(path[0]);
-      if (identifiers.indexOf(path[0]) >= 0) {
-        paths.push(piece);
+      i = identifiers.indexOf(path[0]);
+      if (i >= 0) {
+        if (i !== 0) {
+          params.push(path[0]);
+          origins.push(i);
+        }
       } else if (path[0] in prototype) {
-        expression = expression.slice(0, indices[i] + expanded) + 'this.' + piece + expression.slice(indices[i+1] + expanded);
-        paths.push('this.' + piece);
-        expanded += 5;
-      } /*else if (path[0] in resources) {
-        expression = expression.slice(0, indices[i] + expanded) + 'this.R.' + piece + expression.slice(indices[i+1] + expanded);
-        paths.push('this.R.' + piece);
-        expanded += 7;
+        i = skipWhiteSpace(expression, indices[j+1] + expanded);
+        if (expression[i] !== '(') {
+          expression = expression.slice(0, indices[j] + expanded) + 'this.' + piece + expression.slice(indices[j+1] + expanded);
+          expanded += 5;
+        } else {
+          params.push(path[0]);
+          origins.push(0);
+        }
       } else if (path[0] in resources) {
-        lines.push('  var ' + path[0] + ' = this.res("' + path[0] + '");')
-      } */ else if (path[0] in resources) {
-        // lines.push('  var ' + path[0] + ' = this.$res("' + path[0] + '");'); // from local resources or global
-        lines.push('  var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
+        params.push(path[0]);
+        origins.push(-1);
+      } else if (path[0] !== '$_0') {
+        expression = expression.slice(0, indices[j] + expanded) + 'this.' + piece + expression.slice(indices[j+1] + expanded);
+        expanded += 5;
       }
     }
 
-    lines.push('  return ' + expression);
-
-    // if (__ENV__ === 'development') {
-    //   lines.push('} catch (e) {');
-    //   lines.push('  console.warn("[EXTAG WARN] The expression `' + 
-    //               expr.replace(/('|")/g, '\\$1') + 
-    //               '` may be illegal in the template of Component `' + 
-    //               (constructor.fullName || constructor.name) + 
-    //               '`");');
-    //   lines.push('  throw e;')
-    //   lines.push('}');
-    // } 
-  
-    args.push(lines.join('\n'));
-  
     try {
-      var func = Function.apply(null, args);
-      return new Evaluator({
-        func: func,
-        // expr: expr,
-        paths: paths,
-        identifiers: identifiers
-      });
+      evaluator = new FuncEvaluator(expression, params, origins);
+      evaluator.compile(prototype, identifiers);
+      return evaluator;
+      // return new Evaluator({
+      //   func: func,
+      //   // expr: expr,
+      //   paths: paths,
+      //   identifiers: identifiers
+      // });
     } catch (e) {
       if (__ENV__ === 'development') { 
-        logger.warn('Illegal expression `' + expr + '` in the template of Component ' + (constructor.fullName || constructor.name));
+        logger.warn('Illegal expression `' + expression + '` in the template of Component ' + (constructor.fullName || constructor.name));
       }
       throw(e);
     }
