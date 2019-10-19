@@ -27,6 +27,9 @@ function find(path, scope) {
 }
 
 export default {
+  test: function(text) {
+    return PATH_REGEXP_1.test(text);
+  },
   /**
    * Parse property path from a string.
    * @param {string} text - like 'a.b.c' or 'a[0].c'...

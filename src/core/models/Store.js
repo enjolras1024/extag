@@ -5,6 +5,7 @@ import Watcher from 'src/base/Watcher'
 import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
 import Dependency from 'src/core/Dependency'
+import Binding from 'src/core/bindings/Binding'
 import config from 'src/share/config'
 import { defineProp, defineClass } from 'src/share/functions'
 
@@ -146,5 +147,21 @@ defineClass({
     }
 
     return;
-  }
+  },
+
+  bind: function(target, property, collect, reflect) {
+    // var scope = this; 
+    // if (collect && (typeof collect === 'function')) {
+    //   DataBinding.compile({
+    //     mode: DataBinding.MODES.ONE_WAY,
+    //     evaluator: new Evaluator({func: collect})
+    //   }, property, target, [scope]);
+    // }
+    // if (reflect && (typeof reflect === 'function')) {
+    //   target.on('changed.' + property, function() {
+    //     reflect.call(scope, target[property]);
+    //   });
+    // }
+    Binding.create(this, target, property, collect, reflect);
+  },
 });

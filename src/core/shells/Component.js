@@ -4,10 +4,14 @@ import Parent from 'src/base/Parent'
 import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
 import Schedule from 'src/core/Schedule'
+import Dependency from 'src/core/Dependency'
 import Cache from 'src/core/models/Cache'
 import Shell from 'src/core/shells/Shell'
 import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
+import Evaluator from 'src/core/template/Evaluator'
+import Binding from 'src/core/bindings/Binding'
+import DataBinding from 'src/core/bindings/DataBinding'
 // import JSXEngine from 'src/core/template/JSXEngine.3'
 // import HTMXEngine from 'src/core/template/HTMXEngine'
 // import HTMXTemplate from 'src/core/template/HTMXTemplate'
@@ -161,6 +165,18 @@ defineClass({
    */
   get: function get(key) {
     var desc = Accessor.getAttrDesc(this, key);//this.__extag_descriptors__[key];
+    if (!desc) {
+      return this._props[key]
+    }
+    if (desc.bindable) {
+      if (Dependency.binding()) {
+        Dependency.add(this, key);
+      }
+      return !desc.get ? this._props[key] : desc.get.call(this, key, this._props);
+    }
+    return this[key];
+    // return value;
+    // return (desc && desc.get) ? desc.get.call(this, key, this._props) : this._props[key];
     // if (desc) {
     //   // if (Dep.binding && !desc.compute) {
     //   //   Dep.add(this, key);
@@ -170,7 +186,6 @@ defineClass({
     //               desc.get.call(this, key, this._props);
     // }
     // return this._props[key];
-    return (desc && desc.get) ? desc.get.call(this, key, this._props) : this._props[key];
   },
 
   /**
@@ -223,6 +238,22 @@ defineClass({
     }
 
     // return this;
+  },
+
+  bind: function(target, property, collect, reflect) {
+    // var scope = this; 
+    // if (collect && (typeof collect === 'function')) {
+    //   DataBinding.compile({
+    //     mode: DataBinding.MODES.ONE_WAY,
+    //     evaluator: new Evaluator({func: collect})
+    //   }, property, target, [scope]);
+    // }
+    // if (reflect && (typeof reflect === 'function')) {
+    //   target.on('changed.' + property, function() {
+    //     reflect.call(scope, target[property]);
+    //   });
+    // }
+    Binding.create(this, target, property, collect, reflect);
   },
 
   /**
