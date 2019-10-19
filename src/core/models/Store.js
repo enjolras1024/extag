@@ -4,8 +4,11 @@
 import Watcher from 'src/base/Watcher'
 import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
+import Dependency from 'src/core/Dependency'
 import config from 'src/share/config'
 import { defineProp, defineClass } from 'src/share/functions'
+
+var storeGuid = 0;
 
 /**
  * Store for storing data an sending property-changed event with declaration.
@@ -29,29 +32,44 @@ defineClass({
     },
 
     initialize: function initialize(store, props) {
-      var constructor = store.constructor, prototype = constructor.prototype, descriptors = constructor.attributes;
+      var prototype = store.constructor.prototype;
+      var attributes = store.constructor.attributes;
 
       // if (!prototype.hasOwnProperty('__extag_descriptors__')) {
-        Accessor.applyAttributeDescriptors(prototype, descriptors, true); 
+        Accessor.applyAttributeDescriptors(prototype, attributes, true); 
       // }
 
-      if (props) {
-        Accessor.applyAttributeDescriptors(store, props, false); 
-      }
+      // if (props) {
+      //   Accessor.applyAttributeDescriptors(store, props, false); 
+      // }
 
       var defaults = Accessor.getAttributeDefaultValues(store);
 
       defineProp(store, '$props', {
-        value: defaults, writable: false, enumerable: false, configurable: false
+        value: defaults, writable: false, enumerable: false, configurable: true
       });
+
+      defineProp(store, '$guid', {
+        value: 's' + storeGuid++, writable: false, enumerable: false, configurable: true
+      });
+
+      if (this.setup) {
+        this.setup();
+      }
 
       if (__ENV__ === 'development') {
         Validator.validate0(store, props);
       }
   
       if (props) {
+        Accessor.applyAttributeDescriptors(store, props, false);
         store.assign(props);
       }
+
+      // if (this.onInited) {
+      //   this.onInited();
+      // }
+      
     }
   },
 
@@ -61,10 +79,13 @@ defineClass({
    */
   get: function get(key) {
     var desc = Accessor.getAttrDesc(this, key);
-    if (desc) {
+    if (desc && desc.bindable) {
       // if (Dep.binding && !desc.compute) {
       //   Dep.add(this, key);
       // }
+      if (Dependency.binding()) {
+        Dependency.add(this, key);
+      }
       return !desc.get ? 
                 this.$props[key] : 
                   desc.get.call(this, this.$props, key);
@@ -89,12 +110,12 @@ defineClass({
     var desc = Accessor.getAttrDesc(this, key);
     // usual property
     if (!desc) {
-      // this[key] = val;
-      old = this[key];
-      if (old !== val) {
-        this[key] = val;
-        this.emit('changed.' + key, key, val, old);
-      }
+      // old = this[key];
+      // if (old !== val) {
+      //   this[key] = val;
+      //   this.emit('changed.' + key, key, val, old);
+      // }
+      this[key] = val;
       return;
     }
     // validation in development 

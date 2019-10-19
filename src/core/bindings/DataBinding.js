@@ -4,6 +4,7 @@
 // import RES from 'src/base/RES'
 import Path from 'src/base/Path'
 import Accessor from 'src/base/Accessor'
+import Dependency from 'src/core/Dependency'
 import Store from 'src/core/models/Store'
 import Binding from 'src/core/bindings/Binding'
 import { defineClass } from 'src/share/functions'
@@ -11,8 +12,9 @@ import { CONTEXT_SYMBOL, FLAG_CHANGED } from 'src/share/constants'
 
 var MODES = { ASSIGN: -1, ONE_TIME: 0, ONE_WAY: 1, TWO_WAY: 2, ANY_WAY: 3 };
 
-export default function DataBinding(pattern) {
+function DataBinding(pattern) {
   this.mode = pattern.mode;
+  this.path = pattern.path;
   this.paths = pattern.paths;
   this.evaluator = pattern.evaluator;
   this.converters = pattern.converters;
@@ -44,10 +46,12 @@ defineClass({
       if (!binding.sync) {
         scopes[0].off('update', binding.exec);
       }
+
+      Dependency.clean(binding);
       
       Binding.remove(target, binding);
 
-      delDeps(binding);
+      // delDeps(binding);
     }
   },
 
@@ -65,48 +69,75 @@ defineClass({
     }
 
     this.exec = this.exec.bind(this);
+    this.invalidate = this.invalidate.bind(this);
 
-    if (this.mode === MODES.ANY_WAY) {
-      this.sync = false;
-      this.scopes[0].on('update', this.exec);
-    } else {
-      addDeps(this);
-      var deps = this.deps;
-      if (deps && deps.length) {
-        Binding.record(target, this);
-        if (deps.length > 1) {
-          this.sync = false;
-          this.scopes[0].on('update', this.exec);
-        }
-      }
-    }
+    // if (this.mode === MODES.ANY_WAY) {
+    //   this.sync = false;
+    //   this.scopes[0].on('update', this.exec);
+    // } else {
+    //   addDeps(this);
+    //   var deps = this.deps;
+    //   if (deps && deps.length) {
+    //     Binding.record(target, this);
+    //     if (deps.length > 1) {
+    //       this.sync = false;
+    //       this.scopes[0].on('update', this.exec);
+    //     }
+    //   }
+    // }
 
     if (this.mode === MODES.TWO_WAY) {
       this.back = this.back.bind(this);
-      var path = Path.parse(this.paths[0]);
+      var path = this.path;//Path.parse(this.path);
       var from = this.identifiers.indexOf(path[0]);
-      if (from < 0) {
-
-      }
       this.sourceProp = path[path.length - 1];
-      this.source = Path.search(path.slice(1, path.length - 1), scopes[from], true);
-
+      if (from >= 0) {
+        this.source = Path.search(path.slice(1, path.length - 1), scopes[from], true);
+      } else {
+        this.source = Path.search(path.slice(1, path.length - 1), scopes[0].constructor.resources, true);
+      }
+      
       if (isBindable(this.target, this.targetProp)) {
         this.target.on('changed.' + this.targetProp, this.back);
       }
     }
 
     // Binding.assign(this.target, this.targetProp, this.eval(), this);
-    this.target.set(this.targetProp, this.eval());
+    // this.target.set(this.targetProp, this.eval());
+    
+    if (this.mode === MODES.ANY_WAY) {
+      this.sync = false;
+      this.scopes[0].on('update', this.exec);
+      this.target.set(this.targetProp, this.eval());
+    } else {
+      this.sync = true;
+      this.flag = 1;
+      this.exec();
+      
+      // Dependency.begin(this);
+      // this.target.set(this.targetProp, this.eval());
+      // Dependency.end();
+      var deps = this.deps;
+      var keys = Object.keys(deps);
+      if (deps && keys.length) {
+        Binding.record(target, this);
+        if (keys.length > 1) {
+          this.sync = false;
+          this.scopes[0].on('update', this.exec);
+        } //else if (this.paths.length == 1 && /0/.test(this.paths[0])) {
+          // var desc = Accessor.getAttrDesc()
+        //}
+      }
+    }
   },
 
   eval: function(back) {
     if (this.mode === MODES.TWO_WAY) {
       // if (converters && converters.length) {
       //   if (back) {
-      //     return converters[1].compile(this.scopes, this.target[this.targetProp]);
+      //     return converters[1].execute(this.scopes, this.target[this.targetProp]);
       //   } else {
-      //     return converters[0].compile(this.scopes, this.source[this.sourceProp]);
+      //     return converters[0].execute(this.scopes, this.source[this.sourceProp]);
       //   }
       // } else {
         if (back) {
@@ -119,9 +150,9 @@ defineClass({
 
     var converters = this.converters;
     if (converters && converters.length) {
-      return applyConverters(converters, this.scopes, this.evaluator.compile(this.scopes));
+      return applyConverters(converters, this.scopes, this.evaluator.execute(this.scopes));
     } else {
-      return this.evaluator.compile(this.scopes);
+      return this.evaluator.execute(this.scopes);
     }
   },
 
@@ -129,13 +160,16 @@ defineClass({
     if (this.flag === 0) {
       return;
     }
-    if (this.flag === 1) {
-      this.target.set(this.targetProp, this.eval());
+    // if (this.flag === 1) {
+      Dependency.begin(this);
+      var value = this.eval();
+      Dependency.end();
+      this.target.set(this.targetProp, value);
       // Binding.assign(this.target, this.targetProp, this.eval(), this);
-    } else if (this.flag === 2) {
-      DataBinding.destroy(this);
-      DataBinding.compile(this.pattern, this.targetProp, this.target, this.scopes);
-    }
+    // } else if (this.flag === 2) {
+    //   DataBinding.destroy(this);
+    //   DataBinding.compile(this.pattern, this.targetProp, this.target, this.scopes);
+    // }
 
     // if (this.flag > 1) {
       this.flag = 0;
@@ -152,9 +186,11 @@ defineClass({
   },
 
   invalidate: function(flag) {
-    if (this.flag < flag) {
-      this.flag = flag;
-    }
+    // if (this.flag < flag) {
+    //   this.flag = flag;
+    // }
+    this.flag = 1;
+    // console.log('sync', this.sync, flag)
     if (this.sync) {
       this.exec();
     } else {
@@ -181,95 +217,130 @@ function depend(i, prop, paths, source) {
 
 function isBindable(src, prop) {
   var desc = Accessor.getAttrDesc(src, prop);
-  return (desc && desc.bindable) || src instanceof Store;
+  return desc && desc.bindable;
 }
 
-function addDeps(binding) {
-  var identifiers = binding.identifiers;
-  var scopes =  binding.scopes;
-  var paths = binding.paths;
-  if (!scopes || !paths || !paths.length) { return; }
+// function isSingleBinding(binding) {
+//   var paths = binding.paths;
+//   if (paths.length !== 1) {
+//     return false;
+//   }
+//   var path = Path.parse(paths[0]);
+//   var index = binding.identifiers.indexOf(path[0]);
+//   if (index < 0) {
+//     return false;
+//   }
+//   var src = binding.scopes[index];
+//   var count = 0;
+//   for (var i = 1; i < path.length; ++i) {
+//     if (!(src instanceof Object)) {
+//       break;
+//     }
+//     var prop = path[i];
+//     var desc = Accessor.getAttrDesc(src, prop);
+//     if (desc && desc.bindable) {
+//       if (desc.depends) {
+//         return false;
+//       }
+//       ++count;
+//       if (count > 1) {
+//         return false;
+//       }
+//     }
+//     src = src[prop];
+//   }
+//   return true;
+// }
 
-  var i, j, k, path, temp, deps, desc, scope;
-  paths = paths.slice(0);
-  for (i = 0; i < paths.length; ++i) {
-    // path = paths[i];
-    // if (!path) {
-    //   continue;
-    // }
+// function addDeps(binding) {
+//   var identifiers = binding.identifiers;
+//   var scopes =  binding.scopes;
+//   var paths = binding.paths;
+//   if (!scopes || !paths || !paths.length) { return; }
 
-    if (paths[i] == null) {
-      continue;
-    }
+//   var i, j, k, path, temp, deps, desc, scope;
+//   paths = paths.slice(0);
+//   for (i = 0; i < paths.length; ++i) {
+//     // path = paths[i];
+//     // if (!path) {
+//     //   continue;
+//     // }
 
-    path = Path.parse(paths[i]);
-    k = identifiers.indexOf(path[0]);
-    if (k < 0) { continue; }
+//     if (paths[i] == null) {
+//       continue;
+//     }
+
+//     path = Path.parse(paths[i]);
+//     k = identifiers.indexOf(path[0]);
+//     if (k < 0) { continue; }
     
-    deps = [];
-    scope = scopes[k];
+//     deps = [];
+//     scope = scopes[k];
 
-    for (j = 1; j < path.length; ++j) {
-      if (!(scope instanceof Object)) {
-        break;
-      }
-      var dep = null;
-      temp = path[j];
-      if (isBindable(scope, temp)) {
-        dep = {
-          src: scope,
-          prop: temp,
-          index: j
-        };
-      }
+//     for (j = 1; j < path.length; ++j) {
+//       if (!(scope instanceof Object)) {
+//         break;
+//       }
+//       var dep = null;
+//       temp = path[j];
+//       if (isBindable(scope, temp)) {
+//         dep = {
+//           src: scope,
+//           prop: temp,
+//           index: j
+//         };
+//       }
 
-      if (dep && depend(i, dep.prop, paths, dep.src, path[0])) {
-        paths[i] = null;
-        dep = null;
-      }
-      if (dep) {
-        deps.push(dep);
-      }
-      scope = scope[temp];
-    }
+//       if (dep && depend(i, dep.prop, paths, dep.src, path[0])) {
+//         paths[i] = null;
+//         dep = null;
+//       }
+//       if (dep) {
+//         deps.push(dep);
+//       }
+//       scope = scope[temp];
+//     }
 
-    for (j = 0; j < deps.length; ++j) {
-      dep = deps[j];
-      dep.func = 
-        (j === deps.length - 1) ? 
-        function() {
-          binding.invalidate(1);
-        } : 
-        function() {
-          binding.invalidate(2);
-        }
-      dep.src.on('changed.' + dep.prop, dep.func);
-    }
+//     for (j = 0; j < deps.length; ++j) {
+//       dep = deps[j];
+//       dep.func = 
+//         (j === deps.length - 1) ? 
+//         function() {
+//           binding.invalidate(1);
+//         } : 
+//         function() {
+//           binding.invalidate(2);
+//         }
+//       dep.src.on('changed.' + dep.prop, dep.func);
+//     }
 
-    if (deps.length > 0) {
-      if (!binding.deps) {
-        binding.deps = [];
-      }
-      binding.deps.push.apply(binding.deps, deps);
-    }
-  }
-}
+//     if (deps.length > 0) {
+//       if (!binding.deps) {
+//         binding.deps = [];
+//       }
+//       binding.deps.push.apply(binding.deps, deps);
+//     }
+//   }
+// }
 
-function delDeps(binding) {
-  var i, dep, deps = binding.deps;
-  if (deps) {
-    for (i = 0; i < deps.length; ++i) {
-      dep = deps[i];
-      dep.src.off('changed.' + dep.prop, dep.func);
-    }
-    deps.length = 0;
-    delete binding.deps;
-  }
-}
+// function delDeps(binding) {
+//   return;
+//   var i, dep, deps = binding.deps;
+//   if (deps) {
+//     for (i = 0; i < deps.length; ++i) {
+//       dep = deps[i];
+//       dep.src.off('changed.' + dep.prop, dep.func);
+//     }
+//     deps.length = 0;
+//     delete binding.deps;
+//   }
+// }
 
 function applyConverters(converters, scopes, value) {
   for (var i = 0; i < converters.length; ++i) {
-    value = converters[i].compile(scopes, value);
+    value = converters[i].execute(scopes, value);
   }
   return value;
 }
+
+export default DataBinding
