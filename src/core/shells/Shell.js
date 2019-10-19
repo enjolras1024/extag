@@ -21,7 +21,7 @@ import {
   FLAG_CHANGED_COMMANDS
 } from 'src/share/constants'
 
-var guid = 0;//Number.MIN_VALUE;
+var shellGuid = 0;//Number.MIN_VALUE;
 
 var defaultViewEngine = null;
 
@@ -256,7 +256,7 @@ defineClass({
       // });
 
       defineProp(shell, '$guid', {
-        value: guid++, writable: false, enumerable: false, configurable: true
+        value: shellGuid++, writable: false, enumerable: false, configurable: true
       }); // should be less than Number.MAX_SAFE_INTEGER
 
       defineProp(shell, '$type', {

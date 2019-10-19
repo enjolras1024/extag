@@ -47,11 +47,11 @@ var RESERVED_PARAMS = {
  *      ])
  *
  * @param {string|Function} tagOrType
- * @param {Object} params
+ * @param {Object} config
  * @param {string|Array|Object} children
  * @returns {Object}
  */
-function node(type, params, children) {
+function node(type, config, children) {
   var node = {
     __extag_node__: true
   };
@@ -72,38 +72,38 @@ function node(type, params, children) {
     throw new TypeError('First argument must be class, string or constructor');
   }
 
-  if (arguments.length === 2 && (Array.isArray(params) || typeof params !== 'object')) {
-    children = params;
-    params = null;
+  if (arguments.length === 2 && (Array.isArray(config) || typeof config !== 'object')) {
+    children = config;
+    config = null;
   }
 
-  if (params) {
-    if (params.xkey) {
+  if (config) {
+    if (config.xkey) {
       node.key = param.xkey;
     }
-    if (params.xname) {
-      node.name = params.xname;
+    if (config.xname) {
+      node.name = config.xname;
     }
-    // if (params.style) {
-    //   node.style = params.style;
+    // if (config.style) {
+    //   node.style = config.style;
     // }
-    // if (params.xattrs) {
-    //   node.attrs = params.xattrs;
+    // if (config.xattrs) {
+    //   node.attrs = config.xattrs;
     // }
-    // if (params.xclass) { // TODO: className
-    //   node.classes = params.xclass;
+    // if (config.xclass) { // TODO: className
+    //   node.classes = config.xclass;
     // }
-    if (params.events) {
-      node.events = params.events;
+    if (config.events) {
+      node.events = config.events;
     }
 
-    // node.directs = params.directs;
+    // node.directs = config.directs;
 
     var props = node.props = {};
 
-    for (var key in params) {
-      if (params.hasOwnProperty(key) && !RESERVED_PARAMS.hasOwnProperty(key)) {
-        props[key] = params[key];
+    for (var key in config) {
+      if (config.hasOwnProperty(key) && !RESERVED_PARAMS.hasOwnProperty(key)) {
+        props[key] = config[key];
       }
     }
   }

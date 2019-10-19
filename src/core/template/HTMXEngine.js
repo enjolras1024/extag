@@ -1,6 +1,7 @@
 // src/core/template/HTMXEngine.js
 
 import DirtyMarker from 'src/base/DirtyMarker'
+import Validator from 'src/base/Validator'
 import Cache from 'src/core/models/Cache'
 import Text from 'src/core/shells/Text'
 import Shell from 'src/core/shells/Shell'
@@ -151,10 +152,15 @@ function driveComponent(target, _template, scopes, template, props) {
 
   if (template && scopes) {
     if (props && template.props) {
-      driveProps(target, assign({}, template.props, props), scopes);
-    } else if (template.props) {
-      driveProps(target, template.props, scopes);
+      props = assign({}, template.props, props);
+    } else if (!props && template.props) {
+      props = template.props;
     }
+    if (__ENV__ === 'development') {
+      Validator.validate0(target, props);
+    }
+    driveProps(target, props, scopes);
+
     if (template.actions) {
       driveEvents(target, template.actions, scopes);
     }
@@ -171,6 +177,9 @@ function driveComponent(target, _template, scopes, template, props) {
       driveContents(target, template.children,scopes);
     }
   } else if (props) {
+    if (__ENV__ === 'development') {
+      Validator.validate0(store, props);
+    }
     driveProps(target, props, scopes);
   }
   
