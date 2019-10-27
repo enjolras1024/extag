@@ -110,11 +110,12 @@ export default {
               logger.warn('There is an empty converter in the expression `' + expression + '`');
               throw new Error('Converter must not be empty!');
             }
+            // TODO: check if it is a function
             var index = piece.indexOf('(');
             if (index > 0) {
-              piece = piece.slice(0, index) + '($_0,' + piece.slice(index + 1);
+              piece = piece.slice(0, index) + '(arguments[arguments.length-1],' + piece.slice(index + 1);
             } else {
-              piece = piece + '($_0)';
+              piece = piece + '(arguments[arguments.length-1])';
             }
             converter = EvaluatorParser.parse(piece, prototype, identifiers);
             // collectPaths(converter, paths);

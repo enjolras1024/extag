@@ -26,8 +26,7 @@ export default {
     if (HANDLER_REGEXP.test(pieces[0])) {
       template.handler = pieces[0].replace(CONTEXT_REGEXP, ''); // TODO:
     }  else {
-      template.identifiers = identifiers;//.concat(['event']);
-      template.evaluator = EvaluatorParser.parse(pieces[0], prototype, template.identifiers);
+      template.evaluator = EvaluatorParser.parse(pieces[0], prototype, identifiers);
     }
 
     if (pieces.length > 1) {

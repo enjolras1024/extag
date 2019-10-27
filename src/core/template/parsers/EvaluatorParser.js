@@ -30,7 +30,7 @@ function isLegalVarStartCharCode(cc) {
   return  (cc >= 97 && cc <= 122) || (cc >= 65 && cc <= 90) || cc === 95 || cc === 36;
 }
 
-function extract(expression) {
+function getExprIndices(expression) {
   var indices = [], pieces = [], piece, f0 = 0, f1 = -1;
   var b0, b1, b2, c0 = 0, c1 = 0, c2 = 0, cb, cc, cn, cs;
   for (var i = 0, n = expression.length; i < n; ++i) {
@@ -81,91 +81,111 @@ export default {
    * @returns {Object}
    */
   parse: function parse(expression, prototype, identifiers) {
-    var evaluator;
+    var evaluator, origins, params, i, j;
 
     if (PROP_EXPR_REGEXP.test(expression)) {
       evaluator = new PropEvaluator(expression.trim());
-      evaluator.compile(prototype, identifiers);
+      if (prototype) {
+        evaluator.compile(prototype, identifiers);
+      }
       return evaluator;
     }
 
-    var paths = [], lines = [], expanded = 0, expr = expression;
-    var resources = prototype.constructor.resources || EMPTY_OBJECT;
-    var constructor = prototype.constructor;
-    var indices = extract(expression);
-    var i, j;
+    if (prototype) {
+      var resources = prototype.constructor.resources || EMPTY_OBJECT;
+      var constructor = prototype.constructor;
+      var indices = getExprIndices(expression);
+      var expanded = 0, piece, path;
 
-    // var args = identifiers.slice(0);
-    // args[0] = '$_0'; 
+      // var args = identifiers.slice(0);
+      // args[0] = '$_0'; 
 
-    // if (__ENV__ === 'development') {
-    //   lines.push('try {');
-    // } 
+      // if (__ENV__ === 'development') {
+      //   lines.push('try {');
+      // } 
 
-    // for (i = 0; i < indices.length; i += 2) {
-    //   if (indices[i+1] < 0) { continue; }
-    //   var piece = expression.slice(indices[i] + expanded, indices[i+1] + expanded);
-    //   if (JS_KEYWORD_MAP.hasOwnProperty(piece)) {
-    //     continue;
-    //   }
-    //   var path = Path.parse(piece);
-    //   // var k = identifiers.indexOf(path[0]);
-    //   if (identifiers.indexOf(path[0]) >= 0) {
-    //     paths.push(piece);
-    //   } else if (path[0] in prototype) {
-    //     expression = expression.slice(0, indices[i] + expanded) + 'this.' + piece + expression.slice(indices[i+1] + expanded);
-    //     paths.push('this.' + piece);
-    //     expanded += 5;
-    //   } /*else if (path[0] in resources) {
-    //     expression = expression.slice(0, indices[i] + expanded) + 'this.R.' + piece + expression.slice(indices[i+1] + expanded);
-    //     paths.push('this.R.' + piece);
-    //     expanded += 7;
-    //   } else if (path[0] in resources) {
-    //     lines.push('  var ' + path[0] + ' = this.res("' + path[0] + '");')
-    //   } */ else if (path[0] in resources) {
-    //     // lines.push('  var ' + path[0] + ' = this.$res("' + path[0] + '");'); // from local resources or global
-    //     lines.push('  var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
-    //   }
-    // }
+      // for (i = 0; i < indices.length; i += 2) {
+      //   if (indices[i+1] < 0) { continue; }
+      //   var piece = expression.slice(indices[i] + expanded, indices[i+1] + expanded);
+      //   if (JS_KEYWORD_MAP.hasOwnProperty(piece)) {
+      //     continue;
+      //   }
+      //   var path = Path.parse(piece);
+      //   // var k = identifiers.indexOf(path[0]);
+      //   if (identifiers.indexOf(path[0]) >= 0) {
+      //     paths.push(piece);
+      //   } else if (path[0] in prototype) {
+      //     expression = expression.slice(0, indices[i] + expanded) + 'this.' + piece + expression.slice(indices[i+1] + expanded);
+      //     paths.push('this.' + piece);
+      //     expanded += 5;
+      //   } /*else if (path[0] in resources) {
+      //     expression = expression.slice(0, indices[i] + expanded) + 'this.R.' + piece + expression.slice(indices[i+1] + expanded);
+      //     paths.push('this.R.' + piece);
+      //     expanded += 7;
+      //   } else if (path[0] in resources) {
+      //     lines.push('  var ' + path[0] + ' = this.res("' + path[0] + '");')
+      //   } */ else if (path[0] in resources) {
+      //     // lines.push('  var ' + path[0] + ' = this.$res("' + path[0] + '");'); // from local resources or global
+      //     lines.push('  var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
+      //   }
+      // }
 
-    // lines.push('  return ' + expression);
+      // lines.push('  return ' + expression);
 
-    var params = ['$_0'], origins = [-2], piece, path;
+      // var params = ['$_0'], origins = [-2], piece, path;
+      params = [];
+      origins = [];
 
-    for (j = 0; j < indices.length; j += 2) {
-      if (indices[j+1] < 0) { continue; }
-      piece = expression.slice(indices[j] + expanded, indices[j+1] + expanded);
-      path = Path.parse(piece);
-      if (JS_KEYWORD_MAP.hasOwnProperty(path[0])) {
-        continue;
-      }
-      i = identifiers.indexOf(path[0]);
-      if (i >= 0) {
-        if (i !== 0) {
-          params.push(path[0]);
-          origins.push(i);
+      for (j = 0; j < indices.length; j += 2) {
+        if (indices[j+1] < 0) { continue; }
+        piece = expression.slice(indices[j] + expanded, indices[j+1] + expanded);
+        path = Path.parse(piece);
+        if (JS_KEYWORD_MAP.hasOwnProperty(path[0])
+            || params.indexOf(path[0]) >= 0) {
+          continue;
         }
-      } else if (path[0] in prototype) {
-        i = skipWhiteSpace(expression, indices[j+1] + expanded);
-        if (expression[i] !== '(') {
+        i = identifiers.indexOf(path[0]);
+        if (i >= 0) {
+          if (i !== 0) {
+            params.push(path[0]);
+            origins.push(i);
+          }
+        } else if (path[0] in prototype) {
+          i = skipWhiteSpace(expression, indices[j+1] + expanded);
+          if (expression[i] !== '(') {
+            expression = expression.slice(0, indices[j] + expanded) + 'this.' + piece + expression.slice(indices[j+1] + expanded);
+            expanded += 5;
+          } else {
+            params.push(path[0]);
+            origins.push(0);
+          }
+        } else if (path[0] in resources) {
+          params.push(path[0]);
+          origins.push(-1);
+        } else {
           expression = expression.slice(0, indices[j] + expanded) + 'this.' + piece + expression.slice(indices[j+1] + expanded);
           expanded += 5;
-        } else {
-          params.push(path[0]);
-          origins.push(0);
         }
-      } else if (path[0] in resources) {
-        params.push(path[0]);
-        origins.push(-1);
-      } else if (path[0] !== '$_0') {
-        expression = expression.slice(0, indices[j] + expanded) + 'this.' + piece + expression.slice(indices[j+1] + expanded);
-        expanded += 5;
+      }
+    } else {
+      params = [];
+      origins = null;
+      for (j = 0; j < indices.length; j += 2) {
+        if (indices[j+1] < 0) { continue; }
+        piece = expression.slice(indices[j], indices[j+1]);
+        path = Path.parse(piece);
+        if (!JS_KEYWORD_MAP.hasOwnProperty(path[0])
+            && params.indexOf(path[0]) < 0) {
+          params.push(path[0]);
+        }
       }
     }
 
     try {
       evaluator = new FuncEvaluator(expression, params, origins);
-      evaluator.compile(prototype, identifiers);
+      if (prototype) {
+        evaluator.compile(prototype, identifiers);
+      }
       return evaluator;
       // return new Evaluator({
       //   func: func,

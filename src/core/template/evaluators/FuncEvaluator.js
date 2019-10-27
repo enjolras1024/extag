@@ -34,22 +34,24 @@ defineClass({
    */
   compile: function(prototype, identifiers) {
     var resources = prototype.constructor.resources || EMPTY_OBJECT;
-    var params = this.params;
-    var param, origins = [];
+    var origins, params, param;
     // var paths = [];
     var i, j;
     // console.log(this.func.toString())
-    if (!params) {
+    if (!this.params) {
       var code = this.func.toString();
       if (!SINGLE_PARAM_ARROW_REGEXP.test(code)) {
         i = code.indexOf('(');
         j = code.indexOf(')', i + 1);
-        params = code.slice(i + 1, j).trim().split(PARAM_DELIMITER);
+        this.params = code.slice(i + 1, j).trim().split(PARAM_DELIMITER);
       } else {
         i = code.indexOf('=>');
-        params = [code.slice(0, i).trim()];
+        this.params = [code.slice(0, i).trim()];
       }
-
+    }
+    if (!this.origins) {
+      params = this.params;
+      this.origins = origins = [];
       for (j = 0; j < params.length; ++j) {
         param = params[j];
         i = identifiers.indexOf(param);
@@ -63,9 +65,6 @@ defineClass({
           origins.push(-2);
         }
       }
-
-      this.params = params;
-      this.origins = origins;
     }
   },
 
@@ -85,8 +84,12 @@ defineClass({
       } else if (i === -1) {
         args.push(ctx.constructor.resources[param])
       } else {
-        args.push(value);
+        args.push(null);
       }
+    }
+
+    if (arguments.length >= 2) {
+      args.push(value);
     }
 
     if (__ENV__ === 'development') { 
