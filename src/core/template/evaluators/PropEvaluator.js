@@ -18,11 +18,11 @@ defineClass({
   constructor: PropEvaluator,
 
   /**
-   * compile this evaluator with component prototype and template identifiers
+   * connect this evaluator with component prototype and template identifiers
    * @param {Object} prototype 
    * @param {Array} identifiers 
    */
-  compile: function(prototype, identifiers) {
+  connect: function(prototype, identifiers) {
     var resources = prototype.constructor.resources || EMPTY_OBJECT;
     var i = identifiers.indexOf(this.prop);
     if (i >= 0) {
@@ -49,6 +49,8 @@ defineClass({
       return scopes[i];
     } else if (i === -1) {
       return ctx.constructor.resources[this.prop];
+    } else {
+      return ctx[this.prop];
     }
   }
 });

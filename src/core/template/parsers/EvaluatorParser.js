@@ -85,8 +85,8 @@ export default {
 
     if (PROP_EXPR_REGEXP.test(expression)) {
       evaluator = new PropEvaluator(expression.trim());
-      if (prototype) {
-        evaluator.compile(prototype, identifiers);
+      if (prototype && identifiers) {
+        evaluator.connect(prototype, identifiers);
       }
       return evaluator;
     }
@@ -183,8 +183,8 @@ export default {
 
     try {
       evaluator = new FuncEvaluator(expression, params, origins);
-      if (prototype) {
-        evaluator.compile(prototype, identifiers);
+      if (prototype && identifiers) {
+        evaluator.connect(prototype, identifiers);
       }
       return evaluator;
       // return new Evaluator({

@@ -113,7 +113,7 @@ export default {
             // TODO: check if it is a function
             var index = piece.indexOf('(');
             if (index > 0) {
-              piece = piece.slice(0, index) + '(arguments[arguments.length-1],' + piece.slice(index + 1);
+              piece = piece.slice(0, index + 1) + 'arguments[arguments.length-1],' + piece.slice(index + 1);
             } else {
               piece = piece + '(arguments[arguments.length-1])';
             }

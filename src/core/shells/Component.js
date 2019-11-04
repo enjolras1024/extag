@@ -28,6 +28,7 @@ import {
   FLAG_CHANGED_COMMANDS
 } from 'src/share/constants'
 
+
 var shellProto = Shell.prototype;
 var elementPropto = Element.prototype;
 var fragmentProto = Fragment.prototype;
@@ -103,9 +104,12 @@ defineClass({
       // 3. compile the template once and only once.
       if (!_template) {
 
-        if (constructor.template) {
+        if (typeof constructor.template === 'string') {
           var HTMXParser = config.HTMXParser;
           _template = HTMXParser.parse(constructor.template, prototype);
+        } else if (typeof constructor.template === 'function') {
+          var JSXParser = config.JSXParser;
+          _template = JSXParser.parse(constructor.template, prototype);
         }
 
         if (_template) {
@@ -318,7 +322,7 @@ defineClass({
       this.onUpdating();
     }
 
-    this.emit('update');
+    this.emit('update', this.$flag);
 
     if (this.$type !== 0) {
       config.HTMXEngine.transferProperties(this);

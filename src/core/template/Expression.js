@@ -43,6 +43,18 @@ defineClass({
     //   }
     // }
   },
+  connect: function(prototype, identifiers) {
+    var evaluator = this.pattern.evaluator;
+    var converters = this.pattern.converters;
+    if (evaluator) {
+      evaluator.connect(prototype, identifiers);
+    } 
+    if (converters) {
+      for (var i = 0; i < converters.length; ++i) {
+        converters[i].connect(prototype, identifiers);
+      }
+    }
+  },
   /**
    * Compile this expression related to the target in the scope.
    * @param {Object} property - the target property

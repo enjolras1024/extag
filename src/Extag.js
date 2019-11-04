@@ -41,6 +41,7 @@ import Evaluator from 'src/core/template/Evaluator'
 import Expression from 'src/core/template/Expression'
 import JSXEngine from 'src/core/template/JSXEngine.4'
 import HTMXEngine from 'src/core/template/HTMXEngine'
+import JSXParser from 'src/core/template/parsers/JSXParser'
 // import HTMXTemplate from 'src/core/template/HTMXTemplate'
 // import HTMLParser from 'src/core/template/parsers/HTMLParser'
 import HTMXParser from 'src/core/template/parsers/HTMXParser'
@@ -133,9 +134,10 @@ export default {
 
   // JSXEngine: JSXEngine,
   //#test HTMXEngine: HTMXEngine,
-  node: JSXEngine.node,
+  node: JSXParser.node,
+  expr: JSXParser.expr,
   // slot: JSXEngine.slot,
-  reflow: JSXEngine.reflow,
+  // reflow: JSXEngine.reflow,
 
   copy: copy,
 

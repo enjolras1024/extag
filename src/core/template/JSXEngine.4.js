@@ -12,118 +12,6 @@ import { defineProp } from 'src/share/functions'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
 
-var RESERVED_PARAMS = {
-  ns: null,
-  // tag: null,
-  xkey: null,
-  xname: null,
-  //type: null,
-  props: null,
-  // attrs: null,
-  // style: null,
-  // 'class': null,
-  // classes: null,
-  // className: null,
-  
-  events: null,
-  // directs: null,
-  children: null,
-  contents: null
-};
-
-/**
- * e.g. node('div', null, [
- *        node('h1', null, 'title'),
- *        node('ul', null,
- *          node('a', {
- *              'href@': 'link.url',
- *              classes: {link: true, 'active@': 'link.active'},
- *              directs: {'for': 'link of $.links', key: 'link.url'}
- *            },
- *            ['tip: @{ link.tip }']
- *          )
- *        ),
- *        node(Button, { label: 'OK', 'click+': '$.onClick' })
- *      ])
- *
- * @param {string|Function} tagOrType
- * @param {Object} config
- * @param {string|Array|Object} children
- * @returns {Object}
- */
-function node(type, config, children) {
-  var node = {
-    __extag_node__: true
-  };
-
-  var t = typeof type;
-  if (t === 'string') {
-    var i = type.indexOf(':');
-    if (i < 0) {
-      node.ns = '';
-      node.tag = type;
-    } else {
-      node.ns = type.slice(0, i);
-      node.tag = type.slice(i + 1);
-    }
-  } else if (t === 'function') {
-    node.type = type;
-  } else {
-    throw new TypeError('First argument must be class, string or constructor');
-  }
-
-  if (arguments.length === 2 && (Array.isArray(config) || typeof config !== 'object')) {
-    children = config;
-    config = null;
-  }
-
-  if (config) {
-    if (config.xkey) {
-      node.key = param.xkey;
-    }
-    if (config.xname) {
-      node.name = config.xname;
-    }
-    // if (config.style) {
-    //   node.style = config.style;
-    // }
-    // if (config.xattrs) {
-    //   node.attrs = config.xattrs;
-    // }
-    // if (config.xclass) { // TODO: className
-    //   node.classes = config.xclass;
-    // }
-    if (config.events) {
-      node.events = config.events;
-    }
-
-    // node.directs = config.directs;
-
-    var props = node.props = {};
-
-    for (var key in config) {
-      if (config.hasOwnProperty(key) && !RESERVED_PARAMS.hasOwnProperty(key)) {
-        props[key] = config[key];
-      }
-    }
-  }
-
-  if (children) {
-    if (Array.isArray(children)) {
-      children = flatten(children);
-    } else {
-      children = [children];
-    }
-    if (node.type) {
-      node.contents = children;
-    } else {
-      node.children = children;
-    }
-  }
-
-  return node;
-}
-
 // function slot(name, children) {
 //   return {
 //     tag: 'x-slot',
@@ -266,7 +154,7 @@ function updatePropsAndEvents(node, target, scope) {
   //   target._vnode = node;
   // } else {
   //   defineProp(target, '_vnode', {
-  //     value: node, writable: true, enumerable: false, configurable: true
+  //     value: node, writable: true, enumerable: false, attrsurable: true
   //   });
   // }
 }
@@ -398,7 +286,7 @@ function reflow(scope, target, nodes) {
 }
 
 var JSXEngine = {
-  node: node,
+  // node: node,
   // slot: slot,
   reflow: reflow
 };

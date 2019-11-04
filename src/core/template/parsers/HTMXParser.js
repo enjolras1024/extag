@@ -96,12 +96,13 @@ function parseDirective(name, expr, node, prototype, identifiers) {
       }
       throw new TypeError('Can not find such component type `' + expr + '`');
     }
-    // _directs.xType = ctor;
+    // _directs.type = ctor;
     node.type = ctor;
   } else if (name === 'x:name') {
     node.name = expr;
   } else if (name === 'x:key') {
-    getGroup(node, 'ctrls').xKey = EvaluatorParser.parse(expr, prototype, identifiers);
+    // getGroup(node, 'ctrls').xKey = EvaluatorParser.parse(expr, prototype, identifiers);
+    node.xkey = EvaluatorParser.parse(expr, prototype, identifiers);
   } else if (name === 'x:for') {
     var matches = expr.trim().match(FOR_LOOP_REGEXP);
 
@@ -119,14 +120,15 @@ function parseDirective(name, expr, node, prototype, identifiers) {
     result = DataBindingParser.parse(matches[2], prototype, identifiers);
 
     if (result) {
-      getGroup(node, 'ctrls').xFor = new Expression(DataBinding, result);
+      // getGroup(node, 'ctrls').xFor = new Expression(DataBinding, result);
+      node.xfor = [matches[1], new Expression(DataBinding, result)];
     } else {
       logger.warn('Illegal x:for="' + expr + '"');
       return;
     }
 
     node.identifiers = identifiers.concat([matches[1]]);
-  } else if (name === 'x:for') {
+  } /*else if (name === 'x:for') {
     var matches = expr.trim().match(FOR_LOOP_REGEXP);
 
     if (!matches || !matches[6].trim()) {
@@ -155,10 +157,11 @@ function parseDirective(name, expr, node, prototype, identifiers) {
       identifiers = identifiers.concat([matches[4], matches[5]]);
     }
     node.identifiers = identifiers;
-  } else if (name === 'x:if') {
+  }*/ else if (name === 'x:if') {
     result = DataBindingParser.parse(expr, prototype, identifiers);
     if (result) {
-      getGroup(node, 'ctrls').xIf = new Expression(DataBinding, result);
+      // getGroup(node, 'ctrls').xIf = new Expression(DataBinding, result);
+      node.xif = new Expression(DataBinding, result);
     }
   } else if (name === 'x:ns') {
     node.ns = expr;
@@ -170,7 +173,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
   var result, group, key;
 
   if (lastChar === '+') {
-    group = getGroup(node, 'actions');
+    group = getGroup(node, 'events');
     key = viewEngine.toCamelCase(attrName.slice(0, -1));
     result = EventBindingParser.parse(attrValue, prototype, identifiers);
     group[key] = new Expression(EventBinding, result);
@@ -200,7 +203,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
       // case '+':
       //   name = viewEngine.toCamelCase(attrName.slice(0, -1));
       //   result = EventBindingParser.parse(attrValue, prototype, identifiers);
-      //   getGroup(node, 'actions')[name] = new Expression(EventBinding, result);
+      //   getGroup(node, 'events')[name] = new Expression(EventBinding, result);
       //   break;
       default:
         key = viewEngine.toCamelCase(attrName);
@@ -435,6 +438,9 @@ function parseHTMX(htmx, prototype) {
         start = stop = idx;
         continue;
       } else if ('!' === nc && '<!--' === htmx.slice(idx, idx + 4)) {
+        if (start < idx) {
+          parseTextNode(decodeHTML(htmx.slice(start, idx)), parent, prototype, parent.identifiers);
+        }
         start = idx + 4;
         // stop = idx + 4;
         // node = parseComment(htmx, range);

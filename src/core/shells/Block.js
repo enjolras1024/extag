@@ -31,23 +31,25 @@ defineClass({
       // block.template = template;
       block.scopes = scopes;
       block.template = assign({}, template);
-      delete block.template.ctrls;
+      delete block.template.xkey;
+      delete block.template.xfor;
+      delete block.template.xif;
       
       block.set('condition', true);
 
-      var ctrls = template.ctrls || {};
+      // var ctrls = template.ctrls || {};
       var expression;
 
-      if (ctrls.xIf) {
+      if (template.xif) {
         block.mode = 1;
-        expression = ctrls.xIf;
+        expression = template.xif;
         expression.compile('condition', block, scopes);
         // Expression.compile({condition: expressions.xIf}, block, scope, locals);
       }
 
-      if (ctrls.xFor) {
+      if (template.xfor) {
         block.mode = 2;
-        expression = ctrls.xFor;
+        expression = template.xfor[1];
         // var path = expression.template.evaluator.paths[0]; // $.items in x-for="item of $.items | filter"
   
         // if (Array.isArray(path)) { // TODO:
@@ -82,8 +84,8 @@ defineClass({
         // Expression.compile({iterable: expression}, block, scope, locals);
         expression.compile('iterable', block, scopes);
   
-        if (ctrls.xKey) {
-          block.keyEval = ctrls.xKey;//.evaluator;
+        if (template.xkey) {
+          block.keyEval = template.xkey;//.evaluator;
         }
       }
 

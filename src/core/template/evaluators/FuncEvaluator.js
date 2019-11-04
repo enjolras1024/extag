@@ -28,11 +28,11 @@ defineClass({
   constructor: FuncEvaluator,
 
   /**
-   * compile this evaluator with component prototype and template identifiers.
+   * connect this evaluator with component prototype and template identifiers.
    * @param {Object} prototype 
    * @param {Array} identifiers 
    */
-  compile: function(prototype, identifiers) {
+  connect: function(prototype, identifiers) {
     var resources = prototype.constructor.resources || EMPTY_OBJECT;
     var origins, params, param;
     // var paths = [];
@@ -84,7 +84,7 @@ defineClass({
       } else if (i === -1) {
         args.push(ctx.constructor.resources[param])
       } else {
-        args.push(null);
+        args.push(ctx[param]);
       }
     }
 

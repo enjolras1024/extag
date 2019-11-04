@@ -57,11 +57,11 @@ function driveProps(target, props, scopes) {
   }
 }
 
-function driveEvents(target, actions, scopes) {
-  if (actions) {
+function driveEvents(target, events, scopes) {
+  if (events) {
     var type, value;
-    for (type in actions) {
-      value = actions[type];
+    for (type in events) {
+      value = events[type];
       if (typeof value === 'object' && value instanceof Expression) {
         value.compile(type, target, scopes);
       } else if (typeof value === 'function') {
@@ -105,7 +105,7 @@ function makeContent(node, scopes) {
   } else if (node instanceof Expression) { // like "hello, @{ $.name }..."
     content = new Fragment(null, scopes, node);
     // node.compile('contents', content, scopes);
-  } else if (node.ctrls == null && node.tag !== '!') {
+  } else if (node.xif == null && node.xfor == null && node.tag !== '!') {
     type = node.type;
     if (type) {
       content = new type(null, scopes, node);
@@ -114,8 +114,8 @@ function makeContent(node, scopes) {
       //   node.ns = node.ns;
       // }
       content = new Element(node.ns ? node.ns + ':' + tag : tag, null, scopes, node);
-      if (node.actions) {
-        driveEvents(content, node.actions, scopes);
+      if (node.events) {
+        driveEvents(content, node.events, scopes);
       }
       if (node.props) {
         driveProps(content, node.props, scopes)
@@ -140,7 +140,7 @@ function makeContent(node, scopes) {
         value: scopes[0]
       });
     }
-  } else if (node.ctrls) {
+  } else if (node.xif || node.xfor) {
     content = new Block(null, scopes, node);
   }
 
@@ -161,8 +161,8 @@ function driveComponent(target, _template, scopes, template, props) {
     }
     driveProps(target, props, scopes);
 
-    if (template.actions) {
-      driveEvents(target, template.actions, scopes);
+    if (template.events) {
+      driveEvents(target, template.events, scopes);
     }
     if (template.attrs) {
       driveProps(target.attrs, template.attrs, scopes);
@@ -183,8 +183,8 @@ function driveComponent(target, _template, scopes, template, props) {
     driveProps(target, props, scopes);
   }
   
-  if (_template.actions) {
-    driveEvents(target, _template.actions, _scopes);
+  if (_template.events) {
+    driveEvents(target, _template.events, _scopes);
   }
   if (_template.props) {
     defineProp(target, '__props', {
