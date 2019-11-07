@@ -333,11 +333,20 @@ function toClasses(classList) {
   }
 }
 
+function throwError(err, opts) {
+  var error = err instanceof Error ? err : new Error('[EXTAG ERROR] ' + err);
+  if (opts) {
+    assign(error, opts);
+  }
+  throw error;
+}
+
 export { 
   copy,
   slice,
   assign,
   toClasses,
+  throwError,
   encodeHTML, 
   decodeHTML,
   defineProp, 

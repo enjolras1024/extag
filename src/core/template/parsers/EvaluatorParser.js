@@ -3,6 +3,7 @@
 import Path from 'src/base/Path'
 import logger from 'src/share/logger'
 import Evaluator from 'src/core/template/Evaluator'
+import { throwError } from 'src/share/functions'
 import { EMPTY_OBJECT } from 'src/share/constants'
 import PropEvaluator from 'src/core/template/evaluators/PropEvaluator'
 import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator'
@@ -194,10 +195,15 @@ export default {
       //   identifiers: identifiers
       // });
     } catch (e) {
-      if (__ENV__ === 'development') { 
-        logger.warn('Illegal expression `' + expression + '` in the template of Component ' + (constructor.fullName || constructor.name));
-      }
-      throw(e);
+      // if (__ENV__ === 'development') { 
+      //   logger.warn('Illegal expression `' + expression + '` in the template of Component ' + (constructor.fullName || constructor.name));
+      // }
+      // throw(e);
+      throwError(e, {
+        code: 1001,
+        expr: arguments[0],
+        desc: 'Illegal expression `' + arguments[0] + '`.'
+      })
     }
     
     

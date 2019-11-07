@@ -105,7 +105,7 @@ defineClass({
     var template = this.template;
     var scopes = this.scopes;
     var fragment = [];
-    var children;
+    // var children;
 
     if (!condition) {
       this.setChildren(fragment);
@@ -115,16 +115,20 @@ defineClass({
     var HTMXEngine = config.HTMXEngine;
 
     if (this.mode === 1) {
-      if (template.tag === 'x:block') {
-        children = template.children;
-      } else {
-        children = [template];
-      }
-      for (var i = 0, n = children.length; i < n; ++i) {
-        content = HTMXEngine.makeContent(children[i], scopes);
-        if (content) {
-          fragment.push(content);
-        }
+      // if (template.tag === 'x:block') {
+      //   children = template.children;
+      // } else {
+      //   children = [template];
+      // }
+      // for (var i = 0, n = children.length; i < n; ++i) {
+      //   content = HTMXEngine.makeContent(children[i], scopes);
+      //   if (content) {
+      //     fragment.push(content);
+      //   }
+      // }
+      content = HTMXEngine.makeContent(template, scopes);
+      if (content) {
+        fragment.push(content);
       }
       this.setChildren(fragment);
       return;
@@ -132,7 +136,7 @@ defineClass({
 
     var indices = {}, index, content, item, key, n, i;
     var iterable = this.get('iterable') || [];
-    children = this._children || [];
+    var children = this._children || [];
     var keyEval = this.keyEval;
     var newScopes;
   
@@ -168,13 +172,14 @@ defineClass({
       }
   
       if (!content) {
-        if (template.tag !== 'x:block') {
-          content = HTMXEngine.makeContent(template, newScopes);
-        } else if (template.children && template.children.length === 1) {
-          content = HTMXEngine.makeContent(template.children[0], newScopes);
-        } else {
-          // content = new Fragment(); HTMXEngine.start(template, content, newScopes);
-        }
+        // if (template.tag !== 'x:block') {
+        //   content = HTMXEngine.makeContent(template, newScopes);
+        // } else if (template.children && template.children.length === 1) {
+        //   content = HTMXEngine.makeContent(template.children[0], newScopes);
+        // } else {
+        //   // content = new Fragment(); HTMXEngine.start(template, content, newScopes);
+        // }
+        content = HTMXEngine.makeContent(template, newScopes);
         content.__key__ = key;
       }
   

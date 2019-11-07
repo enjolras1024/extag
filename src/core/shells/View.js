@@ -44,9 +44,8 @@ defineClass({
   },
 
   onUpdating: function onUpdating() {
-    // TODO: x:cache
+    var content, ctor;
     var type = this.get('xtype');//this.attrs.get('x:type');
-    var fragment = [], content, ctor;
     var template = this.template, scopes = this.scopes;
 
     if (typeof type === 'function') {
@@ -77,8 +76,7 @@ defineClass({
     template.tag = '?';
     template.type = ctor;
     content = HTMXEngine.makeContent(template, scopes);
-    fragment.push(content);
 
-    this.setChildren(fragment);
+    this.setChildren([content]);
   }
 });

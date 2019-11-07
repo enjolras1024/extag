@@ -105,7 +105,9 @@ function makeContent(node, scopes) {
   } else if (node instanceof Expression) { // like "hello, @{ $.name }..."
     content = new Fragment(null, scopes, node);
     // node.compile('contents', content, scopes);
-  } else if (node.xif == null && node.xfor == null && node.tag !== '!') {
+  } else if (node.xif || node.xfor) {
+    content = new Block(null, scopes, node);
+  } else if (node.tag !== '!') {
     type = node.type;
     if (type) {
       content = new type(null, scopes, node);
@@ -140,8 +142,6 @@ function makeContent(node, scopes) {
         value: scopes[0]
       });
     }
-  } else if (node.xif || node.xfor) {
-    content = new Block(null, scopes, node);
   }
 
   return content;

@@ -5,12 +5,13 @@ import {
   VIEW_ENGINE, 
   CONTEXT_SYMBOL } 
   from 'src/share/constants'
-import { decodeHTML } from 'src/share/functions'
+import { decodeHTML, throwError } from 'src/share/functions'
 import logger from 'src/share/logger'
 import Path from 'src/base/Path'
 import View from 'src/core/shells/View'
 import Slot from 'src/core/shells/Slot'
 import Block from 'src/core/shells/Block'
+import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
 // import TextBinding from 'src/core/bindings/TextBinding'
@@ -23,12 +24,13 @@ import EventBindingParser from 'src/core/template/parsers/EventBindingParser'
 import FragmentBindingParser from 'src/core/template/parsers/FragmentBindingParser'
 import PrimaryLiteralParser from 'src/core/template/parsers/PrimaryLiteralParser'
 
-// var TAGNAME_STOP = /[\s\/>]/
-// var FOR_LOOP_REGEXP = /^(([\_\$\w]+)|(\[\s*(\w+),\s*(\w+)\s*\]))\s+of\s+(.+)$/;
 var FOR_LOOP_REGEXP = /^([\_\$\w]+)\s+of\s+(.+)$/;
 var CAPITAL_REGEXP = /^[A-Z]/;
-var LETTER_REGEXP = /[a-z]/i;
+var LETTER_REGEXP = /[a-zA-Z]/;
 var TAGNAME_STOP = /[\s\/>]/;
+var LF_IN_BLANK = /\s*\n\s*/g;
+var WHITE_SPACE = /\s/;
+var WHITE_SPACES = /\s+/;
 
 var viewEngine = null;
 
@@ -61,7 +63,6 @@ var DIRECTIVES = {
   'x:key': true,
   'x:name': true,
   'x:type': true,
-  // 'x:attrs': true,
   'x:class': true,
   'x:style': true
 }
@@ -75,7 +76,8 @@ function getGroup(node, name) {
 }
 
 function isDirective(name) {
-  return name.charCodeAt(0) === 120 && (name in DIRECTIVES);
+  return name.charCodeAt(0) === 120 // 'x'
+          && (name in DIRECTIVES);
 }
 
 function isSelfClosingTag(tagName) {
@@ -83,7 +85,7 @@ function isSelfClosingTag(tagName) {
 }
 
 function parseDirective(name, expr, node, prototype, identifiers) {
-  var result;// = getGroup(node, 'directs');
+  var result;
   if (name === 'x:class') {
     node.classes = ClassStyleParser.parse(expr, prototype, identifiers, viewEngine, false);
   } else if (name === 'x:style') {
@@ -91,25 +93,33 @@ function parseDirective(name, expr, node, prototype, identifiers) {
   } else if (name === 'x:type') {
     var ctor = Path.search(expr, prototype.constructor.resources);
     if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
-      if (__ENV__ === 'development') {
-        logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in local resources or global RES.');
-      }
-      throw new TypeError('Can not find such component type `' + expr + '`');
+      // if (__ENV__ === 'development') {
+      //   logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in static resources.');
+      // }
+      // throw new TypeError('Can not find such component type `' + expr + '`');
+      throwError('Illegal x:type="' + expr + '"', {
+        code: 1001,
+        expr: expr,
+        desc: 'Can not find such component type `' + expr 
+              + '`. Make sure it extends Component and please register `' + expr 
+              + '` in static resources.'
+      });
     }
-    // _directs.type = ctor;
     node.type = ctor;
   } else if (name === 'x:name') {
     node.name = expr;
   } else if (name === 'x:key') {
-    // getGroup(node, 'ctrls').xKey = EvaluatorParser.parse(expr, prototype, identifiers);
     node.xkey = EvaluatorParser.parse(expr, prototype, identifiers);
   } else if (name === 'x:for') {
     var matches = expr.trim().match(FOR_LOOP_REGEXP);
 
     if (!matches || !matches[2].trim()) {
-      // throw new Error('x:for="' + expr + '" is illegal');
-      logger.warn('Illegal x:for="' + expr + '"');
-      return;
+      throwError('Illegal x:for="' + expr + '".', {
+        code: 1001,
+        expr: expr
+      });
+      // logger.warn('Illegal x:for="' + expr + '"');
+      // return;
     }
 
     // if (matches[6].lastIndexOf('::') < 0) {
@@ -123,45 +133,26 @@ function parseDirective(name, expr, node, prototype, identifiers) {
       // getGroup(node, 'ctrls').xFor = new Expression(DataBinding, result);
       node.xfor = [matches[1], new Expression(DataBinding, result)];
     } else {
-      logger.warn('Illegal x:for="' + expr + '"');
-      return;
+      throwError('Illegal x:for="' + expr + '".', {
+        code: 1001,
+        expr: expr
+      });
+      // logger.warn('Illegal x:for="' + expr + '"');
+      // return;
     }
 
     node.identifiers = identifiers.concat([matches[1]]);
-  } /*else if (name === 'x:for') {
-    var matches = expr.trim().match(FOR_LOOP_REGEXP);
-
-    if (!matches || !matches[6].trim()) {
-      // throw new Error('x:for="' + expr + '" is illegal');
-      logger.warn('Illegal x:for="' + expr + '"');
-      return;
-    }
-
-    // if (matches[6].lastIndexOf('::') < 0) {
-    //   matches[6] += '::[].slice(0)';
-    // }
-
-    // var expression = DataBindingParser.parse('{' + matches[2] + '}', prototype, resources, identifiers);
-    result = DataBindingParser.parse(matches[6], prototype, identifiers);
-
-    if (result) {
-      getGroup(node, 'ctrls').xFor = new Expression(DataBinding, result);
-    } else {
-      logger.warn('Illegal x:for="' + expr + '"');
-      return;
-    }
-
-    if (matches[2]) {
-      identifiers = identifiers.concat(['$_' + identifiers.length, matches[2]]);
-    } else {
-      identifiers = identifiers.concat([matches[4], matches[5]]);
-    }
-    node.identifiers = identifiers;
-  }*/ else if (name === 'x:if') {
+  } else if (name === 'x:if') {
     result = DataBindingParser.parse(expr, prototype, identifiers);
     if (result) {
-      // getGroup(node, 'ctrls').xIf = new Expression(DataBinding, result);
       node.xif = new Expression(DataBinding, result);
+    } else {
+      throwError('Illegal x:if="' + expr + '".', {
+        code: 1001,
+        expr: expr,
+      });
+      // logger.warn('Illegal x:if="' + expr + '"');
+      // return;
     }
   } else if (name === 'x:ns') {
     node.ns = expr;
@@ -224,13 +215,25 @@ function getStopOf(regex, htmx, from) {
   return -1;
 }
 
+function getSnapshot(htmx, expr, node, start) {
+  // var i = htmx.lastIndexOf(limit[0], node.range[0]);
+  // var j = htmx.indexOf(limit[1], range[1]);
+  var i = htmx.indexOf(expr, start);
+  var j = htmx.indexOf('\n', i + expr.length);
+  j = j > 0 ? j : htmx.length;
+  if (j > i + expr.length * 4) {
+    j = i + expr.length * 4;
+  }
+  return [htmx.slice(node.range[0], i) + '%c' + expr + '%c' + htmx.slice(i + expr.length, j), 'color:red;', '']
+}
+
 function parseAttributes(htmx, from, node, prototype, identifiers) {
   var idx = from, start = from, stop = from, end = htmx.length;
   var cc, attrName, attrNames;//, operator, attributes = [];
 	while (idx < end) {
     cc = htmx[idx];
     if (attrName) {
-      if (!/\s/.test(cc)) {
+      if (!WHITE_SPACE.test(cc)) {
         if (cc === '"' || cc === "'") {
           start = idx + 1;
           stop = htmx.indexOf(cc, start);
@@ -242,10 +245,22 @@ function parseAttributes(htmx, from, node, prototype, identifiers) {
         stop = stop > 0 ? stop : end;
 
         if (node) {
-          if (isDirective(attrName)) {
-            parseDirective(attrName, htmx.slice(start, stop), node, prototype, node.identifiers);
-          } else {
-            parseAttribute(attrName, htmx.slice(start, stop), node, prototype, node.identifiers);
+          try {
+            if (isDirective(attrName)) {
+              parseDirective(attrName, htmx.slice(start, stop), node, prototype, node.identifiers);
+            } else {
+              parseAttribute(attrName, htmx.slice(start, stop), node, prototype, node.identifiers);
+            }
+          } catch(e) {
+            if (__ENV__ === 'development') {
+              if (e.code === 1001) {
+                var snapshot = getSnapshot(htmx, e.expr, node, start);
+                logger.warn((e.desc || e.message) + ' In the template of component ' 
+                  + (prototype.constructor.fullName || prototype.constructor.name) + ':\n' 
+                  + snapshot[0], snapshot[1], snapshot[2]);
+              }
+            }
+            throw e;
           }
         }
 
@@ -261,7 +276,7 @@ function parseAttributes(htmx, from, node, prototype, identifiers) {
     } else if (cc === '>') {
       stop = idx;
       if (start < stop) {
-        attrNames = htmx.slice(start, stop).trim().split(/\s+/);
+        attrNames = htmx.slice(start, stop).trim().split(WHITE_SPACES);
         while(attrNames.length > 0) {
           attrName = attrNames.shift();
           if (attrName && node) {
@@ -273,7 +288,7 @@ function parseAttributes(htmx, from, node, prototype, identifiers) {
     } else if (cc === '=') {
       stop = idx;
       if (start < stop) {
-        attrNames = htmx.slice(start, stop).trim().split(/\s+/);
+        attrNames = htmx.slice(start, stop).trim().split(WHITE_SPACES);
         while(attrNames.length > 1) {
           attrName = attrNames.shift();
           if (attrName && node) {
@@ -290,11 +305,24 @@ function parseAttributes(htmx, from, node, prototype, identifiers) {
   }
 }
 
-function parseTextNode(text, parent, prototype, identifiers) {
-  var children = parent.children || [];
-
+function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
+  var children = parent.children || [], result;
+  var text = decodeHTML(htmx.slice(start, stop));
+  text = text.replace(LF_IN_BLANK, '');
   if (FragmentBindingParser.like(text)) {
-    var result = FragmentBindingParser.parse(text, prototype, identifiers);
+    try {
+      result = FragmentBindingParser.parse(text, prototype, identifiers);
+    } catch (e) {
+      if (__ENV__ === 'development') {
+        if (e.code === 1001) {
+          var snapshot = getSnapshot(htmx, e.expr, parent, start);
+          logger.warn((e.desc || e.message) + ' In the template of component ' 
+                  + (prototype.constructor.fullName || prototype.constructor.name) + ':\n' 
+                  + snapshot[0], snapshot[1], snapshot[2]);
+        }
+      }
+      throw e;
+    }
     if (result) {
       children.push(new Expression(FragmentBinding, result));
     } else {
@@ -308,6 +336,8 @@ function parseTextNode(text, parent, prototype, identifiers) {
 }
 
 function parseHTMX(htmx, prototype) {
+  htmx = htmx.trim();
+
   var cc, nc;
   var node, tagName;
   // var range = [0, 0];
@@ -332,7 +362,7 @@ function parseHTMX(htmx, prototype) {
       nc = htmx[idx + 1];
       if (LETTER_REGEXP.test(nc)) {
         if (start < idx) {
-          parseTextNode(decodeHTML(htmx.slice(start, idx)), parent, prototype, parent.identifiers);
+          parseTextNode(htmx, start, idx, parent, prototype, parent.identifiers);
         }
 
         start = idx + 1;
@@ -344,7 +374,7 @@ function parseHTMX(htmx, prototype) {
         node.__extag_node__ = true;
 
         if (__ENV__ === 'development') {
-          node.range = [start, -1];
+          node.range = [start-1, -1];
         }
         
         node.identifiers = parent.identifiers;
@@ -378,9 +408,12 @@ function parseHTMX(htmx, prototype) {
             case 'x:view':
               node.type = View;
               break;
-            case 'x:block':
-              node.type = Block;
+            case 'x:frag':
+              node.type = Fragment;
               break;
+            // case 'x:block':
+            //   node.type = Block;
+            //   break;
           }
         }
         
@@ -403,7 +436,7 @@ function parseHTMX(htmx, prototype) {
         continue;
       } else if ('/' === nc && LETTER_REGEXP.test(htmx[idx + 2])) {
         if (start < idx) {
-          parseTextNode(decodeHTML(htmx.slice(start, idx)), parent, prototype, parent.identifiers);
+          parseTextNode(htmx, start, idx, parent, prototype, parent.identifiers);
         }
 
         start = idx + 2;
@@ -411,7 +444,13 @@ function parseHTMX(htmx, prototype) {
         tagName = htmx.slice(start, stop);
         // console.log('end tag: ' + htmx.slice(start, stop))
         if (tagName !== parent.tag) {
-          throw new Error('Unclosed tag ' + parent.tag);
+          if (__ENV__ === 'development') {
+            var snapshot = getSnapshot(htmx, tagName, parent, start);
+            logger.warn('Unclosed tag `' + parent.tag + '`. In the template of component ' 
+                  + (prototype.constructor.fullName || prototype.constructor.name) + ':\n' 
+                  + snapshot[0], snapshot[1], snapshot[2]);
+          }
+          throwError('Unclosed tag ' + parent.tag);
         }
 
         if ('>' !== htmx[stop]) {
@@ -439,7 +478,7 @@ function parseHTMX(htmx, prototype) {
         continue;
       } else if ('!' === nc && '<!--' === htmx.slice(idx, idx + 4)) {
         if (start < idx) {
-          parseTextNode(decodeHTML(htmx.slice(start, idx)), parent, prototype, parent.identifiers);
+          parseTextNode(htmx, start, idx, parent, prototype, parent.identifiers);
         }
         start = idx + 4;
         // stop = idx + 4;
@@ -462,7 +501,7 @@ function parseHTMX(htmx, prototype) {
   }
 
   if (start < end) {
-    parseTextNode(decodeHTML(htmx.slice(start, end)), parent, prototype, parent.identifiers);
+    parseTextNode(htmx, start, end, parent, prototype, parent.identifiers);
   }
 
   // if (parent) {
@@ -474,25 +513,31 @@ function parseHTMX(htmx, prototype) {
 
 var HTMXParser = {
   parse: function(htmx, prototype) {
-    viewEngine = viewEngine ||config.get(VIEW_ENGINE);
+    viewEngine = viewEngine || config.get(VIEW_ENGINE);
 
     var constructor = prototype.constructor;
-    var nodes = parseHTMX(htmx.trim(), prototype);
+    var nodes = parseHTMX(htmx, prototype);
     var children = nodes[0].children;
     var root = children[0];
+
     if (children.length !== 1) {
-      logger.warn('The template of Component ' + (constructor.fullName || constructor.name) + ' must have only one root tag.');
-      throw new Error('')
+      throwError('The template of Component ' + (constructor.fullName || constructor.name) + ' must have only one root tag.')
     }
     if (root.tag === '!' || root.tag === '#') {
-      logger.warn('Component template root tag must be a DOM element.')
-      throw new Error('')
+      throwError('Component template root tag must be a DOM element, instead of: ' + htmx.slice(0, htmx.indexOf('>')));
     }
     if (root.type) {
-      logger.warn('Do not use a component as the template root tag.')
-      throw new Error('')
+      if (root.tag === 'x:frag' && root.type === Fragment) {
+        root.type = null;
+      } else if (root.tag === 'x:slot' || root.tag === 'x:view') {
+        throwError(root.tag + ' can not be used as root tag of component template: ' + htmx.slice(0, htmx.indexOf('>')));
+      } else {
+        throwError('component can not be used as root tag of another component template: ' + htmx.slice(0, htmx.indexOf('>')));
+      }
+    } else if (root.xif || root.xfor || root.xkey) {
+      throwError('`x:if`, `x:for`, `x:key` can not be used on root tag of component template: '  + htmx.slice(0, htmx.indexOf('>')));
     }
-    return root;//children.length == 1 ? children[0] : nodes[0];
+    return root;
   }
 };
 

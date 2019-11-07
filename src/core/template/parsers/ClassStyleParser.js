@@ -8,6 +8,9 @@ import DataBinding from 'src/core/bindings/DataBinding'
 // import TextBinding from 'src/core/bindings/TextBinding'
 import Expression from 'src/core/template/Expression'
 
+var WHITE_SPACES = /\s+/;
+var STYLE_DELIMITER = /;/g;
+
 export default {
   /**
    * 
@@ -18,7 +21,7 @@ export default {
    */
   parse: function parse(expression, prototype, identifiers, viewEngine, camelCase) {
     var group = {};
-    var pieces = expression.split(/;/g); // as constant
+    var pieces = expression.split(STYLE_DELIMITER); // as constant
     var operator, result, piece, expr, name, names, m, n, i, j;
     // var viewEngine = config.get(VIEW_ENGINE);
     for (i = 0, n = pieces.length; i < n; ++i) {
@@ -28,7 +31,7 @@ export default {
       if (m < 0) {
         if (piece) {
           // extact a and b from x:class="a b; c@: c;"
-          names = piece.split(/\s+/);
+          names = piece.split(WHITE_SPACES);
           for (j = 0; j < names.length; ++j) {
             group[names[j]] = true;
           }

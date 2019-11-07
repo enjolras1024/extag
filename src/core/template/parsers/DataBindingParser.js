@@ -2,6 +2,7 @@
 
 import Path from 'src/base/Path'
 import logger from 'src/share/logger'
+import { throwError } from 'src/share/functions'
 import { BINDING_OPERATORS } from 'src/share/constants'
 // import Expression from 'src/base/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
@@ -49,8 +50,13 @@ export default {
     var converters, converter, evaluator, pieces, piece, path;
     if (mode === DATA_BINDING_MODES.TWO_WAY) {
       if (!Path.test(expression.trim())) {
-        logger.warn('`@' + expression + '` is not a valid two-way binding expression. Must be a property name or path.');
-        throw new Error('`@' + expression + '` is not a valid two-way binding expression.  Must be a property name or path.');
+        throwError('', {
+          code: 1001,
+          expr: arguments[0],
+          desc: '`' + arguments[0] + '` is not a valid two-way binding expression. Must be a property name or path.'
+        });
+        // logger.warn('`@' + expression + '` is not a valid two-way binding expression. Must be a property name or path.');
+        // throw new Error('`@' + expression + '` is not a valid two-way binding expression.  Must be a property name or path.');
       }
       path = Path.parse(expression.trim());
       if ((path[0] in prototype) && identifiers.indexOf(path[0]) < 0) {
@@ -107,8 +113,13 @@ export default {
           for (i = 1; i < pieces.length; ++i) {
             piece = pieces[i].trim();
             if (!piece) {
-              logger.warn('There is an empty converter in the expression `' + expression + '`');
-              throw new Error('Converter must not be empty!');
+              // logger.warn('There is an empty converter in the expression `' + expression + '`');
+              // throw new Error('Converter must not be empty!');
+              throwError('Converter must not be empty!', {
+                code: 1001,
+                expr: arguments[0],
+                desc: 'Empty converter in the expression `' + arguments[0] + '` is not allowed.'
+              });
             }
             // TODO: check if it is a function
             var index = piece.indexOf('(');
