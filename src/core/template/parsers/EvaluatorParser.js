@@ -92,10 +92,11 @@ export default {
       return evaluator;
     }
 
+    var indices = getExprIndices(expression);
+
     if (prototype) {
       var resources = prototype.constructor.resources || EMPTY_OBJECT;
       var constructor = prototype.constructor;
-      var indices = getExprIndices(expression);
       var expanded = 0, piece, path;
 
       // var args = identifiers.slice(0);

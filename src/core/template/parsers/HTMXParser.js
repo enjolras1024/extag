@@ -28,7 +28,7 @@ var FOR_LOOP_REGEXP = /^([\_\$\w]+)\s+of\s+(.+)$/;
 var CAPITAL_REGEXP = /^[A-Z]/;
 var LETTER_REGEXP = /[a-zA-Z]/;
 var TAGNAME_STOP = /[\s\/>]/;
-var LF_IN_BLANK = /\s*\n\s*/g;
+// var LF_IN_BLANK = /\s*\n\s*/g;
 var WHITE_SPACE = /\s/;
 var WHITE_SPACES = /\s+/;
 
@@ -183,7 +183,16 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         break;
       case '#': 
         key = viewEngine.toCamelCase(attrName.slice(0, -1));
-        result = FragmentBindingParser.parse(attrValue, prototype, identifiers);
+        try {
+          result = FragmentBindingParser.parse(attrValue, prototype, identifiers);
+        } catch (e) {
+          if (__ENV__ === 'development') {
+            if (e.code === 1001) {
+              e.expr = '@{' + e.expr + '}';
+            }
+          }
+          throw e;
+        }
         if (result) {
           result.asStr = true;
           group[key] = new Expression(FragmentBinding, result);
@@ -307,15 +316,14 @@ function parseAttributes(htmx, from, node, prototype, identifiers) {
 
 function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
   var children = parent.children || [], result;
-  var text = decodeHTML(htmx.slice(start, stop));
-  text = text.replace(LF_IN_BLANK, '');
+  var text = htmx.slice(start, stop);
   if (FragmentBindingParser.like(text)) {
     try {
       result = FragmentBindingParser.parse(text, prototype, identifiers);
     } catch (e) {
       if (__ENV__ === 'development') {
         if (e.code === 1001) {
-          var snapshot = getSnapshot(htmx, e.expr, parent, start);
+          var snapshot = getSnapshot(htmx, '@{' + e.expr + '}', parent, start);
           logger.warn((e.desc || e.message) + ' In the template of component ' 
                   + (prototype.constructor.fullName || prototype.constructor.name) + ':\n' 
                   + snapshot[0], snapshot[1], snapshot[2]);
