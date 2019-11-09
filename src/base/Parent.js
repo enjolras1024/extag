@@ -77,29 +77,23 @@ defineClass({
    * @param {Array} items
    */
   setChildren: function setChildren(children) {
-    var i, n = 0, before;
-    // if (this._children) {
-    //   before = this._children[0];
-    // }
-    // if (children && children.length) {
-    //   for (i = 0, n = children.length; i < n; ++i) {
-    //     this.insertChild(children[i], before);
-    //   }
-    // }
+    var i;
     var _children = this._children;
-    if (_children  && _children.length) {
-      for (i = 0, n = _children.length; i < n; ++i) {
+    var n = children ? children.length : 0;
+    var m = _children ? _children.length : 0;
+ 
+    if (m) {
+      for (i = 0; i < m; ++i) {
         _children[i]._parent = null;
       }
       _children.length = 0;
-      // for (i = children.length - 1; i >= n; --i) {
-      //   this.removeChild(children[i]);
-      // }
     }
-    if (children && children.length) {
-      for (i = 0, n = children.length; i < n; ++i) {
+    if (n) {
+      for (i = 0; i < n; ++i) {
         this.insertChild(children[i], null);
       }
+    } else if (m) {
+      this.invalidate(FLAG_CHANGED_CHILDREN);
     }
     return this;
   },
