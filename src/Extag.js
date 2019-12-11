@@ -37,7 +37,6 @@ import DataBinding from 'src/core/bindings/DataBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import FragmentBinding from 'src/core/bindings/FragmentBinding'
 
-import Evaluator from 'src/core/template/Evaluator'
 import Expression from 'src/core/template/Expression'
 import JSXEngine from 'src/core/template/JSXEngine.4'
 import HTMXEngine from 'src/core/template/HTMXEngine'
@@ -91,8 +90,6 @@ export default {
 
   // base
   //#test Accessor: Accessor,
-  //#test DirtyMarker: DirtyMarker,
-  //#test Evaluator: Evaluator,
   //#test Expression: Expression,
   //#test Generator: Generator,
   //#test Parent: Parent,
@@ -112,7 +109,7 @@ export default {
   // shells
   //#test Shell: Shell,
   //#test
-  Slot: Slot,
+  // Slot: Slot,
   Text: Text, 
   Element: Element, 
   // Fragment: Fragment,
@@ -131,6 +128,11 @@ export default {
   //#test DataBindingParser: DataBindingParser,
   //#test TextBindingParser: TextBindingParser,
   //#test EventBindingParser: EventBindingParser,
+
+  // template
+  //#test DirtyMarker: DirtyMarker,
+  //#test PropEvaluator: PropEvaluator,
+  //#test FuncEvaluator: FuncEvaluator,
 
   // JSXEngine: JSXEngine,
   //#test HTMXEngine: HTMXEngine,

@@ -1,17 +1,16 @@
-import { CONTEXT_SYMBOL, BINDING_OPERATORS, ONE_WAY_BINDING_BRACKETS } from 'src/share/constants'
+import { 
+  CONTEXT_REGEXP,
+  HANDLER_REGEXP,
+  PROP_EXPR_REGEXP
+} from 'src/share/constants'
 import { slice } from 'src/share/functions'
 import DataBinding from 'src/core/bindings/DataBinding'
-// import TextBinding from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import FragmentBinding  from 'src/core/bindings/FragmentBinding'
 import Expression from 'src/core/template/Expression'
 import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator';
 import PropEvaluator from 'src/core/template/evaluators/PropEvaluator';
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
-
-var PROP_EXPR_REGEXP = /^\s*[\$_a-zA-Z0-9]+\s*$/;
-var CONTEXT_REGEXP = new RegExp('^' + CONTEXT_SYMBOL + '\\.');
-var HANDLER_REGEXP = new RegExp('^(' + CONTEXT_SYMBOL + '\\.)?[\\w\\$\\_]+$');
 
 function createEvaluator(expr) {
   var type = typeof expr === 'string' ;
@@ -79,7 +78,6 @@ var ExpressionParser = {
         path: mode === 2 ? expr : null,
         evaluator: createEvaluator(base),
         converters: more ? createConverters(more) : null
-        // TODO: identifiers
       });
     } else if (type === '+') {
       if (typeof base === 'string' && HANDLER_REGEXP.test(base)) {

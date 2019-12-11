@@ -3,8 +3,10 @@
 import config from 'src/share/config'
 import { 
   VIEW_ENGINE, 
-  CONTEXT_SYMBOL } 
-  from 'src/share/constants'
+  CAPITAL_REGEXP,
+  WHITE_SPACE_REGEXP,
+  WHITE_SPACES_REGEXP
+} from 'src/share/constants'
 import { decodeHTML, throwError } from 'src/share/functions'
 import logger from 'src/share/logger'
 import Path from 'src/base/Path'
@@ -14,7 +16,6 @@ import Block from 'src/core/shells/Block'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
-// import TextBinding from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import FragmentBinding  from 'src/core/bindings/FragmentBinding'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
@@ -25,12 +26,8 @@ import FragmentBindingParser from 'src/core/template/parsers/FragmentBindingPars
 import PrimaryLiteralParser from 'src/core/template/parsers/PrimaryLiteralParser'
 
 var FOR_LOOP_REGEXP = /^([\_\$\w]+)\s+of\s+(.+)$/;
-var CAPITAL_REGEXP = /^[A-Z]/;
 var LETTER_REGEXP = /[a-zA-Z]/;
 var TAGNAME_STOP = /[\s\/>]/;
-// var LF_IN_BLANK = /\s*\n\s*/g;
-var WHITE_SPACE = /\s/;
-var WHITE_SPACES = /\s+/;
 
 var viewEngine = null;
 
@@ -118,27 +115,17 @@ function parseDirective(name, expr, node, prototype, identifiers) {
         code: 1001,
         expr: expr
       });
-      // logger.warn('Illegal x:for="' + expr + '"');
-      // return;
     }
 
-    // if (matches[6].lastIndexOf('::') < 0) {
-    //   matches[6] += '::[].slice(0)';
-    // }
-
-    // var expression = DataBindingParser.parse('{' + matches[2] + '}', prototype, resources, identifiers);
     result = DataBindingParser.parse(matches[2], prototype, identifiers);
 
     if (result) {
-      // getGroup(node, 'ctrls').xFor = new Expression(DataBinding, result);
       node.xfor = [matches[1], new Expression(DataBinding, result)];
     } else {
       throwError('Illegal x:for="' + expr + '".', {
         code: 1001,
         expr: expr
       });
-      // logger.warn('Illegal x:for="' + expr + '"');
-      // return;
     }
 
     node.identifiers = identifiers.concat([matches[1]]);
@@ -151,8 +138,6 @@ function parseDirective(name, expr, node, prototype, identifiers) {
         code: 1001,
         expr: expr,
       });
-      // logger.warn('Illegal x:if="' + expr + '"');
-      // return;
     }
   } else if (name === 'x:ns') {
     node.ns = expr;
@@ -200,11 +185,6 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
           group[key] = attrValue;
         }
         break;
-      // case '+':
-      //   name = viewEngine.toCamelCase(attrName.slice(0, -1));
-      //   result = EventBindingParser.parse(attrValue, prototype, identifiers);
-      //   getGroup(node, 'events')[name] = new Expression(EventBinding, result);
-      //   break;
       default:
         key = viewEngine.toCamelCase(attrName);
         group[key] = viewEngine.isBoolProp(key) || attrValue;
@@ -225,15 +205,17 @@ function getStopOf(regex, htmx, from) {
 }
 
 function getSnapshot(htmx, expr, node, start) {
-  // var i = htmx.lastIndexOf(limit[0], node.range[0]);
-  // var j = htmx.indexOf(limit[1], range[1]);
   var i = htmx.indexOf(expr, start);
   var j = htmx.indexOf('\n', i + expr.length);
   j = j > 0 ? j : htmx.length;
   if (j > i + expr.length * 4) {
     j = i + expr.length * 4;
   }
-  return [htmx.slice(node.range[0], i) + '%c' + expr + '%c' + htmx.slice(i + expr.length, j), 'color:red;', '']
+  return [
+    htmx.slice(node.range[0], i) + '%c' + expr + '%c' + htmx.slice(i + expr.length, j), 
+    'color:red;', 
+    ''
+  ]
 }
 
 function parseAttributes(htmx, from, node, prototype, identifiers) {
@@ -242,7 +224,7 @@ function parseAttributes(htmx, from, node, prototype, identifiers) {
 	while (idx < end) {
     cc = htmx[idx];
     if (attrName) {
-      if (!WHITE_SPACE.test(cc)) {
+      if (!WHITE_SPACE_REGEXP.test(cc)) {
         if (cc === '"' || cc === "'") {
           start = idx + 1;
           stop = htmx.indexOf(cc, start);
@@ -285,7 +267,7 @@ function parseAttributes(htmx, from, node, prototype, identifiers) {
     } else if (cc === '>') {
       stop = idx;
       if (start < stop) {
-        attrNames = htmx.slice(start, stop).trim().split(WHITE_SPACES);
+        attrNames = htmx.slice(start, stop).trim().split(WHITE_SPACES_REGEXP);
         while(attrNames.length > 0) {
           attrName = attrNames.shift();
           if (attrName && node) {
@@ -297,7 +279,7 @@ function parseAttributes(htmx, from, node, prototype, identifiers) {
     } else if (cc === '=') {
       stop = idx;
       if (start < stop) {
-        attrNames = htmx.slice(start, stop).trim().split(WHITE_SPACES);
+        attrNames = htmx.slice(start, stop).trim().split(WHITE_SPACES_REGEXP);
         while(attrNames.length > 1) {
           attrName = attrNames.shift();
           if (attrName && node) {
@@ -360,7 +342,7 @@ function parseHTMX(htmx, prototype) {
   parent = {
     tag: '[]',
     children: [],
-    identifiers: [CONTEXT_SYMBOL] // ['this']
+    identifiers: ['this']
   };
   parents.push(parent);
 

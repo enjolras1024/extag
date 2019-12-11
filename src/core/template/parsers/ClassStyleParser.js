@@ -5,25 +5,25 @@ import FragmentBindingParser from 'src/core/template/parsers/FragmentBindingPars
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
 import FragmentBinding from 'src/core/bindings/FragmentBinding'
 import DataBinding from 'src/core/bindings/DataBinding'
-// import TextBinding from 'src/core/bindings/TextBinding'
 import Expression from 'src/core/template/Expression'
+import { WHITE_SPACES_REGEXP } from 'src/share/constants'
 
-var WHITE_SPACES = /\s+/;
 var STYLE_DELIMITER = /;/g;
 
 export default {
   /**
-   * 
-   * @param {string} expression 
-   * @param {Object} prototype 
-   * @param {Array} identifiers 
-   * @param {boolean} camelCase  using camel case for x:style="...", not for x:calss="..."
+   * parse x:class="..." and x:style="..."
+   * @param {string} expr - e.g. "a b; c@: active;" for x:class, 
+   *                              and "display: none; font-size#:@{fontSize}px;" for x:style
+   * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
+   * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
+   * @param {boolean} camelCase  - using camel case for x:style="...", not for x:calss="..."
    */
-  parse: function parse(expression, prototype, identifiers, viewEngine, camelCase) {
+  parse: function parse(expr, prototype, identifiers, viewEngine, camelCase) {
     var group = {};
-    var pieces = expression.split(STYLE_DELIMITER); // as constant
+    var pieces = expr.split(STYLE_DELIMITER); // as constant
     var operator, result, piece, expr, name, names, m, n, i, j;
-    // var viewEngine = config.get(VIEW_ENGINE);
+
     for (i = 0, n = pieces.length; i < n; ++i) {
       piece = pieces[i].trim();
       m = piece.indexOf(':');
@@ -31,7 +31,7 @@ export default {
       if (m < 0) {
         if (piece) {
           // extact a and b from x:class="a b; c@: c;"
-          names = piece.split(WHITE_SPACES);
+          names = piece.split(WHITE_SPACES_REGEXP);
           for (j = 0; j < names.length; ++j) {
             group[names[j]] = true;
           }
@@ -62,7 +62,16 @@ export default {
           break;
         case '#':
           if (m <= 1) { continue; }
-          result = FragmentBindingParser.parse(expr, prototype, identifiers);
+          try {
+            result = FragmentBindingParser.parse(expr, prototype, identifiers);
+          } catch (e) {
+            if (__ENV__ === 'development') {
+              if (e.code === 1001) {
+                e.expr = '@{' + e.expr + '}';
+              }
+            }
+            throw e;
+          }
           if (result) {
             result.asStr = true;
             group[name.slice(0, m-1)] = new Expression(FragmentBinding, result);

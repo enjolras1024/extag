@@ -2,30 +2,25 @@ import Path from 'src/base/Path'
 import View from 'src/core/shells/View'
 import Slot from 'src/core/shells/Slot'
 import Block from 'src/core/shells/Block'
+import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
-// import TextBinding from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import FragmentBinding  from 'src/core/bindings/FragmentBinding'
-// import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 import config from 'src/share/config'
+import logger from 'src/share/logger'
 
-import { CONTEXT_SYMBOL, BINDING_OPERATORS, ONE_WAY_BINDING_BRACKETS } from 'src/share/constants'
-import { slice } from 'src/share/functions'
-// import DataBinding from 'src/core/bindings/DataBinding'
-// import TextBinding from 'src/core/bindings/TextBinding'
-// import EventBinding from 'src/core/bindings/EventBinding'
-// import FragmentBinding  from 'src/core/bindings/FragmentBinding'
-// import Expression from 'src/core/template/Expression'
+import { 
+  CONTEXT_REGEXP,
+  HANDLER_REGEXP,
+  CAPITAL_REGEXP,
+  PROP_EXPR_REGEXP
+ } from 'src/share/constants'
+import { slice, throwError } from 'src/share/functions'
+
 import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator';
 import PropEvaluator from 'src/core/template/evaluators/PropEvaluator';
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
-
-var FOR_LOOP_REGEXP = /^([\_\$\w]+)\s+of\s+(.+)$/;
-var CAPITAL_REGEXP = /^[A-Z]/;
-var LETTER_REGEXP = /[a-z]/i;
-var TAGNAME_STOP = /[\s\/>]/;
-
 
 function parseJsxNode(node, prototype) {
   var props = node.props, value, key;
@@ -53,9 +48,9 @@ function parseJsxNode(node, prototype) {
     var ctor = Path.search(node.type, prototype.constructor.resources);
     if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
       if (__ENV__ === 'development') {
-        logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in local resources or global RES.');
+        logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in static resources.');
       }
-      throw new TypeError('Can not find such component type `' + expr + '`');
+      throwError('Can not find such component type `' + expr + '`');
     }
     // _directs.xType = ctor;
     node.type = ctor;
@@ -74,9 +69,12 @@ function parseJsxNode(node, prototype) {
       case 'x:view':
         node.type = View;
         break;
-      case 'x:block':
-        node.type = Block;
+      case 'x:frag':
+        node.type = Fragment;
         break;
+      // case 'x:block':
+      //   node.type = Block;
+      //   break;
     }
   }
   if (node.events) {
@@ -193,7 +191,7 @@ function node(type, attrs, children) {
   } else if (t === 'function') {
     node.type = type;
   } else {
-    throw new TypeError('First argument must be class, string or constructor');
+    throwError('First argument must be class, string or constructor.');
   }
 
   if (arguments.length === 2 && (Array.isArray(attrs) || typeof attrs !== 'object')) {
@@ -256,10 +254,6 @@ function node(type, attrs, children) {
 
   return node;
 }
-
-var PROP_EXPR_REGEXP = /^\s*[\$_a-zA-Z0-9]+\s*$/;
-var CONTEXT_REGEXP = new RegExp('^' + CONTEXT_SYMBOL + '\\.');
-var HANDLER_REGEXP = new RegExp('^(' + CONTEXT_SYMBOL + '\\.)?[\\w\\$\\_]+$');
 
 function createEvaluator(expr) {
   var type = typeof expr;
@@ -361,6 +355,19 @@ var JSXParser = {
     node.identifiers = [CONTEXT_SYMBOL];
     parseJsxNode(node, prototype);
     parseJsxChildren(node, prototype);
+
+    if (node.type) {
+      if (node.tag === 'x:frag') {
+        node.type = null;
+      } else if (node.tag === 'x:slot' || node.tag === 'x:view') {
+        throwError(node.tag + ' can not be used as root tag of component template.')
+      } else {
+        throwError('component can not be used as root tag of another component template.')
+      }
+    } else if (node.xif || node.xfor || node.xkey) {
+      throwError('`xif`, `xfor`, `xkey` can not be used on component template root tag.')
+    }
+
     return node;
   }
 }

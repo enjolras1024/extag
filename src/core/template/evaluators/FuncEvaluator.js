@@ -8,6 +8,7 @@ var PARAM_DELIMITER = /\s*\,\s*/g;
 var SINGLE_PARAM_ARROW_REGEXP = /^\s*[\$-a-zA-Z0-9]+\s*=>/;
 
 /**
+ * evaluator for expression like @{a + b}, x:if="!hidden"
  * @class
  * @constructor
  * @param {string|Function} expr 
@@ -29,8 +30,8 @@ defineClass({
 
   /**
    * connect this evaluator with component prototype and template identifiers.
-   * @param {Object} prototype 
-   * @param {Array} identifiers 
+   * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
+   * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
    */
   connect: function(prototype, identifiers) {
     var resources = prototype.constructor.resources || EMPTY_OBJECT;
@@ -69,7 +70,8 @@ defineClass({
   },
 
   /**
-   * @param {Array} scopes  - local varaibles
+   * @param {Array} scopes  - scopes, the first one is the component whose template contains this evaluator, 
+   *                          and the rest are iterator variable from x:for expression.
    * @param {*} value       - value returned by the prevoius evluator/converter in data-binding expression.
    */
   execute: function(scopes, value) {
@@ -82,7 +84,8 @@ defineClass({
       } else if (i > 0) {
         args.push(scopes[i]);
       } else if (i === -1) {
-        args.push(ctx.constructor.resources[param])
+        var resources = ctx.constructor.resources;
+        args.push(resources && resources[param]);
       } else {
         args.push(ctx[param]);
       }

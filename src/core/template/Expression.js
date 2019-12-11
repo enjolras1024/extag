@@ -1,4 +1,4 @@
-// src/base/Expression.js
+// src/template/Expression.js
 
 import { defineClass } from 'src/share/functions'
 

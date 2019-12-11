@@ -1,10 +1,12 @@
 // src/core/template/parsers/EvaluatorParser.js
 
 import Path from 'src/base/Path'
-import logger from 'src/share/logger'
-import Evaluator from 'src/core/template/Evaluator'
 import { throwError } from 'src/share/functions'
-import { EMPTY_OBJECT } from 'src/share/constants'
+import { 
+  EMPTY_OBJECT,
+  PROP_EXPR_REGEXP,
+  WHITE_SPACE_REGEXP
+ } from 'src/share/constants'
 import PropEvaluator from 'src/core/template/evaluators/PropEvaluator'
 import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator'
 
@@ -17,10 +19,69 @@ var JS_KEYWORD_MAP = {};
   }
 })();
 
-var PROP_EXPR_REGEXP = /^\s*[\$_a-zA-Z0-9]+\s*$/;
+function skipWhiteSpace(expr, index) {
+  var cc, length = expr.length;
+  while (index < length) {
+    cc = expr.charCodeAt(index);
+    //    \             \f\n\r\t\v
+    if (!(cc === 32 || (cc >=9 && cc <= 13))) {
+      break;
+    }
+    ++index;
+  }
+  return index;
+}
 
-function skipWhiteSpace(expression, index) {
-  while (expression.charCodeAt(index) === 32) { // 32: ' '
+function notPropertyName(expr, index) {
+  var cc, length = expr.length;
+  while (index < length) {
+    cc = expr.charCodeAt(index);
+    //    \             \f\n\r\t\v
+    if (!(cc === 32 || (cc >=9 && cc <= 13))) {
+      return cc !== 44 && cc !== 123; // not ',' and '{'
+    }
+    --index;
+  }
+}
+
+function skipToPathEnding(expr, index) {
+  var cc, dot, space, length = expr.length;
+  while (index < length) {
+    cc = expr.charCodeAt(index);
+    if (cc === 32 || (cc >=9 && cc <= 13)) {
+      space = true;
+      ++index;
+      continue;
+    }
+    if (cc === 46) {
+      if (dot) {
+        throwError("Unexpected token '.'.", {
+          code: 1001, 
+          expr: expr
+        });
+      }
+      space = false;
+      dot = true;
+    } else {
+      if (!isLegalVarStartCharCode(cc) && !(cc >= 48 && cc <= 57)) {
+        if (dot) {
+          throwError("Unexpected token '" + expr[index] + "'.", {
+            code: 1001, 
+            expr: expr
+          });
+        }
+        break;
+      } else {
+        if (space && !dot) {
+          throwError("Unexpected token '" + expr[index] + "'.", {
+            code: 1001, 
+            expr: expr
+          });
+        }
+      }
+      space = false;
+      dot = false;
+    }
     ++index;
   }
   return index;
@@ -31,117 +92,73 @@ function isLegalVarStartCharCode(cc) {
   return  (cc >= 97 && cc <= 122) || (cc >= 65 && cc <= 90) || cc === 95 || cc === 36;
 }
 
-function getExprIndices(expression) {
-  var indices = [], pieces = [], piece, f0 = 0, f1 = -1;
-  var b0, b1, b2, c0 = 0, c1 = 0, c2 = 0, cb, cc, cn, cs;
-  for (var i = 0, n = expression.length; i < n; ++i) {
+function getIdentifierIndices(expr) {
+  var indices = [];
+  var b0, b1, cb, cc;
+  var n = expr.length, i = 0, j;
+  while(i < n) {
     cb = cc;
-    // cs = expression.charAt(i);
-    cc = expression.charCodeAt(i);
+    cc = expr.charCodeAt(i);
     switch (cc) {
-      case 39: // '
+      case 39: // 39: '
         if (!b0) b0 = true; 
         else if (cb !== 92) b0 = false; // 92: \
         break;
-      case 34: 
+      case 34: // 34: "
         if (!b1) b1 = true; 
         else if (cb !== 92) b1 = false; // 92: \
         break;
       default:
-        if (!b0 && !b1 && !b2 && cb !== 46 && isLegalVarStartCharCode(cc)) {
-          indices.push(i);
-          b2 = true;
-          continue;
+        if (!b0 && !b1 && cb !== 46 && isLegalVarStartCharCode(cc)) {
+          j = skipToPathEnding(expr, i + 1); 
+          cc = expr.charCodeAt(j);
+          if (cc !== 58) { // 58: :, not a property name of object
+            indices.push(i, j);
+          } else if (notPropertyName(expr, i - 1)) {
+            indices.push(i, j);
+          }
+          i = j;
         }
         break;
     }
-    //          a-zA-Z\_\$                     0-9                       \.
-    if (b2 && !(isLegalVarStartCharCode(cc) || (cc >= 48 && cc <= 57) || cc === 46)) {
-      b2 = false;
-      var j = skipWhiteSpace(expression, i+1);
-      if (expression.charCodeAt(j) === 92) { // :
-        indices.push(-1);
-      } else {
-        indices.push(i);
-      }
-    }
+    ++i;
   }
   
-  if (b2) {
-    indices.push(n);
-  }
-
   return indices;
 }
 
 export default {
   /**
-   * @param {string} expression
-   * @param {Object} prototype
-   * @param {Array} identifiers
-   * @returns {Object}
+   * @param {string} expr - e.g. "a + b" in @{a + b} or value@="a + b".
+   * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
+   * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
+   * @returns {PropEvaluator|FuncEvaluator}
    */
-  parse: function parse(expression, prototype, identifiers) {
+  parse: function parse(expr, prototype, identifiers) {
     var evaluator, origins, params, i, j;
 
-    if (PROP_EXPR_REGEXP.test(expression)) {
-      evaluator = new PropEvaluator(expression.trim());
+    if (PROP_EXPR_REGEXP.test(expr)) {
+      evaluator = new PropEvaluator(expr.trim());
       if (prototype && identifiers) {
         evaluator.connect(prototype, identifiers);
       }
       return evaluator;
     }
 
-    var indices = getExprIndices(expression);
+    var indices = getIdentifierIndices(expr);
 
-    if (prototype) {
+    if (prototype && expr.indexOf('/') < 0) {
       var resources = prototype.constructor.resources || EMPTY_OBJECT;
       var constructor = prototype.constructor;
       var expanded = 0, piece, path;
 
-      // var args = identifiers.slice(0);
-      // args[0] = '$_0'; 
-
-      // if (__ENV__ === 'development') {
-      //   lines.push('try {');
-      // } 
-
-      // for (i = 0; i < indices.length; i += 2) {
-      //   if (indices[i+1] < 0) { continue; }
-      //   var piece = expression.slice(indices[i] + expanded, indices[i+1] + expanded);
-      //   if (JS_KEYWORD_MAP.hasOwnProperty(piece)) {
-      //     continue;
-      //   }
-      //   var path = Path.parse(piece);
-      //   // var k = identifiers.indexOf(path[0]);
-      //   if (identifiers.indexOf(path[0]) >= 0) {
-      //     paths.push(piece);
-      //   } else if (path[0] in prototype) {
-      //     expression = expression.slice(0, indices[i] + expanded) + 'this.' + piece + expression.slice(indices[i+1] + expanded);
-      //     paths.push('this.' + piece);
-      //     expanded += 5;
-      //   } /*else if (path[0] in resources) {
-      //     expression = expression.slice(0, indices[i] + expanded) + 'this.R.' + piece + expression.slice(indices[i+1] + expanded);
-      //     paths.push('this.R.' + piece);
-      //     expanded += 7;
-      //   } else if (path[0] in resources) {
-      //     lines.push('  var ' + path[0] + ' = this.res("' + path[0] + '");')
-      //   } */ else if (path[0] in resources) {
-      //     // lines.push('  var ' + path[0] + ' = this.$res("' + path[0] + '");'); // from local resources or global
-      //     lines.push('  var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
-      //   }
-      // }
-
-      // lines.push('  return ' + expression);
-
-      // var params = ['$_0'], origins = [-2], piece, path;
       params = [];
       origins = [];
 
       for (j = 0; j < indices.length; j += 2) {
         if (indices[j+1] < 0) { continue; }
-        piece = expression.slice(indices[j] + expanded, indices[j+1] + expanded);
-        path = Path.parse(piece);
+        piece = expr.slice(indices[j] + expanded, indices[j+1] + expanded);
+        path = Path.parse(piece.replace(WHITE_SPACE_REGEXP, ''));
         if (JS_KEYWORD_MAP.hasOwnProperty(path[0])
             || params.indexOf(path[0]) >= 0) {
           continue;
@@ -153,9 +170,9 @@ export default {
             origins.push(i);
           }
         } else if (path[0] in prototype) {
-          i = skipWhiteSpace(expression, indices[j+1] + expanded);
-          if (expression[i] !== '(') {
-            expression = expression.slice(0, indices[j] + expanded) + 'this.' + piece + expression.slice(indices[j+1] + expanded);
+          i = skipWhiteSpace(expr, indices[j+1] + expanded);
+          if (expr[i] !== '(') {
+            expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
             expanded += 5;
           } else {
             params.push(path[0]);
@@ -165,7 +182,7 @@ export default {
           params.push(path[0]);
           origins.push(-1);
         } else {
-          expression = expression.slice(0, indices[j] + expanded) + 'this.' + piece + expression.slice(indices[j+1] + expanded);
+          expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
           expanded += 5;
         }
       }
@@ -174,8 +191,8 @@ export default {
       origins = null;
       for (j = 0; j < indices.length; j += 2) {
         if (indices[j+1] < 0) { continue; }
-        piece = expression.slice(indices[j], indices[j+1]);
-        path = Path.parse(piece);
+        piece = expr.slice(indices[j], indices[j+1]);
+        path = Path.parse(piece.replace(WHITE_SPACE_REGEXP, ''));
         if (!JS_KEYWORD_MAP.hasOwnProperty(path[0])
             && params.indexOf(path[0]) < 0) {
           params.push(path[0]);
@@ -184,31 +201,18 @@ export default {
     }
 
     try {
-      evaluator = new FuncEvaluator(expression, params, origins);
+      evaluator = new FuncEvaluator(expr, params, origins);
       if (prototype && identifiers) {
         evaluator.connect(prototype, identifiers);
       }
       return evaluator;
-      // return new Evaluator({
-      //   func: func,
-      //   // expr: expr,
-      //   paths: paths,
-      //   identifiers: identifiers
-      // });
     } catch (e) {
-      // if (__ENV__ === 'development') { 
-      //   logger.warn('Illegal expression `' + expression + '` in the template of Component ' + (constructor.fullName || constructor.name));
-      // }
-      // throw(e);
       throwError(e, {
         code: 1001,
         expr: arguments[0],
         desc: 'Illegal expression `' + arguments[0] + '`.'
       })
     }
-    
-    
-    
   }
 };
   

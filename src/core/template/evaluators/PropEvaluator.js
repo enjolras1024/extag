@@ -2,15 +2,14 @@
 
 import { EMPTY_OBJECT } from 'src/share/constants'
 import { defineClass } from 'src/share/functions'
-import logger from 'src/share/logger'
 
 /**
- * for @{prop}, value@="prop"
+ * evaluator for expression like @{prop}, value@="prop"
  * @class
  * @constructor
- * @param {string} prop 
+ * @param {string} prop - property name
  */
-function PropEvaluator(prop) {  // property paths appeared in this evaluator
+function PropEvaluator(prop) {
   this.prop = prop;
 }
 
@@ -19,13 +18,13 @@ defineClass({
 
   /**
    * connect this evaluator with component prototype and template identifiers
-   * @param {Object} prototype 
-   * @param {Array} identifiers 
+   * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
+   * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
    */
   connect: function(prototype, identifiers) {
     var resources = prototype.constructor.resources || EMPTY_OBJECT;
     var i = identifiers.indexOf(this.prop);
-    if (i >= 0) {
+    if (i > 0) {
       this.origin = i;
     } else if (this.prop in prototype) {
       this.origin = 0
@@ -37,20 +36,22 @@ defineClass({
   },
 
   /**
-   * @param {Array} scopes  - local varaibles
-   * @param {*} value       - value returned by the prevoius evluator/converter in data-binding expression.
+   * execute to evaluate
+   * @param {Array} scopes  - scopes, the first one is the component whose template contains this evaluator, 
+   *                          and the rest are iterator variable from x:for expression.
    */
-  execute: function(scopes, value) {
+  execute: function(scopes) {
     var ctx = scopes[0];
     var i = this.origin;
     if (i === 0) {
       return ctx[this.prop];
     } else if (i > 0) {
-      return scopes[i];
+      return scopes[i]; // e.g. @{item} from x:for="item of items"
     } else if (i === -1) {
-      return ctx.constructor.resources[this.prop];
+      var resources = ctx.constructor.resources;
+      return resources && resources[this.prop];
     } else {
-      return ctx[this.prop];
+      return this.prop !== 'this' ? ctx[this.prop] : ctx;
     }
   }
 });

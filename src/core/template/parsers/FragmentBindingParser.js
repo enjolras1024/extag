@@ -13,30 +13,40 @@ var BINDING_LIKE_REGEXP = new RegExp(
 );
 
 export default {
-  like: function like(expression) {
-    return BINDING_LIKE_REGEXP.test(expression);
+  /**
+   * check if the fragment expression contains `@{...}`
+   * @param {string} expr - content of text node in template.
+   */
+  like: function like(expr) {
+    return BINDING_LIKE_REGEXP.test(expr);
   },
 
-  parse: function(expression, prototype, identifiers) {
+  /**
+   * parse an fragment expression that contains  `@{...}`
+   * @param {string} expr - fragment expression that contains  `@{...}`
+   * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
+   * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
+   */
+  parse: function(expr, prototype, identifiers) {
     var i, j, n, template = [], start = 0, stop;
     var b0, b1, b2, ct = 0, cc, cb;
     var pattern, text;
-    for (i = 0, n = expression.length; i < n; ++i) {
+    for (i = 0, n = expr.length; i < n; ++i) {
       cb = cc;
-      cc = expression.charCodeAt(i);
+      cc = expr.charCodeAt(i);
       if (b2) {
         if (cc === 125 && !b0 && !b1) { // }
           --ct;
           if (ct === 0) {
             if (start < stop) {
-              text = expression.slice(start, stop)
+              text = expr.slice(start, stop)
               text = text.replace(LF_IN_BLANK, '');
               if (text) {
                 text = decodeHTML(text);
                 template.push(text);
               }
             }
-            pattern = DataBindingParser.parse(expression.slice(stop+2, i), prototype, identifiers);
+            pattern = DataBindingParser.parse(expr.slice(stop+2, i), prototype, identifiers);
             template.push(new Expression(DataBinding, pattern));
             start = stop = i + 1;
             b2 = false;
@@ -58,7 +68,7 @@ export default {
     }
 
     if (0 < start && start < n) {
-      text = expression.slice(start, n)
+      text = expr.slice(start, n)
       text = text.replace(LF_IN_BLANK, '');
       if (text) {
         text = decodeHTML(text);
