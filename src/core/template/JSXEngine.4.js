@@ -8,7 +8,7 @@ import Slot from 'src/core/shells/Slot'
 // import HTMXEngine from 'src/core/node/HTMXEngine'
 // import HTMXnode from 'src/core/node/HTMXnode'
 import { EMPTY_OBJECT, EMPTY_ARRAY } from 'src/share/constants'
-import { defineProp } from 'src/share/functions'
+import { defineProp, flatten } from 'src/share/functions'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
 
@@ -22,29 +22,6 @@ import logger from 'src/share/logger'
 //     children: children
 //   }
 // }
-
-function flatten(list, array) {
-  var i, n = list.length;
-  if (!array) {
-    for (i = 0; i < n; ++i) {
-      if (Array.isArray(list[i])) {
-        array = [];
-        break;
-      }
-    }
-  }
-  if (array) {
-    for (i = 0; i < n; ++i) {
-      var item = list[i];
-      if (Array.isArray(item)) {
-        flatten(item, array);
-      } else {
-        array.push(item);
-      }
-    }
-  }
-  return array ? array : list;
-}
 
 /**
  * Check if the node matches the child element or child component.

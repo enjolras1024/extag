@@ -178,7 +178,7 @@ function driveComponent(target, _template, scopes, template, props) {
     }
   } else if (props) {
     if (__ENV__ === 'development') {
-      Validator.validate0(store, props);
+      Validator.validate0(target, props);
     }
     driveProps(target, props, scopes);
   }

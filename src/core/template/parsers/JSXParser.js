@@ -16,7 +16,7 @@ import {
   CAPITAL_REGEXP,
   PROP_EXPR_REGEXP
  } from 'src/share/constants'
-import { slice, throwError } from 'src/share/functions'
+import { slice, flatten, throwError } from 'src/share/functions'
 
 import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator';
 import PropEvaluator from 'src/core/template/evaluators/PropEvaluator';

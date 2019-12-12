@@ -76,6 +76,29 @@ var assign = Object.assign || function assign(target/*,..sources*/) {
   return target;
 }
 
+function flatten(list, array) {
+  var i, n = list.length;
+  if (!array) {
+    for (i = 0; i < n; ++i) {
+      if (Array.isArray(list[i])) {
+        array = [];
+        break;
+      }
+    }
+  }
+  if (array) {
+    for (i = 0; i < n; ++i) {
+      var item = list[i];
+      if (Array.isArray(item)) {
+        flatten(item, array);
+      } else {
+        array.push(item);
+      }
+    }
+  }
+  return array ? array : list;
+}
+
 function isNativeFunc(func) {
   return typeof func === 'function' && /native code/.test(func.toString())
 }
@@ -345,6 +368,7 @@ export {
   copy,
   slice,
   assign,
+  flatten,
   toClasses,
   throwError,
   encodeHTML, 
