@@ -3,6 +3,7 @@
 import config from 'src/share/config'
 import { 
   VIEW_ENGINE, 
+  BINDING_FORMAT,
   CAPITAL_REGEXP,
   WHITE_SPACE_REGEXP,
   WHITE_SPACES_REGEXP
@@ -173,7 +174,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         } catch (e) {
           if (__ENV__ === 'development') {
             if (e.code === 1001) {
-              e.expr = '@{' + e.expr + '}';
+              e.expr = BINDING_FORMAT.replace('0', e.expr);
             }
           }
           throw e;
@@ -305,7 +306,7 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
     } catch (e) {
       if (__ENV__ === 'development') {
         if (e.code === 1001) {
-          var snapshot = getSnapshot(htmx, '@{' + e.expr + '}', parent, start);
+          var snapshot = getSnapshot(htmx, BINDING_FORMAT.replace('0', e.expr), parent, start);
           logger.warn((e.desc || e.message) + ' In the template of component ' 
                   + (prototype.constructor.fullName || prototype.constructor.name) + ':\n' 
                   + snapshot[0], snapshot[1], snapshot[2]);

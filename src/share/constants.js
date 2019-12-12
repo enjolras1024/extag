@@ -17,6 +17,7 @@ var EMPTY_ARRAY = [];
 var EVENT_SYMBOL = 'event';
 // var CAPTURE_SYMBOL = '!',
 var CONTEXT_SYMBOL = 'this';
+var BINDING_FORMAT = '@{0}';
 var ONE_WAY_BINDING_BRACKETS = '{}';
 var TWO_WAY_BINDING_BRACKETS = '[]';
 var BINDING_OPERATORS = {
@@ -40,6 +41,7 @@ var CONTEXT_REGEXP = /^this\./;
 var HANDLER_REGEXP = /^(this\.)?[\w\$\_]+$/;
 var PROP_EXPR_REGEXP = /^\s*[\$_a-zA-Z0-9]+\s*$/;
 
+
 export {
   FLAG_NORMAL,
   FLAG_CHANGED,
@@ -54,6 +56,7 @@ export {
 
   EVENT_SYMBOL,
   CONTEXT_SYMBOL,
+  BINDING_FORMAT,
   BINDING_OPERATORS,
   ONE_WAY_BINDING_BRACKETS,
   TWO_WAY_BINDING_BRACKETS,
