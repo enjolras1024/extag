@@ -22,11 +22,11 @@ var ONE_WAY_BINDING_BRACKETS = '{}';
 var TWO_WAY_BINDING_BRACKETS = '[]';
 var BINDING_OPERATORS = {
   DATA: '@', 
-  TEXT: '#', 
+  // TEXT: '#', 
   EVENT: '+', 
   MODIFIER: '::',
   CONVERTER: '|=', 
-  SCOPE_EVENT: '@', 
+  // SCOPE_EVENT: '@', 
   ASSIGN: '!',
   TWO_WAY: '@',  
   ANY_WAY: '^', 
