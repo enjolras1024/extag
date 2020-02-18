@@ -9,7 +9,7 @@ import Binding from 'src/core/bindings/Binding'
 import config from 'src/share/config'
 import { defineProp, defineClass } from 'src/share/functions'
 
-var storeGuid = 0;
+var storeGuid = -1;
 
 /**
  * Store for storing data an sending property-changed event with declaration.
@@ -51,7 +51,7 @@ defineClass({
       });
 
       defineProp(store, '$guid', {
-        value: 's' + storeGuid++, writable: false, enumerable: false, configurable: true
+        value: storeGuid--, writable: false, enumerable: false, configurable: true
       });
 
       if (this.setup) {
