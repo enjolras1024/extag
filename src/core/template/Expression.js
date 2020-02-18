@@ -1,6 +1,29 @@
 // src/template/Expression.js
 
 import { defineClass } from 'src/share/functions'
+import { 
+  CONTEXT_REGEXP,
+  HANDLER_REGEXP,
+  CAPITAL_REGEXP,
+  PROP_EXPR_REGEXP
+ } from 'src/share/constants'
+ import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator';
+import PropEvaluator from 'src/core/template/evaluators/PropEvaluator';
+import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
+
+function parseEvaluator(expr, prototype, identifiers) {
+  var type = typeof expr;
+  if (type === 'string') {
+    // if (PROP_EXPR_REGEXP.test(expr)) {
+    //   return new PropEvaluator(expr.trim());
+    // }
+    return EvaluatorParser.parse(expr, prototype, identifiers);
+  } else if (type === 'function') {
+    var evaluator = new FuncEvaluator(expr);
+    evaluator.connect(prototype, identifiers);
+    return evaluator;
+  }
+}
 
 /**
  * Expression parsed from 'checked@="selected"' and so on, in the component pattern.
@@ -10,9 +33,10 @@ import { defineClass } from 'src/share/functions'
  * @param {Object} binding
  * @param {Object} pattern
  */
-export default function Expression(binding, pattern) {
+export default function Expression(binding, pattern, unparsed) {
   this.binding = binding;
   this.pattern = pattern;
+  this.unparsed = unparsed;
 }
 
 defineClass({
@@ -44,16 +68,23 @@ defineClass({
     // }
   },
   connect: function(prototype, identifiers) {
-    var evaluator = this.pattern.evaluator;
-    var converters = this.pattern.converters;
+    if (!this.unparsed) {
+      return;
+    }
+    var pattern = this.pattern;
+    var evaluator = pattern.evaluator;
+    var converters = pattern.converters;
     if (evaluator) {
-      evaluator.connect(prototype, identifiers);
+      // evaluator.connect(prototype, identifiers);
+      pattern.evaluator = parseEvaluator(evaluator, prototype, identifiers);
     } 
     if (converters) {
       for (var i = 0; i < converters.length; ++i) {
-        converters[i].connect(prototype, identifiers);
+        // converters[i].connect(prototype, identifiers);
+        pattern.converters[i] = parseEvaluator(converters[i], prototype, identifiers);
       }
     }
+    this.unparsed = false;
   },
   /**
    * Compile this expression related to the target in the scope.

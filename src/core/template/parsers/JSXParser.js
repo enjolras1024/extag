@@ -11,6 +11,7 @@ import config from 'src/share/config'
 import logger from 'src/share/logger'
 
 import { 
+  CONTEXT_SYMBOL,
   CONTEXT_REGEXP,
   HANDLER_REGEXP,
   CAPITAL_REGEXP,
@@ -194,12 +195,13 @@ function node(type, attrs, children) {
     throwError('First argument must be class, string or constructor.');
   }
 
-  if (arguments.length === 2 && (Array.isArray(attrs) || typeof attrs !== 'object')) {
-    children = attrs;
-    attrs = null;
-  }
+  // if (arguments.length === 2 && (Array.isArray(attrs) || typeof attrs !== 'object')) {
+  //   children = attrs;
+  //   attrs = null;
+  // }
 
-  if (attrs) {
+  if (attrs && (typeof attrs === 'object') && !attrs.__extag_node__) {
+    
     if (attrs.xif) {
       node.xif = attrs.xif;
     }
@@ -237,6 +239,18 @@ function node(type, attrs, children) {
         props[key] = attrs[key];
       }
     }
+
+    if (arguments.length > 3) {
+      children = slice(arguments, 2);
+    } else {
+      children = arguments[2];
+    }
+  } else {
+    if (arguments.length > 2) {
+      children = slice(arguments, 1);
+    } else {
+      children = arguments[1];
+    }
   }
 
   if (children) {
@@ -255,37 +269,37 @@ function node(type, attrs, children) {
   return node;
 }
 
-function createEvaluator(expr) {
-  var type = typeof expr;
-  if (type === 'string') {
-    if (PROP_EXPR_REGEXP.test(expr)) {
-      return new PropEvaluator(expr.trim());
-    }
-    return EvaluatorParser.parse(expr);
-  } else if (type === 'function') {
-    return new FuncEvaluator(expr);
-  }
-}
+// function createEvaluator(expr) {
+//   var type = typeof expr;
+//   if (type === 'string') {
+//     if (PROP_EXPR_REGEXP.test(expr)) {
+//       return new PropEvaluator(expr.trim());
+//     }
+//     return EvaluatorParser.parse(expr);
+//   } else if (type === 'function') {
+//     return new FuncEvaluator(expr);
+//   }
+// }
 
-function createConverters(more) {
-  var converters = [], type, expr, j, i;
-  for (j = 0; j < more.length; ++j) {
-    expr = more[j];
-    type = typeof expr;
-    if (type === 'string') {
-      i = expr.indexOf('(');
-      if (i > 0) {
-        expr = expr.slice(0, i + 1) + 'arguments[arguments.length-1],' + expr.slice(i + 1);
-      } else {
-        expr = expr + '(arguments[arguments.length-1])';
-      }
-      converters.push(EvaluatorParser.parse(expr));
-    } else if (type === 'function') {
-      converters.push(new FuncEvaluator(expr));
-    }
-  }
-  return converters;
-}
+// function createConverters(more) {
+//   var converters = [], type, expr, j, i;
+//   for (j = 0; j < more.length; ++j) {
+//     expr = more[j];
+//     type = typeof expr;
+//     if (type === 'string') {
+//       i = expr.indexOf('(');
+//       if (i > 0) {
+//         expr = expr.slice(0, i + 1) + 'arguments[arguments.length-1],' + expr.slice(i + 1);
+//       } else {
+//         expr = expr + '(arguments[arguments.length-1])';
+//       }
+//       converters.push(EvaluatorParser.parse(expr));
+//     } else if (type === 'function') {
+//       converters.push(new FuncEvaluator(expr));
+//     }
+//   }
+//   return converters;
+// }
 
 /**
  * 
@@ -321,10 +335,10 @@ function expr(type, base/*, ...more*/) {
     return new Expression(DataBinding, {
       mode: mode,
       path: mode === 2 ? base.trim().replace(CONTEXT_REGEXP, '') : null,
-      evaluator: createEvaluator(base),
-      converters: more ? createConverters(more) : null
+      evaluator: base, //createEvaluator(base),
+      converters: more //more ? createConverters(more) : null
       // TODO: identifiers
-    });
+    }, true);
   } else if (type === '+') {
     if (typeof base === 'string' && HANDLER_REGEXP.test(base.trim())) {
       return new Expression(EventBinding, {
@@ -333,9 +347,9 @@ function expr(type, base/*, ...more*/) {
       });
     } else {
       return new Expression(EventBinding, {
-        evaluator: createEvaluator(base),
+        evaluator: base, //createEvaluator(base),
         modifiers: more
-      });
+      }, true);
     }
   } else if (type === '#') {
     if (more) {
@@ -351,24 +365,24 @@ var JSXParser = {
   node: node,
   expr: expr,
   parse: function(template, prototype) {
-    var node = template(config.JSXEngine.node, expr);
-    node.identifiers = [CONTEXT_SYMBOL];
-    parseJsxNode(node, prototype);
-    parseJsxChildren(node, prototype);
+    var _node = template(node, expr);
+    _node.identifiers = [CONTEXT_SYMBOL];
+    parseJsxNode(_node, prototype);
+    parseJsxChildren(_node, prototype);
 
-    if (node.type) {
-      if (node.tag === 'x:frag') {
-        node.type = null;
-      } else if (node.tag === 'x:slot' || node.tag === 'x:view') {
-        throwError(node.tag + ' can not be used as root tag of component template.')
+    if (_node.type) {
+      if (_node.tag === 'x:frag') {
+        _node.type = null;
+      } else if (_node.tag === 'x:slot' || _node.tag === 'x:view') {
+        throwError(_node.tag + ' can not be used as root tag of component template.')
       } else {
         throwError('component can not be used as root tag of another component template.')
       }
-    } else if (node.xif || node.xfor || node.xkey) {
+    } else if (_node.xif || _node.xfor || _node.xkey) {
       throwError('`xif`, `xfor`, `xkey` can not be used on component template root tag.')
     }
 
-    return node;
+    return _node;
   }
 }
 
