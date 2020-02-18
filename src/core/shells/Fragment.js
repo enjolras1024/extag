@@ -9,7 +9,7 @@ import {
   FLAG_NORMAL,
   FLAG_CHANGED,
   FLAG_CHANGED_CHILDREN,
-  FLAG_CHANGED_COMMANDS
+  FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
 
 import config from 'src/share/config'
@@ -63,9 +63,19 @@ defineClass({
       JSXEngine.reflow(this.scopes[0], this, contents);
     }
 
-    if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-      this._parent.invalidate(FLAG_CHANGED_CHILDREN);
+    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+      if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+        var parent = this.getParent(true);
+        parent.$flag |= FLAG_CHANGED_CHILDREN;
+        if ((parent.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+          parent.$flag |= FLAG_WAITING_TO_RENDER;
+          Schedule.insertRenderQueue(parent);
+        }
+      }
+      this.$flag |= FLAG_WAITING_TO_RENDER;
+      Schedule.insertRenderQueue(this);
     }
+    
 
     // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
     //   if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
@@ -88,7 +98,7 @@ defineClass({
     //   this.render();
     // }
 
-    this.render();
+    // this.render();
     
     return true;
   },

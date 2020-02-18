@@ -6,8 +6,7 @@ import DirtyMarker from 'src/base/DirtyMarker'
 import { defineClass } from 'src/share/functions'
 import {
   FLAG_NORMAL,
-  FLAG_CHANGED,
-  FLAG_CHANGED_CHILDREN
+  FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
 
 export default function Text(data) {
@@ -50,12 +49,11 @@ defineClass({
     if (this.$flag === FLAG_NORMAL) {
       return false;
     }
-    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-    //   this.$flag |= FLAG_WAITING_TO_RENDER;
-    //   // Schedule.insertRenderQueue(this);
-    //   this.render();
-    // }
-    this.render();
+    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+      this.$flag |= FLAG_WAITING_TO_RENDER;
+      Schedule.insertRenderQueue(this);
+    }
+    // this.render();
     return true;
   },
 

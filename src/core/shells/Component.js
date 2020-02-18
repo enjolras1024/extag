@@ -25,7 +25,9 @@ import {
   FLAG_NORMAL,
   FLAG_CHANGED,
   FLAG_CHANGED_CHILDREN,
-  FLAG_CHANGED_COMMANDS
+  FLAG_CHANGED_COMMANDS,
+  FLAG_WAITING_TO_RENDER,
+  FLAG_WAITING_TO_CALLBACk
 } from 'src/share/constants'
 
 
@@ -330,26 +332,24 @@ defineClass({
       this._parent.invalidate(FLAG_CHANGED_CHILDREN);
     }
 
-    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-    //   // If this type is 0, we should ask its parent to render parent's children,
-    //   // since its children are belong to its parent actually.
-    //   if (this.type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-    //     // this._parent.invalidate(2); 
-    //     var parent = this._parent;
-    //     if ((parent.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-    //       // parent.invalidate(FLAG_CHANGED_CHILDREN | FLAG_WAITING_TO_RENDER);
-    //       parent.$flag |= FLAG_WAITING_TO_RENDER;
-    //       parent.$flag |= FLAG_CHANGED_CHILDREN;
-    //       // Schedule.insertRenderQueue(parent);
-    //       parent.render();
-    //     }
-    //   }
-    //   this.$flag |= FLAG_WAITING_TO_RENDER;
-    //   // Schedule.insertRenderQueue(this);
-    //   this.render();
-    // }
+    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+      // If this type is 0, we should ask its parent to render parent's children,
+      // since its children are belong to its parent actually.
+      if (this.type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+        // this._parent.invalidate(2); 
+        var parent = this.getParent(true);
+        parent.$flag |= FLAG_CHANGED_CHILDREN;
+        if ((parent.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+          parent.$flag |= FLAG_WAITING_TO_RENDER;
+          Schedule.insertRenderQueue(parent);
+        }
+      }
+      this.$flag |= FLAG_WAITING_TO_RENDER;
+      Schedule.insertRenderQueue(this);
+      // this.render();
+    }
 
-    this.render();
+    // this.render();
     
     return true;
   },
@@ -366,9 +366,12 @@ defineClass({
     } else {
       fragmentProto.render.call(this);
     }
-    if (this.onRendered) {
+    if (this.onRendered && !(this.$flag & FLAG_WAITING_TO_CALLBACk)) {
+      this.$flag |= FLAG_WAITING_TO_CALLBACk;
       Schedule.pushCallbackQueue((function() {
-        this.onRendered(this.$skin);
+        if ((this.$flag & FLAG_WAITING_TO_CALLBACk)) {
+          this.onRendered(this.$skin);
+        }
       }).bind(this));
     }
     return true;

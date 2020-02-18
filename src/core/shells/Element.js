@@ -7,11 +7,8 @@ import Cache from 'src/core/models/Cache'
 import DirtyMarker from 'src/base/DirtyMarker'
 import { assign, defineProp, defineClass } from 'src/share/functions'
 import {
-  EMPTY_OBJECT,
   FLAG_NORMAL,
-  FLAG_CHANGED,
-  FLAG_CHANGED_CHILDREN,
-  FLAG_CHANGED_COMMANDS
+  FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
 import config from 'src/share/config'
 
@@ -180,13 +177,12 @@ defineClass({
     // Element.convert(this);
     config.HTMXEngine.transferProperties(this);
 
-    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-    //   this.$flag |= FLAG_WAITING_TO_RENDER;
-    //   // Schedule.insertRenderQueue(this);
-    //   this.render();
-    // }
+    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+      this.$flag |= FLAG_WAITING_TO_RENDER;
+      Schedule.insertRenderQueue(this);
+    }
 
-    this.render();
+    // this.render();
     
     return true;
   },

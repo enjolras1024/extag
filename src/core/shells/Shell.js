@@ -18,7 +18,8 @@ import {
   FLAG_NORMAL, 
   FLAG_CHANGED, 
   FLAG_CHANGED_CHILDREN,
-  FLAG_CHANGED_COMMANDS
+  FLAG_CHANGED_COMMANDS,
+  FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
 
 var shellGuid = 0;//Number.MIN_VALUE;
@@ -140,7 +141,11 @@ defineClass({
       }
     }
 
-    this.invalidate(FLAG_CHANGED_CHILDREN);
+    // this.invalidate(FLAG_CHANGED_CHILDREN);
+    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+      this.$flag |= FLAG_WAITING_TO_RENDER;
+      Schedule.insertRenderQueue(this);
+    }
 
     return true;
   },
