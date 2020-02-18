@@ -296,10 +296,10 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
     if (result) {
       children.push(new Expression(FragmentBinding, result));
     } else {
-      children.push(text);
+      children.push(decodeHTML(text));
     }
   } else {
-    children.push(text);
+    children.push(decodeHTML(text));
   }
 
   parent.children = children;
