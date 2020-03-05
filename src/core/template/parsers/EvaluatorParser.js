@@ -10,6 +10,8 @@ import {
 import PropEvaluator from 'src/core/template/evaluators/PropEvaluator'
 import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator'
 
+var DIVISION_REGEXP = /[\w).+\-_$\]]/;
+
 var JS_KEYWORDS = 'abstract arguments boolean break byte case catch char class const continue debugger default delete do double else enum eval export extends false final finally float for function goto if implements import in instanceof int interface let long native new null package private protected public return short static super switch synchronized this throw throws transient true try typeof undefined var void volatile while with yield Array Date Infinity Math NaN Number Object String Boolean';
 var JS_KEYWORD_MAP = {};
 (function() {
@@ -94,22 +96,37 @@ function isLegalVarStartCharCode(cc) {
 
 function getIdentifierIndices(expr) {
   var indices = [];
-  var b0, b1, cb, cc;
+  var b0, b1, b2, cb, cc;
   var n = expr.length, i = 0, j;
   while(i < n) {
     cb = cc;
     cc = expr.charCodeAt(i);
     switch (cc) {
       case 39: // 39: '
-        if (!b0) b0 = true; 
-        else if (cb !== 92) b0 = false; // 92: \
+        if (!b0) { b0 = true; } 
+        else if (cb !== 92) { b0 = false; }// 92: \
         break;
       case 34: // 34: "
-        if (!b1) b1 = true; 
-        else if (cb !== 92) b1 = false; // 92: \
+        if (!b1) { b1 = true; } 
+        else if (cb !== 92) { b1 = false; } // 92: \
         break;
+      case 47: // 47: /, maybe regexp
+        if (!b2) {
+          var cp;
+          for (; j >= 0; --j) {
+            cp = expr.charCodeAt(j);
+            if (!(cp === 32 || (cp >=9 && cp <= 13))) {
+              break;
+            }
+          }
+          if (!cp || !DIVISION_REGEXP.test(cp)) {
+            b2 = true;
+          }
+        } else if (cb !== 92) { b2 = false; }
+        break;
+      // TODO: ``
       default:
-        if (!b0 && !b1 && cb !== 46 && isLegalVarStartCharCode(cc)) {
+        if (!b0 && !b1 && !b2 && cb !== 46 && isLegalVarStartCharCode(cc)) {
           j = skipToPathEnding(expr, i + 1); 
           cc = expr.charCodeAt(j);
           if (cc !== 58) { // 58: :, not a property name of object
@@ -147,7 +164,7 @@ export default {
 
     var indices = getIdentifierIndices(expr);
 
-    if (prototype && expr.indexOf('/') < 0) {
+    if (prototype) {
       var resources = prototype.constructor.resources || EMPTY_OBJECT;
       var constructor = prototype.constructor;
       var expanded = 0, piece, path;
@@ -171,13 +188,13 @@ export default {
           }
         } else if (path[0] in prototype) {
           i = skipWhiteSpace(expr, indices[j+1] + expanded);
-          if (expr[i] !== '(') {
+          // if (expr[i] !== '(') {
             expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
             expanded += 5;
-          } else {
-            params.push(path[0]);
-            origins.push(0);
-          }
+          // } else {
+          //   params.push(path[0]);
+          //   origins.push(0);
+          // }
         } else if (path[0] in resources) {
           params.push(path[0]);
           origins.push(-1);
