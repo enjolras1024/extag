@@ -1,15 +1,10 @@
 // src/core/shells/Shell.js
 
-// import Event from 'src/base/Event'
 import Parent from 'src/base/Parent'
 import Watcher from 'src/base/Watcher'
 import Accessor from 'src/base/Accessor'
 import DirtyMarker from 'src/base/DirtyMarker'
-// import Utility from 'src/core/Utility'
 import Schedule from 'src/core/Schedule'
-// import Cache from 'src/core/models/Cache'
-
-// import Collection from 'src/core/models/Collection'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
 import { VIEW_ENGINE } from 'src/share/constants'
@@ -176,9 +171,9 @@ defineClass({
     return this.$skin;
   },
 
-  getParent: function getParent(actual) {
-    return actual ? Parent.findParent(this) : this._parent;
-  },
+  // getParent: function getParent(actual) {
+  //   return actual ? Parent.findParent(this) : this._parent;
+  // },
 
   /**
    * return this shell's name, tag and guid.

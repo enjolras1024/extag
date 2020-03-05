@@ -1,6 +1,6 @@
 // src/base/Parent.js
 
-import { defineProp, defineClass } from 'src/share/functions'
+import { defineProp, defineClass, throwError } from 'src/share/functions'
 import { FLAG_CHANGED_CHILDREN } from 'src/share/constants'
 import logger from 'src/share/logger'
 
@@ -10,7 +10,7 @@ import logger from 'src/share/logger'
  * @constructor
  */
 export default function Parent() {
-  throw new Error('Parent is a base class and can not be instantiated');
+  throwError('Parent is a base class and can not be instantiated!');
 }
 
 function findParent(shell) {
@@ -81,6 +81,17 @@ defineClass({
     var _children = this._children;
     var n = children ? children.length : 0;
     var m = _children ? _children.length : 0;
+
+    if (m === n) {
+      for (i = 0; i < n; ++i) {
+        if (_children[i] !== children[i]) {
+          break;
+        }
+      }
+      if (i === n) { // nothing change
+        return this;
+      }
+    }
  
     if (m) {
       for (i = 0; i < m; ++i) {
@@ -95,6 +106,7 @@ defineClass({
     } else if (m) {
       this.invalidate(FLAG_CHANGED_CHILDREN);
     }
+
     return this;
   },
 
@@ -106,7 +118,10 @@ defineClass({
    */
   insertChild: function insertChild(child, before) {
     if (child == null) {
-      throw new Error('The new child to be inserted into this parent must not be null');
+      throwError('The new child to be inserted into this parent must not be null!');
+    }
+    if (child.$guid <= this.$guid) {
+      throwError('The Child must be created after its parent for rendering top-down (parent to child)!')
     }
     var i, j, n, children = this._children;
 
@@ -126,7 +141,7 @@ defineClass({
         }
       }
       if (i === n) {
-        throw new Error('The child before which the new child is to be inserted is not a child of this parent');
+        throwError('The child before which the new child is to be inserted is not a child of this parent!');
       }
       if (before === child) { 
         return this; 
@@ -183,7 +198,7 @@ defineClass({
    */
   removeChild: function removeChild(child) {
     if (child == null) {
-      throw new Error('The new child to be removed from this parent must not be null');
+      throwError('The new child to be removed from this parent must not be null!');
     }
 
     var i = 0, n = 0, children = this._children;
@@ -197,7 +212,7 @@ defineClass({
     }
 
     if (i === n) { 
-      throw new Error('The child to be removed is not a child of this parent');
+      throwError('The child to be removed is not a child of this parent!');
     }
 
     if (i < n -1) {
@@ -220,7 +235,7 @@ defineClass({
    */
   replaceChild: function replaceChild(child, existed) {
     if (child == null) {
-      throw new Error('The new child to be inserted into this parent must not be null');
+      throwError('The new child to be inserted into this parent must not be null!');
     }
     
     // if (child === existed) { return /*this*/; }
@@ -236,7 +251,7 @@ defineClass({
     }
 
     if (i === n) {
-      throw new Error('The child to be replaced is not a child of this parent');
+      throwError('The child to be replaced is not a child of this parent!');
     }
 
     if (child === existed) { 
