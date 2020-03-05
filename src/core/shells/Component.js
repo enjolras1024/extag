@@ -26,8 +26,7 @@ import {
   FLAG_CHANGED,
   FLAG_CHANGED_CHILDREN,
   FLAG_CHANGED_COMMANDS,
-  FLAG_WAITING_TO_RENDER,
-  FLAG_WAITING_TO_CALLBACk
+  FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
 
 
@@ -35,6 +34,13 @@ var shellProto = Shell.prototype;
 var elementPropto = Element.prototype;
 var fragmentProto = Fragment.prototype;
 // var emptyDesc = {};
+var KEYS_PRESERVED = ['ns', 'tag', '$type', '$guid', '$flag'];
+var METHODS_PRESERVED = [
+  'on', 'off', 'emit',
+  'appendChild', 'insertChild', 'removeChild', 'replaceChild', 
+  'getParent', 'getChildren', 'setChildren', 'getContents', 'setContents',
+  'get', 'set', 'cmd', 'bind', 'assign', 'update', 'render', 'attach', 'detach', 'invalidate', 'getSkin'
+];
 
 export default function Component(props, scopes, template) {
   Component.initialize(this, props, scopes, template);
@@ -79,16 +85,26 @@ defineClass({
       var _template = constructor.__extag_template__;
 
       if (__ENV__ === 'development') {
-        if (typeof attributes === 'object') {
-          var keys = Array.isArray(attributes) ? attributes : Object.keys(attributes);
-          var keysPrevered = ['ns', 'tag', '$type', '$guid', '$flag'];
-          for (var i = 0; i < keysPrevered.length; ++i) {
-            if (keys.indexOf(keysPrevered[i]) >= 0) {
-              logger.warn('`' + keysPrevered[i] + '` is prevered property, cannot be an attribute.');
+        if (!_template) {
+          (function() {
+            var i, keys;
+            var name = constructor.fullName || constructor.name;
+            if (attributes) {
+              keys = Array.isArray(attributes) ? attributes : Object.keys(attributes);
+              for (i = 0; i < KEYS_PRESERVED.length; ++i) {
+                if (keys.indexOf(KEYS_PRESERVED[i]) >= 0) {
+                  logger.warn('`' + KEYS_PRESERVED[i] + '` is a preserved component property, cannot be an attribute of ' + name + '.');
+                }
+              }
             }
-          }
+            // check if some final methods are override
+            for (i = 0; i < METHODS_PRESERVED.length; ++i) {
+              if (prototype[METHODS_PRESERVED[i]] !== Component.prototype[METHODS_PRESERVED[i]]) {
+                logger.warn('`' + METHODS_PRESERVED[i] + '` is a preserved component method. You should be careful to override the method of ' + name + '.');
+              }
+            }
+          })()
         }
-        // TODO: check if some final methods are overrided
       }
 
           // TODO: check attributes
@@ -366,12 +382,9 @@ defineClass({
     } else {
       fragmentProto.render.call(this);
     }
-    if (this.onRendered && !(this.$flag & FLAG_WAITING_TO_CALLBACk)) {
-      this.$flag |= FLAG_WAITING_TO_CALLBACk;
+    if (this.onRendered && this.$skin) {
       Schedule.pushCallbackQueue((function() {
-        if ((this.$flag & FLAG_WAITING_TO_CALLBACk)) {
-          this.onRendered(this.$skin);
-        }
+        this.onRendered(this.$skin);
       }).bind(this));
     }
     return true;
