@@ -1,11 +1,7 @@
 // src/core/bindings/DataBinding.js
-
-// import Dep from 'src/core/Dep'
-// import RES from 'src/base/RES'
 import Path from 'src/base/Path'
 import Accessor from 'src/base/Accessor'
 import Dependency from 'src/core/Dependency'
-import Store from 'src/core/models/Store'
 import Binding from 'src/core/bindings/Binding'
 import { defineClass } from 'src/share/functions'
 import { CONTEXT_SYMBOL, FLAG_CHANGED } from 'src/share/constants'
@@ -96,9 +92,6 @@ defineClass({
       }
     }
 
-    // Binding.assign(this.target, this.targetProp, this.eval(), this);
-    // this.target.set(this.targetProp, this.eval());
-    
     if (this.mode === MODES.ANY_WAY) {
       this.sync = false;
       this.scopes[0].on('update', this.exec);
@@ -115,19 +108,11 @@ defineClass({
 
   eval: function(back) {
     if (this.mode === MODES.TWO_WAY) {
-      // if (converters && converters.length) {
-      //   if (back) {
-      //     return converters[1].execute(this.scopes, this.target[this.targetProp]);
-      //   } else {
-      //     return converters[0].execute(this.scopes, this.source[this.sourceProp]);
-      //   }
-      // } else {
-        if (back) {
-          return this.target[this.targetProp];
-        } else {
-          return this.source[this.sourceProp];
-        }
-      // }
+      if (back) {
+        return this.target[this.targetProp];
+      } else {
+        return this.source[this.sourceProp];
+      }
     } 
 
     var converters = this.converters;
@@ -139,24 +124,20 @@ defineClass({
   },
 
   exec: function exec() {
+    if (this.mode === MODES.ANY_WAY) {
+      this.target.set(this.targetProp, this.eval());
+      return;
+    }
     if (this.flag === 0) {
       return;
     }
-    // if (this.flag === 1) {
-      Dependency.begin(this);
-      var value = this.eval();
-      Dependency.end();
-      this.target.set(this.targetProp, value);
-      // Binding.assign(this.target, this.targetProp, this.eval(), this);
-    // } else if (this.flag === 2) {
-    //   DataBinding.destroy(this);
-    //   DataBinding.compile(this.pattern, this.targetProp, this.target, this.scopes);
-    // }
 
-    // if (this.flag > 1) {
-      this.flag = 0;
-    // }
+    Dependency.begin(this);
+    var value = this.eval();
+    Dependency.end();
+    this.target.set(this.targetProp, value);
 
+    this.flag = 0;
     if (this.mode === MODES.ONE_TIME) {
       DataBinding.destroy(this);
     } else if (this.depsCount > 1 && this.sync) {
@@ -166,16 +147,11 @@ defineClass({
   },
 
   back: function back() {
-    // Binding.assign(this.source, this.sourceProp, this.eval(true), this);
     this.source.set(this.sourceProp, this.eval(true));
   },
 
-  invalidate: function(flag) {
-    // if (this.flag < flag) {
-    //   this.flag = flag;
-    // }
+  invalidate: function() {
     this.flag = 1;
-    // console.log('sync', this.sync, flag)
     if (this.sync) {
       this.exec();
     } else {
