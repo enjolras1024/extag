@@ -149,6 +149,7 @@ function parseDirective(name, expr, node, prototype, identifiers) {
 function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
   var lastChar = attrName[attrName.length - 1];
   var result, group, key;
+  var asProp;
 
   if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
     group = getGroup(node, 'events');
@@ -156,19 +157,45 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
     result = EventBindingParser.parse(attrValue, prototype, identifiers);
     group[key] = new Expression(EventBinding, result);
   } else {
-    group = attrName.indexOf(':') < 0 ? getGroup(node, 'props') : getGroup(node, 'attrs');
-    if (lastChar === BINDING_OPERATORS.DATA) { // last char is '@'
-      key = viewEngine.toCamelCase(attrName.slice(0, -1));
-      result = PrimaryLiteralParser.tryParse(attrValue);
-      if (result != null) {
-        group[key] = result;
-      } else {
-        result = DataBindingParser.parse(attrValue, prototype, identifiers);
-        group[key] = new Expression(DataBinding, result);
-      }
-    } else {
-      key = viewEngine.toCamelCase(attrName);
-      group[key] = viewEngine.isBoolProp(key) || attrValue;
+    asProp = attrName.indexOf(':') < 0;
+    group = asProp ? getGroup(node, 'props') : getGroup(node, 'attrs');
+    switch (lastChar) {
+      case BINDING_OPERATORS.DATA: // last char is '@'
+        key = asProp ? 
+              viewEngine.toCamelCase(attrName.slice(0, -1)) : 
+              attrName.slice(1, -1);
+        result = PrimaryLiteralParser.tryParse(attrValue);
+        if (result != null) {
+          group[key] = result;
+        } else {
+          result = DataBindingParser.parse(attrValue, prototype, identifiers);
+          group[key] = new Expression(DataBinding, result);
+        }
+        break;
+      case BINDING_OPERATORS.TEXT: // last char is '#'
+        key = asProp ? 
+              viewEngine.toCamelCase(attrName.slice(0, -1)) : 
+              attrName.slice(1, -1);
+        try {
+          result = FragmentBindingParser.parse(attrValue, prototype, identifiers);
+        } catch (e) {
+          if (__ENV__ === 'development') {
+            if (e.code === 1001) {
+              e.expr = BINDING_FORMAT.replace('0', e.expr);
+            }
+          }
+          throw e;
+        }
+        if (result) {
+          result.asStr = true;
+          group[key] = new Expression(FragmentBinding, result);
+        } else {
+          group[key] = attrValue;
+        }
+        break;
+      default:
+        key = asProp ? viewEngine.toCamelCase(attrName) : attrName;
+        group[key] = viewEngine.isBoolProp(key) || attrValue;
     }
   }
 }
