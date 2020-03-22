@@ -7,8 +7,7 @@ import {
   PROP_EXPR_REGEXP,
   WHITE_SPACE_REGEXP
  } from 'src/share/constants'
-import PropEvaluator from 'src/core/template/evaluators/PropEvaluator'
-import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator'
+import Evaluator from 'src/core/template/Evaluator'
 
 var DIVISION_REGEXP = /[\w).+\-_$\]]/;
 
@@ -21,18 +20,18 @@ var JS_KEYWORD_MAP = {};
   }
 })();
 
-function skipWhiteSpace(expr, index) {
-  var cc, length = expr.length;
-  while (index < length) {
-    cc = expr.charCodeAt(index);
-    //    \             \f\n\r\t\v
-    if (!(cc === 32 || (cc >=9 && cc <= 13))) {
-      break;
-    }
-    ++index;
-  }
-  return index;
-}
+// function skipWhiteSpace(expr, index) {
+//   var cc, length = expr.length;
+//   while (index < length) {
+//     cc = expr.charCodeAt(index);
+//     //    \             \f\n\r\t\v
+//     if (!(cc === 32 || (cc >=9 && cc <= 13))) {
+//       break;
+//     }
+//     ++index;
+//   }
+//   return index;
+// }
 
 function notPropertyName(expr, index) {
   var cc, length = expr.length;
@@ -152,83 +151,51 @@ export default {
    * @returns {PropEvaluator|FuncEvaluator}
    */
   parse: function parse(expr, prototype, identifiers) {
-    var evaluator, origins, params, i, j;
-
-    if (PROP_EXPR_REGEXP.test(expr)) {
-      evaluator = new PropEvaluator(expr.trim());
-      if (prototype && identifiers) {
-        evaluator.connect(prototype, identifiers);
-      }
-      return evaluator;
-    }
+    var args = identifiers.slice(1);
+    var expanded = 0, piece, path;
+    var lines = [], i, j;
+    // if (PROP_EXPR_REGEXP.test(expr)) {
+    //   evaluator = new PropEvaluator(expr.trim());
+    //   if (prototype && identifiers) {
+    //     evaluator.connect(prototype, identifiers);
+    //   }
+    //   return evaluator;
+    // }
 
     var indices = getIdentifierIndices(expr);
 
-    if (prototype) {
-      var resources = prototype.constructor.resources || EMPTY_OBJECT;
-      var constructor = prototype.constructor;
-      var expanded = 0, piece, path;
+    var resources = prototype.constructor.resources || EMPTY_OBJECT;
 
-      params = [];
-      origins = [];
-
-      for (j = 0; j < indices.length; j += 2) {
-        if (indices[j+1] < 0) { continue; }
-        piece = expr.slice(indices[j] + expanded, indices[j+1] + expanded);
-        path = Path.parse(piece.replace(WHITE_SPACE_REGEXP, ''));
-        if (JS_KEYWORD_MAP.hasOwnProperty(path[0])
-            || params.indexOf(path[0]) >= 0) {
-          continue;
-        }
-        i = identifiers.indexOf(path[0]);
-        if (i >= 0) {
-          if (i !== 0) {
-            params.push(path[0]);
-            origins.push(i);
-          }
-        } else if (path[0] in prototype) {
-          i = skipWhiteSpace(expr, indices[j+1] + expanded);
-          // if (expr[i] !== '(') {
-            expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
-            expanded += 5;
-          // } else {
-          //   params.push(path[0]);
-          //   origins.push(0);
-          // }
-        } else if (path[0] in resources) {
-          params.push(path[0]);
-          origins.push(-1);
-        } else {
-          expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
-          expanded += 5;
-        }
+    for (j = 0; j < indices.length; j += 2) {
+      if (indices[j+1] < 0) { continue; }
+      piece = expr.slice(indices[j] + expanded, indices[j+1] + expanded);
+      path = Path.parse(piece.replace(WHITE_SPACE_REGEXP, ''));
+      if (JS_KEYWORD_MAP.hasOwnProperty(path[0])) {
+        continue;
       }
-    } else {
-      params = [];
-      origins = null;
-      for (j = 0; j < indices.length; j += 2) {
-        if (indices[j+1] < 0) { continue; }
-        piece = expr.slice(indices[j], indices[j+1]);
-        path = Path.parse(piece.replace(WHITE_SPACE_REGEXP, ''));
-        if (!JS_KEYWORD_MAP.hasOwnProperty(path[0])
-            && params.indexOf(path[0]) < 0) {
-          params.push(path[0]);
-        }
+      i = identifiers.indexOf(path[0]);
+      if (i >= 0) {
+        
+      } else if (path[0] in resources) {
+        lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
+      } else {
+        expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
+        expanded += 5;
       }
     }
 
+    lines.push('return ' + expr);
+    args.push(lines.join('\n'));
+
     try {
-      evaluator = new FuncEvaluator(expr, params, origins);
-      if (prototype && identifiers) {
-        evaluator.connect(prototype, identifiers);
-      }
-      return evaluator;
+      var func = Function.apply(null, args);
+      return new Evaluator(func, expr);
     } catch (e) {
       throwError(e, {
         code: 1001,
         expr: arguments[0],
         desc: 'Illegal expression `' + arguments[0] + '`.'
-      })
+      });
     }
   }
 };

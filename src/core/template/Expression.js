@@ -7,9 +7,10 @@ import {
   CAPITAL_REGEXP,
   PROP_EXPR_REGEXP
  } from 'src/share/constants'
- import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator';
-import PropEvaluator from 'src/core/template/evaluators/PropEvaluator';
+//  import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator';
+// import PropEvaluator from 'src/core/template/evaluators/PropEvaluator';
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
+import Evaluator from 'src/core/template/Evaluator';
 
 function parseEvaluator(expr, prototype, identifiers) {
   var type = typeof expr;
@@ -19,9 +20,10 @@ function parseEvaluator(expr, prototype, identifiers) {
     // }
     return EvaluatorParser.parse(expr, prototype, identifiers);
   } else if (type === 'function') {
-    var evaluator = new FuncEvaluator(expr);
-    evaluator.connect(prototype, identifiers);
-    return evaluator;
+    // var evaluator = new FuncEvaluator(expr);
+    // evaluator.connect(prototype, identifiers);
+    // return evaluator;
+    return new Evaluator(expr, null);
   }
 }
 

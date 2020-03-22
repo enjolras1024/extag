@@ -8,6 +8,14 @@ import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 
 var DATA_BINDING_MODES = DataBinding.MODES;
 
+function newIdentifier(expr, identifiers) {
+  var identifier = '$' + identifiers.length;
+  while (expr.indexOf(identifier) >= 0) {
+    identifier = '$' + identifier;
+  }
+  return identifier;
+}
+
 export default {
   /**
    * parse data-binding expression
@@ -67,14 +75,15 @@ export default {
             });
           }
 
+          var identifier = newIdentifier(expr, identifiers);
           var index = piece.indexOf('(');
           if (index > 0) {
-            piece = piece.slice(0, index + 1) + 'arguments[arguments.length-1],' + piece.slice(index + 1);
+            piece = piece.slice(0, index + 1) + identifier + ',' + piece.slice(index + 1);
           } else {
-            piece = piece + '(arguments[arguments.length-1])';
+            piece = piece + '(' + identifier + ')';
           }
 
-          converter = EvaluatorParser.parse(piece, prototype, identifiers);
+          converter = EvaluatorParser.parse(piece, prototype, identifiers.concat([identifier]));
           converters = converters || [];
           converters.push(converter);
         }
