@@ -1,0 +1,26 @@
+* {
+  font-family: "Helvetica Neue", Helvetica, Arial, "Microsoft Yahei", sans-serif;
+}
+
+.template {
+  display: none;
+}
+
+svg {
+  background-color: #eee;
+  user-select: none;
+  -ms-user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select:none
+}
+
+.slider .track {
+  fill: rgb(200,200,200);
+}
+
+.slider .button {
+  cursor: pointer;
+  fill: rgb(240,240,240);
+  stroke-width: 1px;
+  stroke: rgb(160,160,160);
+}

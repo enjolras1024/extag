@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Extag | Hello Extag</title>
+  <style>
+    * {
+      font-family: "Helvetica Neue", Helvetica, Arial, "Microsoft Yahei", sans-serif;
+    }
+
+    .highlight {
+      color: orange;
+    }
+  </style>
+</head>
+<body>
+  <div id="demo"></div>
+  <p>It is an easiest example. We use one-way binding, text template and descriptors here.</p>
+  <p>You can open up the console and set <span class="highlight">app.what</span> to a different value to see what will happen.</p>
+  <script src="../../dist/extag-skin.js"></script>
+  <script src="../../dist/extag.js"></script>
+  <script>
+    var Demo = Extag.defineClass({
+      extend: Extag.Component,
+      statics: {
+        template: '<div>' +
+                    '<h1 style="color: #0066dd;">' + 
+                      'Hello, @{ what }!' +
+                    '</h1>' +
+                  '</div>',
+        attributes: ['what'], // or { what: null }, so `what` is bindable
+      }
+    });
+
+    var demo = Extag.Component.create(Demo, {what: 'Extag'});
+
+    demo.attach(ExtagSkin.query('#demo'));
+
+    console.log('do something like:');
+    console.log('demo.what = "Earth";');
+    console.log('demo.set("what", "Universe");');
+    console.log('demo.store({what: "Everything"});');
+  </script>
+</body>
+</html>

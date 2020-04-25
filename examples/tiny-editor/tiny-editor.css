@@ -1,0 +1,51 @@
+.tiny-editor {
+  position: relative;
+  border: 1px solid #ddd;
+  font-family: "Helvetica Neue", Helvetica, Arial, "Microsoft Yahei", sans-serif;
+}
+
+.tiny-head {
+  width: 100%;
+  height: 30px;
+  position: absolute;
+  background-color: #ddd;
+}
+
+.tiny-head .active {
+  background-color: #ccc;
+}
+
+.tiny-body {
+  position: absolute;
+  top: 30px;
+  outline: none;
+  overflow-y: auto;
+  font-size: 15px;
+  line-height: 1.5em;
+}
+
+.tiny-body p, .tiny-body li, .tiny-body div {
+  margin: 0;
+  padding: 0;
+}
+
+.tiny-body ul, .tiny-body ol {
+  margin: 0;
+  padding: 0 0 0 2em;
+}
+
+.tiny-button {
+  float: left;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 5px;
+  display: inline-block;
+  /*border-right: 1px solid #ccc;*/
+  cursor: pointer;
+  line-height: 20px;
+  text-align: center;
+  text-decoration: none;
+  background-position: 6px 6px;
+  background-repeat: no-repeat;
+}

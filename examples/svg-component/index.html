@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SVG Component - Extag</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <h1>SVG Component</h1>
+
+  <div id="app"></div>
+
+  <!-- <p>In this example, we create components based on SVG.</p>
+  <p>A SVG component can contain other SVG components.</p> -->
+
+  <div class="template">
+    <div class="app">
+      <svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">
+        <rect transform@="'translate(150, 100) rotate(' + rotate + ') scale(' + scaleX + ',' + scaleY + ')'"
+              width="20" height="20" x:style="fill: rgb(0,102,221);"></rect>
+        <circle cx="150" cy="100" r="2" x:style="fill: rgb(255,0,0)"></circle>
+        <g x:type="TextSlider" transform="translate(10, 10)" label="rotate" max@="360.0" value@="@rotate"></g>
+        <g x:type="TextSlider" transform="translate(10, 35)" label="scaleX" min@="1.0" max@="5.0" value@="@scaleX"></g>
+        <g x:type="TextSlider" transform="translate(10, 60)" label="scaleY" min@="1.0" max@="5.0" value@="@scaleY"></g>
+      </svg>
+    </div>
+  </div>
+
+  <svg class="template" xmlns="http://www.w3.org/2000/svg">
+    <g class="text-slider" x:ns="svg">
+      <text transform="translate(0, 10)">@{ label !}</text>
+      <text transform="translate(50, 10)">: @{ value }</text>
+      <g x:type="Slider" x:name="slider" transform="translate(120, 0)" max@="max" min@="min" value@="@value"></g>
+    </g>
+  </svg>
+
+  <svg class="template" xmlns="http://www.w3.org/2000/svg">
+    <g class="slider" x:ns="svg">
+      <rect width="150" height="2" y="5" class="track"></rect>
+      <circle cx@="normalize(value)" cy="6" r="8" class="button" x:name="btn" mousedown+="onMouseChange" touchstart+="onMouseChange"></circle>
+    </g>
+  </svg>
+
+  <script src="../../javascripts/extag-dom.js"></script>
+  <script src="../../javascripts/extag.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>

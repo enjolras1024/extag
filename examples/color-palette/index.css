@@ -1,0 +1,39 @@
+* {
+  vertical-align: middle;
+  font-family: "Helvetica Neue", Helvetica, Arial, "Microsoft Yahei", sans-serif;
+}
+
+.template {
+  display: none;
+}
+
+.invalid {
+  outline: solid 1px #ff0000;
+}
+
+.palette .lump  {
+  display: inline-block;
+  width: 110px;
+  height: 18px;
+  margin-left: 10px;
+  border: solid 1px #000000;
+}
+
+.palette .input {
+  width: 54px;
+  margin-left: 2px;
+}
+
+.channel-editor {
+  padding: 5px 0;
+}
+
+.channel-editor .editor {
+  width: 30px;
+  margin: 0 5px;
+  text-align: right;
+}
+
+.channel-editor .slider {
+  width: 120px;
+}

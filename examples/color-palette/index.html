@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Color Palette - Extag</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+<h1>Color Palette</h1>
+
+<div id="palette"></div>
+
+<div class="template">
+  <div class="channel-editor">
+    <span>@{ label !}:</span>
+    <!-- fine -->
+    <input type="text" class="editor" x:name="editor" maxlength="3" value@="value" change+="onChange">
+    <input type="range" class="slider" x:name="slider" min="0" max="255" value@="value" input+="onSlide">
+  </div>
+</div>
+
+<div class="template">
+  <div class="palette">
+    <input type="text" value@="color" change+="onChange" x:name="input" x:class="input; invalid: @{isInvalid};">
+    <span x:name="lump" x:style="background-color: @{color};" class="lump"></span>
+    <div x:type="ChannelEditor" label="R" value@="@red"></div>
+    <div x:type="ChannelEditor" label="G" value@="@green"></div>
+    <div x:type="ChannelEditor" label="B" value@="@blue"></div>
+  </div>
+</div>
+
+<script src="../../javascripts/extag-dom.js"></script>
+<script src="../../javascripts/extag.js"></script>
+<script src="index.js"></script>
+</body>
+</html>
