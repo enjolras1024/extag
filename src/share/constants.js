@@ -16,14 +16,12 @@ var EMPTY_ARRAY = [];
 
 // template symbols
 var EVENT_SYMBOL = 'event';
-// var CAPTURE_SYMBOL = '!',
 var CONTEXT_SYMBOL = 'this';
 var BINDING_FORMAT = '@{0}';
-var ONE_WAY_BINDING_BRACKETS = '{}';
-var TWO_WAY_BINDING_BRACKETS = '[]';
+var BINDING_BRACKETS = '{}';
 var BINDING_OPERATORS = {
   DATA: '@', 
-  // TEXT: '#', 
+  TEXT: '#', 
   EVENT: '+', 
   MODIFIER: '::',
   CONVERTER: '|=', 
@@ -59,9 +57,8 @@ export {
   EVENT_SYMBOL,
   CONTEXT_SYMBOL,
   BINDING_FORMAT,
+  BINDING_BRACKETS,
   BINDING_OPERATORS,
-  ONE_WAY_BINDING_BRACKETS,
-  TWO_WAY_BINDING_BRACKETS,
 
   WHITE_SPACES_REGEXP,
   WHITE_SPACE_REGEXP,
