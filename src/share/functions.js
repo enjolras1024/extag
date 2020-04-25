@@ -40,22 +40,41 @@ function copy(source) {
   }
 }
 
+function Helper(target) {
+  this.target = target;
+}
+
+Helper.prototype.bind = function() {
+  var name, method, target = this.target;
+  for (var i = 0; i < arguments.length; ++i) {
+    name = arguments[i];
+    method = target[name];
+    if (typeof method === 'function') {
+      target[name] = method.bind(target);
+    }
+  }
+};
+
+function help(target) {
+  return new Helper(target);
+};
+
 var assign = Object.assign || function assign(target/*,..sources*/) {
   if (target == null) {
     throw  new TypeError('Cannot convert undefined or null to object');
   }
 
-  //if (!(target instanceof Object)) {
-  //  var type = typeof target;
-  //
-  //  if (type === 'number') {
-  //    target = new Number(target);
-  //  } else if (type === 'string') {
-  //    target = new String(target);
-  //  } else if (type === 'boolean') {
-  //    target = new Boolean(target);
-  //  }
-  //}
+  if (!(target instanceof Object)) {
+   var type = typeof target;
+  
+   if (type === 'number') {
+     target = new Number(target);
+   } else if (type === 'string') {
+     target = new String(target);
+   } else if (type === 'boolean') {
+     target = new Boolean(target);
+   }
+  }
 
   var source, key, i, n = arguments.length;
 
@@ -366,6 +385,7 @@ function throwError(err, opts) {
 
 export { 
   copy,
+  help,
   slice,
   assign,
   flatten,
