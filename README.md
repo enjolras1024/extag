@@ -77,6 +77,6 @@ class Hello extends Extag.Component {
 * 支持Virtual DOM
 * ......
 
-更多内容，请看[文档](https://enjolras1024.github.io/extag)和[示例](https://enjolras1024.github.io/extag/examples)。
+更多内容，请参阅[文档](https://enjolras1024.github.io/extag/)。
 
 #### 注：API不稳定，测试不充分，欢迎交流学习~
