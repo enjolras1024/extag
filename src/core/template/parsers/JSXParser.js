@@ -19,9 +19,9 @@ import {
  } from 'src/share/constants'
 import { slice, flatten, throwError } from 'src/share/functions'
 
-import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator';
-import PropEvaluator from 'src/core/template/evaluators/PropEvaluator';
-import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
+// import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator';
+// import PropEvaluator from 'src/core/template/evaluators/PropEvaluator';
+// import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 
 function parseJsxNode(node, prototype) {
   var props = node.props, value, key;

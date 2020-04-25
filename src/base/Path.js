@@ -47,7 +47,7 @@ export default {
   },
 
   /**
-   * Find the resource in local, then in RES if necessary.
+   * Search the resource in local, then in global if necessary.
    *
    * @param {Array|string} path
    * @param {Object} local
