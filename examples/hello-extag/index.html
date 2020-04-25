@@ -17,11 +17,11 @@
   <div id="demo"></div>
   <p>It is an easiest example. We use one-way binding, text template and descriptors here.</p>
   <p>You can open up the console and set <span class="highlight">app.what</span> to a different value to see what will happen.</p>
-  <script src="../../dist/extag-skin.js"></script>
-  <script src="../../dist/extag.js"></script>
+  <script src="../../javascripts/extag-dom.js"></script>
+  <script src="../../javascripts/extag.js"></script>
   <script>
     var Demo = Extag.defineClass({
-      extend: Extag.Component,
+      extends: Extag.Component,
       statics: {
         template: '<div>' +
                     '<h1 style="color: #0066dd;">' + 
@@ -34,7 +34,7 @@
 
     var demo = Extag.Component.create(Demo, {what: 'Extag'});
 
-    demo.attach(ExtagSkin.query('#demo'));
+    demo.attach(ExtagDom.query('#demo'));
 
     console.log('do something like:');
     console.log('demo.what = "Earth";');
