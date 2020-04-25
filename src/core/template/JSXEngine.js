@@ -136,7 +136,8 @@ function updatePropsAndEvents(node, target, scope) {
   // }
 }
 
-function updateChildrenOrContents(node, target, scope) { // refer to Vue (http://vuejs.org/)
+// refer to Vue (https://vuejs.org/)
+function updateChildrenOrContents(node, target, scope) { 
   var oldChildren, newChildren;
 
   if (target instanceof Component && target !== scope) {
