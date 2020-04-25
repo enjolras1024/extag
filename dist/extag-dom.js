@@ -1,5 +1,5 @@
 /**
- * extag-dom.js v0.1.0
+ * ExtagDom v0.1.0
  * (c) enjolras.chen
  * Released under the MIT License.
  */
@@ -7,7 +7,7 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
   (global = global || self, global.ExtagDom = factory());
-}(this, function () { 'use strict';
+}(this, (function () { 'use strict';
 
   //######################################################################################################################
   // src/view/ExtagDom.js
@@ -1270,4 +1270,4 @@
 
   return ExtagDom;
 
-}));
+})));
