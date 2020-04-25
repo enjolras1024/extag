@@ -262,7 +262,7 @@ function type2tag(type) {
         {text: '变量标识符', href: root + '/documents/template.html#variable-identifier'}
       ]},
       {text: '数据模型', href: root + '/documents/model.html', menus: [
-        {text: 'Store for Object', href: '/documents/model.html#store-for-object'}
+        {text: 'Store for Object', href: root + '/documents/model.html#store-for-object'}
       ]},
       {text: 'Tips', href: root + '/documents/tips.html', menus: [
         {text: '函数组件', href: root + '/documents/tips.html#functinal-component'},
