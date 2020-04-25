@@ -216,58 +216,63 @@ function type2tag(type) {
   //     currLink.className = 'menu-link active';
   //   }
   // }
+  var root = '';
+  var href = window.location.href;
+  if (href.indexOf('enjolras1024.github.io') >= 0) {
+    root = '/extag';
+  }
   Extag.Component.create(SideBar, {
     menuCards: [
-      {text: 'Extag', href: '/', menus: [
-        {text: '快速开始', href: '/index.html#get-started'}
+      {text: 'Extag', href: root + '/', menus: [
+        {text: '快速开始', href: root + '/index.html#get-started'}
       ]},
-      {text: '事件系统', href: '/documents/event.html', menus: [
-        {text: 'on, off, emit', href: '/documents/event.html#on-off-emit'},
-        {text: '事件类型 & 事件扩展名', href: '/documents/event.html#event-type-and-event-extension'}
+      {text: '事件系统', href: root + '/documents/event.html', menus: [
+        {text: 'on, off, emit', href: root + '/documents/event.html#on-off-emit'},
+        {text: '事件类型 & 事件扩展名', href: root + '/documents/event.html#event-type-and-event-extension'}
       ]},
-      {text: '组件系统', href: '/documents/component.html', menus: [
-        {text: '组件，元素，片段，文本', href: '/documents/component.html#component-element-fragment-text'},
+      {text: '组件系统', href: root + '/documents/component.html', menus: [
+        {text: '组件，元素，片段，文本', href: root + '/documents/component.html#component-element-fragment-text'},
         {text: 'props, attrs, style, classes', href: '/documents/component.html#props-attrs-style-and-classes'},
-        {text: '组件自定义特性', href: '/documents/component.html#component-attributes'},
-        {text: '组件特性验证', href: '/documents/component.html#component-attribute-validation'},
-        {text: '组件特性拦截', href: '/documents/component.html#component-attribute-interception'},
-        {text: '组件特性依赖', href: '/documents/component.html#component-attribute-dependency'},
-        {text: '组件内部状态', href: '/documents/component.html#component-inner-state'},
-        {text: '组件contents', href: '/documents/component.html#component-contents'},
-        {text: '组件边界处理', href: '/documents/component.html#component-boundary'},
-        {text: '组件生命周期', href: '/documents/component.html#component-lifecycle'} 
+        {text: '组件自定义特性', href: root + '/documents/component.html#component-attributes'},
+        {text: '组件特性验证', href: root + '/documents/component.html#component-attribute-validation'},
+        {text: '组件特性拦截', href: root + '/documents/component.html#component-attribute-interception'},
+        {text: '组件特性依赖', href: root + '/documents/component.html#component-attribute-dependency'},
+        {text: '组件内部状态', href: root + '/documents/component.html#component-inner-state'},
+        {text: '组件contents', href: root + '/documents/component.html#component-contents'},
+        {text: '组件边界处理', href: root + '/documents/component.html#component-boundary'},
+        {text: '组件生命周期', href: root + '/documents/component.html#component-lifecycle'} 
       ]},
-      {text: '模板语法', href: '/documents/template.html', menus: [
-        {text: '事件监听', href: '/documents/template.html#event-listening'},
-        {text: '数据绑定', href: '/documents/template.html#data-binding'},
-        {text: '双向数据绑定', href: '/documents/template.html#two-way-data-binding'},
-        {text: '片段插值绑定', href: '/documents/template.html#fragment-binding'},
-        {text: 'class和style绑定', href: '/documents/template.html#class-and-style-binding'},
+      {text: '模板语法', href: root + '/documents/template.html', menus: [
+        {text: '事件监听', href: root + '/documents/template.html#event-listening'},
+        {text: '数据绑定', href: root + '/documents/template.html#data-binding'},
+        {text: '双向数据绑定', href: root + '/documents/template.html#two-way-data-binding'},
+        {text: '片段插值绑定', href: root + '/documents/template.html#fragment-binding'},
+        {text: 'class和style绑定', href: root + '/documents/template.html#class-and-style-binding'},
 
         // {text: 'Store for Object', href: '/documents/template.html#store-for-object'},
-        {text: '可选转换器', href: '/documents/template.html#optional-converters'},
-        {text: '使用子组件', href: '/documents/template.html#using-child-component'},
-        {text: '组件slots', href: '/documents/template.html#component-slots'},
-        {text: '部件引用', href: '/documents/template.html#part-refrence'},
-        {text: '列表渲染', href: '/documents/template.html#list-rendering'},
-        {text: '条件渲染', href: '/documents/template.html#condition-rendering'},
-        {text: '片段渲染', href: '/documents/template.html#fragment-rendering'},
-        {text: 'camelCase v.s. kebab-case', href: '/documents/template.html#camelCase-vs-kebab-case'},
-        {text: '标签命名空间', href: '/documents/template.html#tag-namespace'},
-        {text: '变量标识符', href: '/documents/template.html#variable-identifier'}
+        {text: '可选转换器', href: root + '/documents/template.html#optional-converters'},
+        {text: '使用子组件', href: root + '/documents/template.html#using-child-component'},
+        {text: '组件slots', href: root + '/documents/template.html#component-slots'},
+        {text: '部件引用', href: root + '/documents/template.html#part-refrence'},
+        {text: '列表渲染', href: root + '/documents/template.html#list-rendering'},
+        {text: '条件渲染', href: root + '/documents/template.html#condition-rendering'},
+        {text: '片段渲染', href: root + '/documents/template.html#fragment-rendering'},
+        {text: 'camelCase v.s. kebab-case', href: root + '/documents/template.html#camelCase-vs-kebab-case'},
+        {text: '标签命名空间', href: root + '/documents/template.html#tag-namespace'},
+        {text: '变量标识符', href: root + '/documents/template.html#variable-identifier'}
       ]},
-      {text: '数据模型', href: '/documents/model.html', menus: [
+      {text: '数据模型', href: root + '/documents/model.html', menus: [
         {text: 'Store for Object', href: '/documents/model.html#store-for-object'}
       ]},
-      {text: 'Tips', href: '/documents/tips.html', menus: [
-        {text: '函数组件', href: '/documents/tips.html#functinal-component'},
-        {text: '模板函数', href: '/documents/tips.html#template-function'},
-        {text: 'Shadow模式', href: '/documents/tips.html#shadow-mode'}
+      {text: 'Tips', href: root + '/documents/tips.html', menus: [
+        {text: '函数组件', href: root + '/documents/tips.html#functinal-component'},
+        {text: '模板函数', href: root + '/documents/tips.html#template-function'},
+        {text: 'Shadow模式', href: root + '/documents/tips.html#shadow-mode'}
       ]},
-      {text: '示例', href: '/examples', menus: [
-        {text: 'Color Palette', href: '/examples/color-palette.html'},
-        {text: 'SVG Component', href: '/examples/svg-component.html'},
-        {text: 'TodoMVC', href: '/examples/todomvc.html'}
+      {text: '示例', href: root + '/examples', menus: [
+        {text: 'Color Palette', href: root + '/examples/color-palette.html'},
+        {text: 'SVG Component', href: root + '/examples/svg-component.html'},
+        {text: 'TodoMVC', href: root + '/examples/todomvc.html'}
       ]}
     ]
   }).attach(ExtagDom.query('.side-bar'));
