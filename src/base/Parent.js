@@ -120,9 +120,9 @@ defineClass({
     if (child == null) {
       throwError('The new child to be inserted into this parent must not be null!');
     }
-    if (child.$guid <= this.$guid) {
-      throwError('The Child must be created after its parent for rendering top-down (parent to child)!')
-    }
+    // if (child.$guid <= this.$guid) {
+    //   throwError('The child must be created after its parent for rendering top-down (parent to child)!')
+    // }
     var i, j, n, children = this._children;
 
     if (!children) {
