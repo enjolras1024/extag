@@ -6,10 +6,10 @@ import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
 import TextBinding from 'src/core/bindings/TextBinding'
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
-import { BINDING_OPERATORS, ONE_WAY_BINDING_BRACKETS } from 'src/share/constants'
+import { BINDING_OPERATORS, BINDING_BRACKETS } from 'src/share/constants'
 
 var BINDING_LIKE_REGEXP = new RegExp(
-  BINDING_OPERATORS.DATA +'\\' + ONE_WAY_BINDING_BRACKETS[0] + '.*?\\' + ONE_WAY_BINDING_BRACKETS[1]
+  BINDING_OPERATORS.DATA +'\\' + BINDING_BRACKETS[0] + '.*?\\' + BINDING_BRACKETS[1]
 );
 
 export default {

@@ -9,16 +9,16 @@ import Expression from 'src/core/template/Expression'
 import { throwError } from 'src/share/functions'
 import { 
   BINDING_FORMAT,
+  BINDING_BRACKETS,
   BINDING_OPERATORS, 
-  WHITE_SPACES_REGEXP, 
-  ONE_WAY_BINDING_BRACKETS 
+  WHITE_SPACES_REGEXP
 } from 'src/share/constants'
 
 var STYLE_DELIMITER = /;/g;
 var CSS_NAME_REGEXP = /^[a-z0-9\-\_]+$/i;
 // var SINGLE_BINDING_REGEXP = /^@\{[^@]*\}$/;
 var SINGLE_BINDING_REGEXP = new RegExp(
-  '^' + BINDING_OPERATORS.DATA +'\\' + ONE_WAY_BINDING_BRACKETS[0] + '[^' + BINDING_OPERATORS.DATA + ']*\\' + ONE_WAY_BINDING_BRACKETS[1] + '$'
+  '^' + BINDING_OPERATORS.DATA +'\\' + BINDING_BRACKETS[0] + '[^' + BINDING_OPERATORS.DATA + ']*\\' + BINDING_BRACKETS[1] + '$'
 );
 
 export default {
