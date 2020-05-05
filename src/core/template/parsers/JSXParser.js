@@ -200,7 +200,7 @@ function node(type, attrs, children) {
   //   attrs = null;
   // }
 
-  if (attrs && (typeof attrs === 'object') && !attrs.__extag_node__) {
+  if (attrs != null) {
     
     if (attrs.xif) {
       node.xif = attrs.xif;
@@ -239,21 +239,12 @@ function node(type, attrs, children) {
         props[key] = attrs[key];
       }
     }
-
-    if (arguments.length > 3) {
-      children = slice(arguments, 2);
-    } else {
-      children = arguments[2];
-    }
-  } else {
-    if (arguments.length > 2) {
-      children = slice(arguments, 1);
-    } else {
-      children = arguments[1];
-    }
   }
 
   if (children) {
+    if (arguments.length > 3) {
+      children = slice(arguments, 2);
+    }
     if (Array.isArray(children)) {
       children = flatten(children);
     } else {
