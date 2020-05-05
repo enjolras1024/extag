@@ -1,6 +1,6 @@
 {
   "name": "extag",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An Event-driven JavaScript Library for Building User Interfaces with Simple APIs in a Flexible Way",
   "main": "dist/extag.js",
   "scripts": {
