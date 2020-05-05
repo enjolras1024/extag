@@ -139,6 +139,9 @@ function makeContent(node, scopes) {
     if (content && node.name) {
       scopes[0].addNamedPart(node.name, content); // TODO: removeNamedPart
       defineProp(content, '$owner', {
+        configurable: true,
+        enumarable: false,
+        writable: false,
         value: scopes[0]
       });
     }

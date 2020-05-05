@@ -33,7 +33,6 @@ export default {
     } else if (expr[n-1] === BINDING_OPERATORS.ANY_WAY) {     // <h1 title@="title ^">@{title ^}</h1>
       mode = DATA_BINDING_MODES.ANY_WAY;
       expr = expr.slice(0, n-1);
-      event = 'update';
     } else if (expr[n-1] === BINDING_OPERATORS.ASSIGN) {      // <h1 title@="title!">@{title !}</h1>
       mode = DATA_BINDING_MODES.ASSIGN;
       expr = expr.slice(0, n-1);

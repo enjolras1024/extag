@@ -68,6 +68,9 @@ function createChild(node, target, scope) {
     // scope[node.xName] = child; // TODO: addNamedPart
     scope.addNamedPart(node.name, child);
     defineProp(child, '$owner', {
+      configurable: true,
+      enumarable: false,
+      writable: false,
       value: scope
     });
   }

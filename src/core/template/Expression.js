@@ -78,12 +78,14 @@ defineClass({
     var converters = pattern.converters;
     if (evaluator) {
       // evaluator.connect(prototype, identifiers);
-      pattern.evaluator = parseEvaluator(evaluator, prototype, identifiers);
+      // pattern.evaluator = parseEvaluator(evaluator, prototype, identifiers);
+      pattern.evaluator = new Evaluator(evaluator);
     } 
     if (converters) {
       for (var i = 0; i < converters.length; ++i) {
         // converters[i].connect(prototype, identifiers);
-        pattern.converters[i] = parseEvaluator(converters[i], prototype, identifiers);
+        // pattern.converters[i] = parseEvaluator(converters[i], prototype, identifiers);
+        pattern.converters[i] = new Evaluator(converters[i]);
       }
     }
     this.unparsed = false;
