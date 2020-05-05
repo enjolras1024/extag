@@ -52,7 +52,7 @@ defineClass({
       }
 
       if (!binding.sync) {
-        scopes[0].off('update', binding.exec);
+        scopes[0].off('updating', binding.exec);
       }
 
       Binding.remove(target, binding);
@@ -94,7 +94,7 @@ defineClass({
 
     if (this.mode === MODES.ANY_WAY) {
       this.sync = false;
-      this.scopes[0].on('update', this.exec);
+      this.scopes[0].on('updating', this.exec);
       this.target.set(this.targetProp, this.eval());
     } else {
       this.sync = true;
@@ -141,7 +141,7 @@ defineClass({
     if (this.mode === MODES.ONE_TIME) {
       DataBinding.destroy(this);
     } else if (this.depsCount > 1 && this.sync) {
-      this.scopes[0].on('update', this.exec);
+      this.scopes[0].on('updating', this.exec);
       this.sync = false;
     }
   },

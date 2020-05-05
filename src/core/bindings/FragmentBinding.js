@@ -29,7 +29,7 @@ defineClass({
     },
 
     destroy: function(binding) {
-      binding.scopes[0].off('update', binding.exec);
+      binding.scopes[0].off('updating', binding.exec);
 
       var bindings = binding.cache._bindings;
 
@@ -71,7 +71,7 @@ defineClass({
 
     this.exec = this.exec.bind(this);
 
-    scopes[0].on('update', this.exec);
+    scopes[0].on('updating', this.exec);
   },
 
   exec: function() {

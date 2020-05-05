@@ -17,15 +17,18 @@ function Binding(scope, target, property, collect, reflect) {
     this.flag = 1;
     this.exec();
     
-    var deps = this.deps;
-    var keys = Object.keys(deps);
-    if (deps && keys.length) {
+    if (this.depsCount > 0) {
       Binding.record(target, this);
-      if (keys.length > 1) {
-        this.sync = false;
-        scope.on('update', this.exec);
-      }
     }
+    // var deps = this.deps;
+    // var keys = Object.keys(deps);
+    // if (deps && keys.length) {
+    //   Binding.record(target, this);
+    //   if (keys.length > 1) {
+    //     this.sync = false;
+    //     scope.on('updating', this.exec);
+    //   }
+    // }
 
     if (typeof reflect === 'function') {
       this.reflect = reflect;
@@ -84,7 +87,7 @@ defineClass({
       }
       
       if (!binding.sync && typeof binding.collect === 'function') {
-        scope.off('update', binding.exec);
+        scope.off('updating', binding.exec);
       }
 
       Dependency.clean(binding);
@@ -97,11 +100,17 @@ defineClass({
     if (this.flag === 0) {
       return;
     }
+
     Dependency.begin(this);
     var value = this.collect.call(this.scope);
     Dependency.end();
     this.target.set(this.property, value);
     this.flag = 0;
+
+    if (this.depsCount > 1 && this.sync) {
+      this.scope.on('updating', this.exec);
+      this.sync = false;
+    }
   },
 
   back: function() {
