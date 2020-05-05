@@ -24,6 +24,7 @@ import DataBinding from 'src/core/bindings/DataBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import FragmentBinding from 'src/core/bindings/FragmentBinding'
 
+import Evaluator from 'src/core/template/Evaluator'
 import Expression from 'src/core/template/Expression'
 import JSXEngine from 'src/core/template/JSXEngine'
 import HTMXEngine from 'src/core/template/HTMXEngine'
@@ -33,8 +34,6 @@ import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
 import EventBindingParser from 'src/core/template/parsers/EventBindingParser'
 import FragmentBindingParser from 'src/core/template/parsers/FragmentBindingParser'
-// import PropEvaluator from 'src/core/template/evaluators/PropEvaluator'
-// import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator'
 
 import config from 'src/share/config'
 import { 
@@ -86,6 +85,7 @@ export default {
   //#test Parent: Parent,
   //#test Path: Path,
   //#test Schedule: Schedule,
+  //#test DirtyMarker: DirtyMarker,
   Validator: Validator,
   Watcher: Watcher, 
   
@@ -117,9 +117,8 @@ export default {
   //#test EventBindingParser: EventBindingParser,
 
   // template
-  //#test DirtyMarker: DirtyMarker,
-  //#test PropEvaluator: PropEvaluator,
-  //#test FuncEvaluator: FuncEvaluator,
+  
+  //#test Evaluator: Evaluator,
 
   // JSXEngine: JSXEngine,
   //#test HTMXEngine: HTMXEngine,

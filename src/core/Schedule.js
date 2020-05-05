@@ -31,11 +31,11 @@ var updateQueue = [];
         //   throw new Error('too much things to update');
         // }
         shell = updateQueue[updateQueueCursor];
-        try {
+        // try {
           shell.update();
-        } catch (e) {
-          logger.error(e);
-        }
+        // } catch (e) {
+        //   logger.error(e);
+        // }
         ++updateQueueCursor;
       }
     
@@ -52,11 +52,11 @@ var updateQueue = [];
         //   throw new Error('too much things to update');
         // }
         shell = renderQueue[renderQueueCursor];
-        try {
+        // try {
           shell.render();
-        } catch (e) {
-          logger.error(e);
-        }
+        // } catch (e) {
+        //   logger.error(e);
+        // }
         ++renderQueueCursor;
       }
     
@@ -65,11 +65,11 @@ var updateQueue = [];
       rendering = false;
     
       for (i = callbackQueue.length - 1; i >= 0; --i) {
-        try {
+        // try {
           callbackQueue[i]();
-        } catch (e) {
-          logger.error(e);
-        }
+        // } catch (e) {
+        //   logger.error(e);
+        // }
       }
 
       callbackQueue.length = 0;

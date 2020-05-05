@@ -169,6 +169,6 @@ defineClass({
         this.set(key, props[key]);
       }
     }
-    return this;
+    // return this;
   }
 });
