@@ -52,9 +52,9 @@ defineClass({
       return false;
     }
 
-    if (this.onUpdating) {
-      this.onUpdating();
-    }
+    // if (this.onUpdating) {
+    //   this.onUpdating();
+    // }
 
     if (this.scopes && this.hasDirty('contents')) {
       var JSXEngine = config.JSXEngine;

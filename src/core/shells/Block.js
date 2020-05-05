@@ -89,9 +89,7 @@ defineClass({
         }
       }
 
-      
-
-      // block.on('update', block.onUpdating.bind(block));
+      block.on('updating', block.onUpdating.bind(block));
     },
     template: '<x:frag></x:frag>'
   },

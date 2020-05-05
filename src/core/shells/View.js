@@ -39,14 +39,16 @@ defineClass({
       //   }
       // }
       view.invalidate(FLAG_CHANGED);
+      view.on('updating', view.onUpdating.bind(view));
     },
     template: '<x:frag></x:frag>'
   },
 
   onUpdating: function onUpdating() {
-    var content, ctor;
     var type = this.get('xtype');//this.attrs.get('x:type');
-    var template = this.template, scopes = this.scopes;
+    var template = this.templat;
+    var scopes = this.scopes;
+    var content, ctor;
 
     if (typeof type === 'function') {
       ctor = type;
@@ -59,7 +61,8 @@ defineClass({
         }).bind(this));
         return;
       } else {
-        ctor = scope.res(type);//RES.search(xType, scope.constructor.resources);
+        var resources = scope.constructor.resources;
+        ctor = resources && resources[type];
       }
     } else if (typeof type === 'object' && typeof Promise === 'function' && type instanceof Promise) {
       type.then((function(ctor) {

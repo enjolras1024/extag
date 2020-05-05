@@ -146,13 +146,23 @@ defineClass({
       Element.defineMembers(component);
 
       // 6. setup
+      var model;
       if (scopes && scopes[0].context) {
-        component.setup(scopes[0].context);
+        model = component.setup(scopes[0].context);
         if (component.context == null) {
           component.context = scopes[0].context;
         }
       } else {
-        component.setup();
+        model = component.setup();
+      }
+
+      if (model != null) {
+        if (typeof model !== 'object') {
+          throw new TypeError('setup() should return object, not ' + (typeof model));
+        }
+        for (var key in model) {
+          defineProp(component, key, Object.getOwnPropertyDescriptor(model, key));
+        }
       }
 
       var HTMXEngine = config.HTMXEngine;
@@ -160,10 +170,10 @@ defineClass({
       HTMXEngine.driveComponent(component, _template, scopes, template, props);
 
       // 8. initialized
-      //component.send('initialized');
-      if (component.onInited) {
-        component.onInited();
-      }
+      component.emit('created');
+      // if (component.onInited) {
+      //   component.onInited();
+      // }
     }
 
   },
@@ -297,9 +307,10 @@ defineClass({
    */
   attach: function attach($skin) {
     if (shellProto.attach.call(this, $skin)) {
-      if (this.onAttached) {
-        this.onAttached($skin);
-      }
+      this.emit('attached', $skin);
+      // if (this.onAttached) {
+      //   this.onAttached($skin);
+      // }
       return true;
     }
     return false;
@@ -313,12 +324,16 @@ defineClass({
   detach: function detach(force) {
     var $skin = this.getSkin();
     if (Shell.prototype.detach.call(this, force)) {
-      if (this.onDetached && $skin) {
-        this.onDetached($skin);
+      if ($skin) {
+        this.emit('detached', $skin);
       }
-      if (this.onDestroyed) {
-        this.onDestroyed();
-      }
+      this.emit('destroyed');
+      // if (this.onDetached && $skin) {
+      //   this.onDetached($skin);
+      // }
+      // if (this.onDestroyed) {
+      //   this.onDestroyed();
+      // }
       return true;
     }
     return false;
@@ -332,15 +347,12 @@ defineClass({
       return false;
     }
 
-    if (this.onUpdating) {
-      // var patterns = this.onUpdating(JSXEngine.node, JSXEngine.slot);
-      // if (patterns && Array.isArray(patterns)) {
-      //   JSXEngine.reflow(patterns, this, this);
-      // }
-      this.onUpdating();
-    }
+    // if (this.onUpdating) {
+    //   this.onUpdating();
+    // }
 
-    this.emit('update', this.$flag);
+    this.emit('updating', this.$flag);
+    // this.emit('update', this.$flag);
 
     if (this.$type !== 0) {
       config.HTMXEngine.transferProperties(this);
@@ -382,11 +394,17 @@ defineClass({
     } else {
       fragmentProto.render.call(this);
     }
-    if (this.onRendered && this.$skin) {
+    var actions = this._actions;
+    if (actions && actions['rendered'] && this.$skin) {
       Schedule.pushCallbackQueue((function() {
-        this.onRendered(this.$skin);
+        this.emit('rendered', this.$skin);
       }).bind(this));
     }
+    // if (this.onRendered && this.$skin) {
+    //   Schedule.pushCallbackQueue((function() {
+    //     this.onRendered(this.$skin);
+    //   }).bind(this));
+    // }
     return true;
   },
 
