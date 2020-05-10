@@ -1,5 +1,5 @@
 /**
- * ExtagDom v0.1.0
+ * ExtagDom v0.2.0
  * (c) enjolras.chen
  * Released under the MIT License.
  */
@@ -610,7 +610,7 @@
   }
 
   assign(ExtagDom, {
-    version: "0.1.0",
+    version: "0.2.0",
     /**
      * @required
      */

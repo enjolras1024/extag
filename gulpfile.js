@@ -40,7 +40,7 @@ async function build(opts) {
   await bundle.write({
     name: name,
     format: format,
-    file: `dist/${version}/${file}`,
+    file: `dist/${file}`,
     banner: banner.trim()
   });
 
@@ -68,7 +68,7 @@ async function build(opts) {
   await bundle.write({
     name: name,
     format: format,
-    file: `dist/${version}/${minfile}`
+    file: `dist/${minfile}`
   });
 }
 

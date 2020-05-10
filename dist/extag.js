@@ -1,5 +1,5 @@
 /**
- * Extag v0.1.0
+ * Extag v0.2.0
  * (c) enjolras.chen
  * Released under the MIT License.
  */
@@ -458,10 +458,9 @@
   var VIEW_ENGINE = 'view-engine';
   var EMPTY_OBJECT = {};
   var EMPTY_ARRAY = [];
-  // var CAPTURE_SYMBOL = '!',
   var CONTEXT_SYMBOL = 'this';
   var BINDING_FORMAT = '@{0}';
-  var ONE_WAY_BINDING_BRACKETS = '{}';
+  var BINDING_BRACKETS = '{}';
   var BINDING_OPERATORS = {
     DATA: '@', 
     TEXT: '#', 
@@ -624,9 +623,9 @@
       if (child == null) {
         throwError('The new child to be inserted into this parent must not be null!');
       }
-      if (child.$guid <= this.$guid) {
-        throwError('The Child must be created after its parent for rendering top-down (parent to child)!');
-      }
+      // if (child.$guid <= this.$guid) {
+      //   throwError('The child must be created after its parent for rendering top-down (parent to child)!')
+      // }
       var i, j, n, children = this._children;
 
       if (!children) {
@@ -1375,7 +1374,7 @@
           this.set(key, props[key]);
         }
       }
-      return this;
+      // return this;
     }
   });
 
@@ -1660,11 +1659,11 @@
           //   throw new Error('too much things to update');
           // }
           shell = updateQueue[updateQueueCursor];
-          try {
+          // try {
             shell.update();
-          } catch (e) {
-            logger.error(e);
-          }
+          // } catch (e) {
+          //   logger.error(e);
+          // }
           ++updateQueueCursor;
         }
       
@@ -1681,11 +1680,11 @@
           //   throw new Error('too much things to update');
           // }
           shell = renderQueue[renderQueueCursor];
-          try {
+          // try {
             shell.render();
-          } catch (e) {
-            logger.error(e);
-          }
+          // } catch (e) {
+          //   logger.error(e);
+          // }
           ++renderQueueCursor;
         }
       
@@ -1694,11 +1693,11 @@
         rendering = false;
       
         for (i = callbackQueue.length - 1; i >= 0; --i) {
-          try {
+          // try {
             callbackQueue[i]();
-          } catch (e) {
-            logger.error(e);
-          }
+          // } catch (e) {
+          //   logger.error(e);
+          // }
         }
 
         callbackQueue.length = 0;
@@ -1882,15 +1881,18 @@
       this.flag = 1;
       this.exec();
       
-      var deps = this.deps;
-      var keys = Object.keys(deps);
-      if (deps && keys.length) {
+      if (this.depsCount > 0) {
         Binding.record(target, this);
-        if (keys.length > 1) {
-          this.sync = false;
-          scope.on('update', this.exec);
-        }
       }
+      // var deps = this.deps;
+      // var keys = Object.keys(deps);
+      // if (deps && keys.length) {
+      //   Binding.record(target, this);
+      //   if (keys.length > 1) {
+      //     this.sync = false;
+      //     scope.on('updating', this.exec);
+      //   }
+      // }
 
       if (typeof reflect === 'function') {
         this.reflect = reflect;
@@ -1949,7 +1951,7 @@
         }
         
         if (!binding.sync && typeof binding.collect === 'function') {
-          scope.off('update', binding.exec);
+          scope.off('updating', binding.exec);
         }
 
         Dependency.clean(binding);
@@ -1962,11 +1964,17 @@
       if (this.flag === 0) {
         return;
       }
+
       Dependency.begin(this);
       var value = this.collect.call(this.scope);
       Dependency.end();
       this.target.set(this.property, value);
       this.flag = 0;
+
+      if (this.depsCount > 1 && this.sync) {
+        this.scope.on('updating', this.exec);
+        this.sync = false;
+      }
     },
 
     back: function() {
@@ -2046,11 +2054,6 @@
           Accessor.applyAttributeDescriptors(store, props, false);
           store.assign(props);
         }
-
-        // if (this.onInited) {
-        //   this.onInited();
-        // }
-        
       }
     },
 
@@ -2080,14 +2083,6 @@
      * @param {*} val
      */
     set: function set(key, val) {
-      // if (arguments.length === 1) {
-      //   var opts = key;
-      //   for (key in opts) {
-      //     this.set(key, opts[key]);
-      //   }
-      //   return this;
-      // }
-
       var desc = Accessor.getAttrDesc(this, key);
       // usual property
       if (!desc) {
@@ -2127,23 +2122,7 @@
       }
 
       return;
-    },
-
-    bind: function(target, property, collect, reflect) {
-      // var scope = this; 
-      // if (collect && (typeof collect === 'function')) {
-      //   DataBinding.compile({
-      //     mode: DataBinding.MODES.ONE_WAY,
-      //     evaluator: new Evaluator({func: collect})
-      //   }, property, target, [scope]);
-      // }
-      // if (reflect && (typeof reflect === 'function')) {
-      //   target.on('changed.' + property, function() {
-      //     reflect.call(scope, target[property]);
-      //   });
-      // }
-      Binding.create(this, target, property, collect, reflect);
-    },
+    }
   });
 
   // src/core/models/Cache.js
@@ -2900,9 +2879,9 @@
         return false;
       }
 
-      if (this.onUpdating) {
-        this.onUpdating();
-      }
+      // if (this.onUpdating) {
+      //   this.onUpdating();
+      // }
 
       if (this.scopes && this.hasDirty('contents')) {
         var JSXEngine = config.JSXEngine;
@@ -3051,7 +3030,7 @@
         }
 
         if (!binding.sync) {
-          scopes[0].off('update', binding.exec);
+          scopes[0].off('updating', binding.exec);
         }
 
         Binding.remove(target, binding);
@@ -3093,7 +3072,7 @@
 
       if (this.mode === MODES.ANY_WAY) {
         this.sync = false;
-        this.scopes[0].on('update', this.exec);
+        this.scopes[0].on('updating', this.exec);
         this.target.set(this.targetProp, this.eval());
       } else {
         this.sync = true;
@@ -3140,7 +3119,7 @@
       if (this.mode === MODES.ONE_TIME) {
         DataBinding.destroy(this);
       } else if (this.depsCount > 1 && this.sync) {
-        this.scopes[0].on('update', this.exec);
+        this.scopes[0].on('updating', this.exec);
         this.sync = false;
       }
     },
@@ -3278,13 +3257,23 @@
         Element.defineMembers(component);
 
         // 6. setup
+        var model;
         if (scopes && scopes[0].context) {
-          component.setup(scopes[0].context);
+          model = component.setup(scopes[0].context);
           if (component.context == null) {
             component.context = scopes[0].context;
           }
         } else {
-          component.setup();
+          model = component.setup();
+        }
+
+        if (model != null) {
+          if (typeof model !== 'object') {
+            throw new TypeError('setup() should return object, not ' + (typeof model));
+          }
+          for (var key in model) {
+            defineProp(component, key, Object.getOwnPropertyDescriptor(model, key));
+          }
         }
 
         var HTMXEngine = config.HTMXEngine;
@@ -3292,10 +3281,10 @@
         HTMXEngine.driveComponent(component, _template, scopes, template, props);
 
         // 8. initialized
-        //component.send('initialized');
-        if (component.onInited) {
-          component.onInited();
-        }
+        component.emit('created');
+        // if (component.onInited) {
+        //   component.onInited();
+        // }
       }
 
     },
@@ -3429,9 +3418,10 @@
      */
     attach: function attach($skin) {
       if (shellProto.attach.call(this, $skin)) {
-        if (this.onAttached) {
-          this.onAttached($skin);
-        }
+        this.emit('attached', $skin);
+        // if (this.onAttached) {
+        //   this.onAttached($skin);
+        // }
         return true;
       }
       return false;
@@ -3445,12 +3435,16 @@
     detach: function detach(force) {
       var $skin = this.getSkin();
       if (Shell.prototype.detach.call(this, force)) {
-        if (this.onDetached && $skin) {
-          this.onDetached($skin);
+        if ($skin) {
+          this.emit('detached', $skin);
         }
-        if (this.onDestroyed) {
-          this.onDestroyed();
-        }
+        this.emit('destroyed');
+        // if (this.onDetached && $skin) {
+        //   this.onDetached($skin);
+        // }
+        // if (this.onDestroyed) {
+        //   this.onDestroyed();
+        // }
         return true;
       }
       return false;
@@ -3464,15 +3458,12 @@
         return false;
       }
 
-      if (this.onUpdating) {
-        // var patterns = this.onUpdating(JSXEngine.node, JSXEngine.slot);
-        // if (patterns && Array.isArray(patterns)) {
-        //   JSXEngine.reflow(patterns, this, this);
-        // }
-        this.onUpdating();
-      }
+      // if (this.onUpdating) {
+      //   this.onUpdating();
+      // }
 
-      this.emit('update', this.$flag);
+      this.emit('updating', this.$flag);
+      // this.emit('update', this.$flag);
 
       if (this.$type !== 0) {
         config.HTMXEngine.transferProperties(this);
@@ -3514,11 +3505,17 @@
       } else {
         fragmentProto.render.call(this);
       }
-      if (this.onRendered && this.$skin) {
+      var actions = this._actions;
+      if (actions && actions['rendered'] && this.$skin) {
         Schedule.pushCallbackQueue((function() {
-          this.onRendered(this.$skin);
+          this.emit('rendered', this.$skin);
         }).bind(this));
       }
+      // if (this.onRendered && this.$skin) {
+      //   Schedule.pushCallbackQueue((function() {
+      //     this.onRendered(this.$skin);
+      //   }).bind(this));
+      // }
       return true;
     },
 
@@ -3738,21 +3735,6 @@
 
   // src/template/Expression.js
 
-  function parseEvaluator(expr, prototype, identifiers) {
-    var type = typeof expr;
-    if (type === 'string') {
-      // if (PROP_EXPR_REGEXP.test(expr)) {
-      //   return new PropEvaluator(expr.trim());
-      // }
-      return EvaluatorParser.parse(expr, prototype, identifiers);
-    } else if (type === 'function') {
-      // var evaluator = new FuncEvaluator(expr);
-      // evaluator.connect(prototype, identifiers);
-      // return evaluator;
-      return new Evaluator(expr, null);
-    }
-  }
-
   /**
    * Expression parsed from 'checked@="selected"' and so on, in the component pattern.
    * 
@@ -3804,12 +3786,14 @@
       var converters = pattern.converters;
       if (evaluator) {
         // evaluator.connect(prototype, identifiers);
-        pattern.evaluator = parseEvaluator(evaluator, prototype, identifiers);
+        // pattern.evaluator = parseEvaluator(evaluator, prototype, identifiers);
+        pattern.evaluator = new Evaluator(evaluator);
       } 
       if (converters) {
         for (var i = 0; i < converters.length; ++i) {
           // converters[i].connect(prototype, identifiers);
-          pattern.converters[i] = parseEvaluator(converters[i], prototype, identifiers);
+          // pattern.converters[i] = parseEvaluator(converters[i], prototype, identifiers);
+          pattern.converters[i] = new Evaluator(converters[i]);
         }
       }
       this.unparsed = false;
@@ -3907,9 +3891,7 @@
           }
         }
 
-        
-
-        // block.on('update', block.onUpdating.bind(block));
+        block.on('updating', block.onUpdating.bind(block));
       },
       template: '<x:frag></x:frag>'
     },
@@ -4135,6 +4117,9 @@
       if (content && node.name) {
         scopes[0].addNamedPart(node.name, content); // TODO: removeNamedPart
         defineProp(content, '$owner', {
+          configurable: true,
+          enumarable: false,
+          writable: false,
           value: scopes[0]
         });
       }
@@ -4322,8 +4307,9 @@
             name: name || ''
           }
         });
-
+        
         slot.template = assign({}, template);
+        slot.template.props = assign({}, template.props);
         if (name) {
           delete slot.template.props.name;
         }
@@ -4331,6 +4317,7 @@
         slot.scopes = scopes;
 
         slot.invalidate(FLAG_CHANGED);
+        slot.on('updating', slot.onUpdating.bind(slot));
         // slot.invalidate = slot.invalidate.bind(slot);
         scopes[0].on('changed.contents', function() {
           slot.invalidate(FLAG_CHANGED);
@@ -4340,14 +4327,9 @@
     },
 
     onUpdating: function onUpdating() {
-      // if (!this.hasDirty('scopeContents') && !this.hasDirty('name')) {
-      //   return;
-      // }
-
       var fragment = [], children, content, n, i;
       var scopeContents = this.scopes[0].getContents();
       var template = this.template, scopes = this.scopes;
-
       if (scopeContents && scopeContents.length > 0) {
         var name = this.get('name') || '';
         for (i = 0, n = scopeContents.length; i < n; ++i) {
@@ -4356,8 +4338,13 @@
             fragment.push(content);
           }
         }
-        this.setChildren(fragment);
-      } else if (template.children && this.getChildren().length === 0) {
+        this.useDefault = false;
+      }
+      if (fragment.length === 0 && template.children) {
+        // use the default template to slot here
+        if (this.useDefault) {
+          return;
+        }
         children = template.children;
         for (i = 0, n = children.length; i < n; ++i) {
           content = HTMXEngine.makeContent(children[i], scopes);
@@ -4365,8 +4352,9 @@
             fragment.push(content);
           }
         }
-        this.setChildren(fragment);
+        this.useDefault = true;
       }
+      this.setChildren(fragment);
     }
   });
 
@@ -4520,7 +4508,7 @@
       },
 
       destroy: function(binding) {
-        binding.scopes[0].off('update', binding.exec);
+        binding.scopes[0].off('updating', binding.exec);
 
         var bindings = binding.cache._bindings;
 
@@ -4562,7 +4550,7 @@
 
       this.exec = this.exec.bind(this);
 
-      scopes[0].on('update', this.exec);
+      scopes[0].on('updating', this.exec);
     },
 
     exec: function() {
@@ -4641,6 +4629,9 @@
       // scope[node.xName] = child; // TODO: addNamedPart
       scope.addNamedPart(node.name, child);
       defineProp(child, '$owner', {
+        configurable: true,
+        enumarable: false,
+        writable: false,
         value: scope
       });
     }
@@ -4878,14 +4869,16 @@
         //   }
         // }
         view.invalidate(FLAG_CHANGED);
+        view.on('updating', view.onUpdating.bind(view));
       },
       template: '<x:frag></x:frag>'
     },
 
     onUpdating: function onUpdating() {
-      var content, ctor;
       var type = this.get('xtype');//this.attrs.get('x:type');
-      var template = this.template, scopes = this.scopes;
+      var template = this.templat;
+      var scopes = this.scopes;
+      var content, ctor;
 
       if (typeof type === 'function') {
         ctor = type;
@@ -4898,7 +4891,8 @@
           }).bind(this));
           return;
         } else {
-          ctor = scope.res(type);//RES.search(xType, scope.constructor.resources);
+          var resources = scope.constructor.resources;
+          ctor = resources && resources[type];
         }
       } else if (typeof type === 'object' && typeof Promise === 'function' && type instanceof Promise) {
         type.then((function(ctor) {
@@ -5101,7 +5095,7 @@
     //   attrs = null;
     // }
 
-    if (attrs && (typeof attrs === 'object') && !attrs.__extag_node__) {
+    if (attrs != null) {
       
       if (attrs.xif) {
         node.xif = attrs.xif;
@@ -5140,21 +5134,12 @@
           props[key] = attrs[key];
         }
       }
-
-      if (arguments.length > 3) {
-        children = slice(arguments, 2);
-      } else {
-        children = arguments[2];
-      }
-    } else {
-      if (arguments.length > 2) {
-        children = slice(arguments, 1);
-      } else {
-        children = arguments[1];
-      }
     }
 
     if (children) {
+      if (arguments.length > 3) {
+        children = slice(arguments, 2);
+      }
       if (Array.isArray(children)) {
         children = flatten(children);
       } else {
@@ -5338,7 +5323,6 @@
       } else if (expr[n-1] === BINDING_OPERATORS.ANY_WAY) {     // <h1 title@="title ^">@{title ^}</h1>
         mode = DATA_BINDING_MODES.ANY_WAY;
         expr = expr.slice(0, n-1);
-        event = 'update';
       } else if (expr[n-1] === BINDING_OPERATORS.ASSIGN) {      // <h1 title@="title!">@{title !}</h1>
         mode = DATA_BINDING_MODES.ASSIGN;
         expr = expr.slice(0, n-1);
@@ -5411,7 +5395,7 @@
   var LF_IN_BLANK = /\s*\n\s*/g;
 
   var BINDING_LIKE_REGEXP = new RegExp(
-    BINDING_OPERATORS.DATA +'\\' + ONE_WAY_BINDING_BRACKETS[0] + '(\\s|.)*?\\' + ONE_WAY_BINDING_BRACKETS[1]
+    BINDING_OPERATORS.DATA +'\\' + BINDING_BRACKETS[0] + '(\\s|.)*?\\' + BINDING_BRACKETS[1]
   );
 
   var FragmentBindingParser = {
@@ -5488,7 +5472,7 @@
   var CSS_NAME_REGEXP = /^[a-z0-9\-\_]+$/i;
   // var SINGLE_BINDING_REGEXP = /^@\{[^@]*\}$/;
   var SINGLE_BINDING_REGEXP = new RegExp(
-    '^' + BINDING_OPERATORS.DATA +'\\' + ONE_WAY_BINDING_BRACKETS[0] + '[^' + BINDING_OPERATORS.DATA + ']*\\' + ONE_WAY_BINDING_BRACKETS[1] + '$'
+    '^' + BINDING_OPERATORS.DATA +'\\' + BINDING_BRACKETS[0] + '[^' + BINDING_OPERATORS.DATA + ']*\\' + BINDING_BRACKETS[1] + '$'
   );
 
   var ClassStyleParser = {
@@ -5744,10 +5728,11 @@
     } else {
       asProp = attrName.indexOf(':') < 0;
       group = asProp ? getGroup(node, 'props') : getGroup(node, 'attrs');
-      console.log(attrName, attrValue, BINDING_OPERATORS.TEXT);
       switch (lastChar) {
         case BINDING_OPERATORS.DATA: // last char is '@'
-          key = asProp ? viewEngine.toCamelCase(attrName.slice(0, -1)) : attrName.slice(1, -1);
+          key = asProp ? 
+                viewEngine.toCamelCase(attrName.slice(0, -1)) : 
+                attrName.slice(1, -1);
           result = PrimaryLiteralParser.tryParse(attrValue);
           if (result != null) {
             group[key] = result;
@@ -5757,7 +5742,9 @@
           }
           break;
         case BINDING_OPERATORS.TEXT: // last char is '#'
-          key = asProp ? viewEngine.toCamelCase(attrName.slice(0, -1)) : attrName.slice(1, -1);
+          key = asProp ? 
+                viewEngine.toCamelCase(attrName.slice(0, -1)) : 
+                attrName.slice(1, -1);
           try {
             result = FragmentBindingParser.parse(attrValue, prototype, identifiers);
           } catch (e) {
@@ -5779,19 +5766,6 @@
           key = asProp ? viewEngine.toCamelCase(attrName) : attrName;
           group[key] = viewEngine.isBoolProp(key) || attrValue;
       }
-      // if (lastChar === BINDING_OPERATORS.DATA) { // last char is '@'
-      //   key = viewEngine.toCamelCase(attrName.slice(0, -1));
-      //   result = PrimaryLiteralParser.tryParse(attrValue);
-      //   if (result != null) {
-      //     group[key] = result;
-      //   } else {
-      //     result = DataBindingParser.parse(attrValue, prototype, identifiers);
-      //     group[key] = new Expression(DataBinding, result);
-      //   }
-      // } else {
-      //   key = viewEngine.toCamelCase(attrName);
-      //   group[key] = viewEngine.isBoolProp(key) || attrValue;
-      // }
     }
   }
 
@@ -6173,6 +6147,7 @@
     // Parent: Parent,
     // Path: Path,
     // Schedule: Schedule,
+    // DirtyMarker: DirtyMarker,
     Validator: Validator,
     Watcher: Watcher, 
     
@@ -6204,16 +6179,15 @@
     // EventBindingParser: EventBindingParser,
 
     // template
-    // DirtyMarker: DirtyMarker,
-    // PropEvaluator: PropEvaluator,
-    // FuncEvaluator: FuncEvaluator,
+    
+    // Evaluator: Evaluator,
 
     // JSXEngine: JSXEngine,
     // HTMXEngine: HTMXEngine,
     node: JSXParser.node,
     expr: JSXParser.expr,
 
-    version: "0.1.0"
+    version: "0.2.0"
   };
 
   return Extag;
