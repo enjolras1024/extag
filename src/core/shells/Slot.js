@@ -22,8 +22,9 @@ defineClass({
           name: name || ''
         }
       });
-
+      
       slot.template = assign({}, template);
+      slot.template.props = assign({}, template.props);
       if (name) {
         delete slot.template.props.name;
       }
@@ -41,14 +42,9 @@ defineClass({
   },
 
   onUpdating: function onUpdating() {
-    // if (!this.hasDirty('scopeContents') && !this.hasDirty('name')) {
-    //   return;
-    // }
-
     var fragment = [], children, content, n, i;
     var scopeContents = this.scopes[0].getContents();
     var template = this.template, scopes = this.scopes;
-
     if (scopeContents && scopeContents.length > 0) {
       var name = this.get('name') || '';
       for (i = 0, n = scopeContents.length; i < n; ++i) {
@@ -57,8 +53,13 @@ defineClass({
           fragment.push(content);
         }
       }
-      this.setChildren(fragment);
-    } else if (template.children && this.getChildren().length === 0) {
+      this.useDefault = false;
+    }
+    if (fragment.length === 0 && template.children) {
+      // use the default template to slot here
+      if (this.useDefault) {
+        return;
+      }
       children = template.children;
       for (i = 0, n = children.length; i < n; ++i) {
         content = HTMXEngine.makeContent(children[i], scopes);
@@ -66,7 +67,8 @@ defineClass({
           fragment.push(content);
         }
       }
-      this.setChildren(fragment);
+      this.useDefault = true;
     }
+    this.setChildren(fragment);
   }
 });

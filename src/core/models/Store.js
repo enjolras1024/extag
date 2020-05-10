@@ -1,6 +1,5 @@
 // src/core/models/Store.js
 
-// import Dep from 'src/core/Dep'
 import Watcher from 'src/base/Watcher'
 import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
@@ -66,11 +65,6 @@ defineClass({
         Accessor.applyAttributeDescriptors(store, props, false);
         store.assign(props);
       }
-
-      // if (this.onInited) {
-      //   this.onInited();
-      // }
-      
     }
   },
 
@@ -100,14 +94,6 @@ defineClass({
    * @param {*} val
    */
   set: function set(key, val) {
-    // if (arguments.length === 1) {
-    //   var opts = key;
-    //   for (key in opts) {
-    //     this.set(key, opts[key]);
-    //   }
-    //   return this;
-    // }
-
     var desc = Accessor.getAttrDesc(this, key);
     // usual property
     if (!desc) {
@@ -147,21 +133,5 @@ defineClass({
     }
 
     return;
-  },
-
-  bind: function(target, property, collect, reflect) {
-    // var scope = this; 
-    // if (collect && (typeof collect === 'function')) {
-    //   DataBinding.compile({
-    //     mode: DataBinding.MODES.ONE_WAY,
-    //     evaluator: new Evaluator({func: collect})
-    //   }, property, target, [scope]);
-    // }
-    // if (reflect && (typeof reflect === 'function')) {
-    //   target.on('changed.' + property, function() {
-    //     reflect.call(scope, target[property]);
-    //   });
-    // }
-    Binding.create(this, target, property, collect, reflect);
-  },
+  }
 });
