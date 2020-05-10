@@ -1,7 +1,7 @@
 {
   "name": "extag",
   "version": "0.2.0",
-  "description": "An Event-driven JavaScript Library for Building User Interfaces with Simple APIs in a Flexible Way",
+  "description": "An Event-driven and Component-based JavaScript Library for Building User Interfaces",
   "main": "dist/extag.js",
   "scripts": {
     "karma-test": "./node_modules/.bin/karma start karma.conf.js",
