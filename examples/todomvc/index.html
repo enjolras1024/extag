@@ -10,7 +10,7 @@
 <body>
   <section id="todoapp"></section>
 
-  <div class="template">
+  <script type="text/template" id="todoapp-template">
     <section class="todoapp">
       <header class="header">
         <h1>todos</h1>
@@ -44,9 +44,9 @@
                 x:style="display:@{todos.length > remainingCount |=display};" >Clear completed</button>
       </footer>
     </section>
-  </div>
+  </script>
 
-  <ul class="template">
+  <script type="text/template" id="todo-item-template">
     <li class="todo-item" x:class="completed:@{completed}; editing:@{editing};">
       <div class="view">
         <input type="checkbox" class="toggle" checked@="completed" change+="onToggle">
@@ -56,7 +56,7 @@
       <input class="edit" x:name="editor" value@="text" change+="onChange"
              keyup.escape+="cancelEditing(event)" keyup.enter+="this.doneEditing()" blur+="this.doneEditing()">
     </li>
-  </ul>
+  </script>
 
   <script src="../../javascripts/extag-dom.js"></script>
   <script src="../../javascripts/extag.js"></script>

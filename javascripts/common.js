@@ -7,7 +7,9 @@ var MenuCard = Extag.defineClass({
                   '<i x:class="icon-triangle; icon-triangle-down: @{folded}; icon-triangle-up: @{!folded}"></i>', 
                 '</h4>', 
                 '<ul x:style="display: @{folded ? \'none\' : \'block\'};">', 
-                  '<li x:for="menu of menus"><a x:class="menu-link; active: @{isActive(menu.href, activeId)}" href@="menu.href">@{menu.text}</a></li>',
+                  '<li x:for="menu of menus">', 
+                    '<a x:class="menu-link; active: @{isActive(menu.href, activeId)}" href@="menu.href" target@="menu.target">@{menu.text}</a>',
+                  '</li>',
                 '</ul>',
               '</div>'].join('\n'),
     attributes: ['href', 'text', 'menus', 'folded', 'activeId']
@@ -45,8 +47,9 @@ var SideBar = Extag.defineClass({
       activeId: '' 
     });
     this.onClickButton = this.onClickButton.bind(this);
+    this.on('created', this.onCreated.bind(this));
   },
-  onInited: function() {
+  onCreated: function() {
     this.links = []
     var menuCards = this.menuCards;
     var locationHref = window.location.href;
@@ -224,7 +227,8 @@ function type2tag(type) {
   Extag.Component.create(SideBar, {
     menuCards: [
       {text: 'Extag', href: root + '/', menus: [
-        {text: '快速开始', href: root + '/index.html#get-started'}
+        {text: '快速开始', href: root + '/index.html#get-started'},
+        {text: 'GitHub', href: 'https://github.com/enjolras1024/extag', target: '_blank'}
       ]},
       {text: '事件系统', href: root + '/documents/event.html', menus: [
         {text: 'on, off, emit', href: root + '/documents/event.html#on-off-emit'},
@@ -240,7 +244,9 @@ function type2tag(type) {
         {text: '组件内部状态', href: root + '/documents/component.html#component-inner-state'},
         {text: '组件contents', href: root + '/documents/component.html#component-contents'},
         {text: '组件边界处理', href: root + '/documents/component.html#component-boundary'},
-        {text: '组件生命周期', href: root + '/documents/component.html#component-lifecycle'} 
+        {text: '组件生命周期', href: root + '/documents/component.html#component-lifecycle'}, 
+        {text: '组件context', href: root + '/documents/component.html#component-context'}, 
+        {text: '组件元素命令', href: root + '/documents/component.html#component-element-command'} 
       ]},
       {text: '模板语法', href: root + '/documents/template.html', menus: [
         {text: '事件监听', href: root + '/documents/template.html#event-listening'},
@@ -253,7 +259,7 @@ function type2tag(type) {
         {text: '可选转换器', href: root + '/documents/template.html#optional-converters'},
         {text: '使用子组件', href: root + '/documents/template.html#using-child-component'},
         {text: '组件slots', href: root + '/documents/template.html#component-slots'},
-        {text: '部件引用', href: root + '/documents/template.html#part-refrence'},
+        {text: '部件引用', href: root + '/documents/template.html#part-reference'},
         {text: '列表渲染', href: root + '/documents/template.html#list-rendering'},
         {text: '条件渲染', href: root + '/documents/template.html#condition-rendering'},
         {text: '片段渲染', href: root + '/documents/template.html#fragment-rendering'},
@@ -264,11 +270,11 @@ function type2tag(type) {
       {text: '数据模型', href: root + '/documents/model.html', menus: [
         {text: 'Store for Object', href: root + '/documents/model.html#store-for-object'}
       ]},
-      {text: 'Tips', href: root + '/documents/tips.html', menus: [
-        {text: '函数组件', href: root + '/documents/tips.html#functinal-component'},
-        {text: '模板函数', href: root + '/documents/tips.html#template-function'},
-        {text: 'Shadow模式', href: root + '/documents/tips.html#shadow-mode'}
-      ]},
+      // {text: 'Tips', href: root + '/documents/tips.html', menus: [
+      //   {text: '函数组件', href: root + '/documents/tips.html#functinal-component'},
+      //   {text: '模板函数', href: root + '/documents/tips.html#template-function'},
+      //   {text: 'Shadow模式', href: root + '/documents/tips.html#shadow-mode'}
+      // ]},
       {text: '示例', href: root + '/examples', menus: [
         {text: 'Color Palette', href: root + '/examples/color-palette.html'},
         {text: 'SVG Component', href: root + '/examples/svg-component.html'},

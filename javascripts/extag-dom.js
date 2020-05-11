@@ -1,5 +1,5 @@
 /**
- * extag-dom.js v0.1.0
+ * ExtagDom v0.2.0
  * (c) enjolras.chen
  * Released under the MIT License.
  */
@@ -7,7 +7,7 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
   (global = global || self, global.ExtagDom = factory());
-}(this, function () { 'use strict';
+}(this, (function () { 'use strict';
 
   //######################################################################################################################
   // src/view/ExtagDom.js
@@ -610,7 +610,7 @@
   }
 
   assign(ExtagDom, {
-    version: "0.1.0",
+    version: "0.2.0",
     /**
      * @required
      */
@@ -1202,7 +1202,7 @@
     invokeCommands: function invokeCommands($skin, commands) {
       for (var i = 0, n = commands.length; i < n; ++i) {
         var command = commands[i];
-        // console.log(command.name, command.args);
+        console.log(command.name, command.args);
         ExtagDom.invoke($skin, command.name, command.args);
       }
     },
@@ -1270,4 +1270,4 @@
 
   return ExtagDom;
 
-}));
+})));

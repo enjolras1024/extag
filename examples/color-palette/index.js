@@ -6,7 +6,7 @@
 
     statics: {
       attributes: ['label', 'value'],
-      template: ExtagDom.query('.template .channel-editor').outerHTML
+      template: ExtagDom.query('#channel-editor-template').innerHTML
     },
 
     setup: function() {
@@ -45,7 +45,7 @@
     extends: Component,
 
     statics: {
-      template: ExtagDom.query('.template .palette').outerHTML,
+      template: ExtagDom.query('#palette-template').innerHTML,
 
       resources: {
         ChannelEditor: ChannelEditor

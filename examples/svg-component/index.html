@@ -13,7 +13,7 @@
   <!-- <p>In this example, we create components based on SVG.</p>
   <p>A SVG component can contain other SVG components.</p> -->
 
-  <div class="template">
+  <script type="text/template" id="app-template">
     <div class="app">
       <svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">
         <rect transform@="'translate(150, 100) rotate(' + rotate + ') scale(' + scaleX + ',' + scaleY + ')'"
@@ -24,22 +24,22 @@
         <g x:type="TextSlider" transform="translate(10, 60)" label="scaleY" min@="1.0" max@="5.0" value@="@scaleY"></g>
       </svg>
     </div>
-  </div>
+  </script>
 
-  <svg class="template" xmlns="http://www.w3.org/2000/svg">
+  <script type="text/template" id="text-slider-template">
     <g class="text-slider" x:ns="svg">
       <text transform="translate(0, 10)">@{ label !}</text>
       <text transform="translate(50, 10)">: @{ value }</text>
       <g x:type="Slider" x:name="slider" transform="translate(120, 0)" max@="max" min@="min" value@="@value"></g>
     </g>
-  </svg>
+  </script>
 
-  <svg class="template" xmlns="http://www.w3.org/2000/svg">
+  <script type="text/template" id="slider-template">
     <g class="slider" x:ns="svg">
       <rect width="150" height="2" y="5" class="track"></rect>
       <circle cx@="normalize(value)" cy="6" r="8" class="button" x:name="btn" mousedown+="onMouseChange" touchstart+="onMouseChange"></circle>
     </g>
-  </svg>
+  </script>
 
   <script src="../../javascripts/extag-dom.js"></script>
   <script src="../../javascripts/extag.js"></script>

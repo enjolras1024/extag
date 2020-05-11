@@ -10,7 +10,7 @@
         max: 10,
         value: 0
       },
-      template: ExtagDom.query('.template .slider').outerHTML
+      template: ExtagDom.query('#slider-template').innerHTML
     },
     
     onMouseChange: function(event) {
@@ -37,11 +37,11 @@
     },
 
     setup: function() {
-      this.normalize = this.normalize.bind(this);
+      this.on('created', this.onCreated.bind(this));
       this.onMouseChange = this.onMouseChange.bind(this);
     },
     
-    onInited: function() {
+    onCreated: function() {
       var body = document.body;
       body.addEventListener('mousemove', this.onMouseChange);
       body.addEventListener('mouseup', this.onMouseChange);
@@ -49,7 +49,7 @@
       body.addEventListener('touchmove', this.onMouseChange);
 
       this.on('changed', (function() {
-      var value = this.value;
+        var value = this.value;
         value = value < this.min ? this.min : value;
         value = value > this.max ? this.max : value;
         this.value = value;
@@ -65,7 +65,7 @@
     extends: Component,
     
     statics: {
-      template: ExtagDom.query('.template .text-slider').outerHTML,
+      template: ExtagDom.query('#text-slider-template').innerHTML,
       resources: {
         Slider: Slider
       },
@@ -82,7 +82,7 @@
     extends: Component,
     
     statics: {
-      template: ExtagDom.query('.template .app').outerHTML,
+      template: ExtagDom.query('#app-template').innerHTML,
       resources: {
         TextSlider: TextSlider
       },

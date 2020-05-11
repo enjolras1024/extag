@@ -32,7 +32,7 @@
 
     statics: {
       fullName: 'TodoItem',
-      template: ExtagDom.query('.template .todo-item').outerHTML,
+      template: ExtagDom.query('#todo-item-template').innerHTML,
       attributes: {
         completed: false,
         editing: false,
@@ -122,7 +122,7 @@
         TodoItem: ENJ.TodoItem
       },
 
-      template: ExtagDom.query('.template .todoapp').outerHTML
+      template: ExtagDom.query('#todoapp-template').innerHTML
     },
 
     setup: function() {
@@ -130,9 +130,10 @@
       this.onEnter = this.onEnter.bind(this);
       this.onToggle = this.onToggle.bind(this);
       this.onChange = this.onChange.bind(this);
+      this.on('created', this.onCreated.bind(this));
     },
 
-    onInited: function() {
+    onCreated: function() {
       var records = ENJ.read();
       if (records) {
         for (var i = 0, n = records.length; i < n; ++i) {

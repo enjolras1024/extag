@@ -132,11 +132,7 @@
     <!-- <p><b>声明式 | 命令式</b>： 通常你可以为组件声明式地定义一个包含绑定表达式和丰富内容的模板。模板一经编译即可用于初始化一个组件，包括生成子内容、添加事件处理器、完成数据绑定等等。或者有时你只需定义一个简单的空模板，在初始化过后再去命令式地添加子内容、事件处理器等。</p> -->
     <h3 id="get-started">快速开始</h3>
     <p>使用script标签简单地引入Extag和ExtagDom。Extag会通过ExtagDom来进行DOM操作。</p>
-    <div class="code-box scroll">
-      <div class="CodeMirror cm-s-alice">
-        <div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-tag cm-bracket">&lt;</span><span class="cm-tag">script</span> <span class="cm-attribute">src</span>=<span class="cm-string">"/javascripts/extag.js"</span><span class="cm-tag cm-bracket">&gt;&lt;/</span><span class="cm-tag">script</span><span class="cm-tag cm-bracket">&gt;</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-tag cm-bracket">&lt;</span><span class="cm-tag">script</span> <span class="cm-attribute">src</span>=<span class="cm-string">"/javascripts/extag-dom.js"</span><span class="cm-tag cm-bracket">&gt;&lt;/</span><span class="cm-tag">script</span><span class="cm-tag cm-bracket">&gt;</span></span></pre></div>
-      </div>
-    </div>
+    <div class="code-box scroll"><div class="CodeMirror cm-s-alice"><div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-tag cm-bracket">&lt;</span><span class="cm-tag">script</span> <span class="cm-attribute">src</span>=<span class="cm-string">"https://unpkg.com/extag@0.2.0/dist/extag.js"</span><span class="cm-tag cm-bracket">&gt;&lt;/</span><span class="cm-tag">script</span><span class="cm-tag cm-bracket">&gt;</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-tag cm-bracket">&lt;</span><span class="cm-tag">script</span> <span class="cm-attribute">src</span>=<span class="cm-string">"https://unpkg.com/extag-dom@0.2.0/dist/extag-dom.js"</span><span class="cm-tag cm-bracket">&gt;&lt;/</span><span class="cm-tag">script</span><span class="cm-tag cm-bracket">&gt;</span></span></pre></div></div></div>
     <p>一个简单的Extag例子如下：</p>
     <div id="code-tabs-1"></div>
     <p>我们定义了一个Hello类，继承自Component。组件模板中使用了一个单向的数据绑定表达式<span class="expr">@{ what }</span>。包裹在<span class="expr">@{ }</span>内的自定义的特性<span class="expr">what</span>是可绑定的，其默认值为<span class="expr">'World'</span>。创建一个Hello类的实例，附着到页面上的一个元素上，<span class="expr">'Hello, World!'</span>的字样就会渲染到页面上。</p>
