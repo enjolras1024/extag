@@ -1,6 +1,6 @@
 // src/base/Accessor.js
 
-import { assign, defineProp, defineClass } from 'src/share/functions'
+import { assign, hasOwnProp, defineProp, defineClass } from 'src/share/functions'
 import Generator from 'src/base/Generator'
 import logger from 'src/share/logger'
 
@@ -12,7 +12,7 @@ var descriptorShared = {
 var getters = {}, setters = {};
 
 function makeGetter(key) {
-  if (!getters.hasOwnProperty(key)) {
+  if (!hasOwnProp.call(getters, key)) {
     getters[key] = function() {
       return this.get(key);
     };
@@ -21,7 +21,7 @@ function makeGetter(key) {
 }
 
 function makeSetter(key) {
-  if (!setters.hasOwnProperty(key)) {
+  if (!hasOwnProp.call(setters, key)) {
     setters[key] = function(val) {
       this.set(key, val);
     };
@@ -55,7 +55,7 @@ function getAttributeDefaultValues(target) {
   var defaultValues = {}, descriptors = target.__extag_descriptors__;
   if (descriptors) {
     for (var key in descriptors) {
-      if (descriptors.hasOwnProperty(key)) {
+      if (hasOwnProp.call(descriptors, key)) {
         var desc = descriptors[key];
         var type = typeof desc.value;
         if (type === 'undefined') {
@@ -77,7 +77,7 @@ function getAttributeDefaultValues(target) {
 }
 
 function applyAttributeDescriptors(prototype, descriptors, override) {
-  if (prototype.hasOwnProperty('__extag_descriptors__')) {
+  if (hasOwnProp.call(prototype, '__extag_descriptors__')) {
     return;
   }
   if (Array.isArray(descriptors)) {
@@ -94,8 +94,9 @@ function applyAttributeDescriptors(prototype, descriptors, override) {
   var key, desc;
 
   for (key in descriptors) { // define getter/setter for each key
-    if (descriptors.hasOwnProperty(key) /*&& !prototype.hasOwnProperty(key)*/) {
+    if (hasOwnProp.call(descriptors, key) /*&& !prototype.hasOwnProperty(key)*/) {
       if ((key in prototype) && !override) {
+        // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
           logger.warn('`' + key + '` is already defined in the prototype of ' + prototype.constructor);
         }
@@ -155,17 +156,19 @@ defineClass({
     applyAttributeDescriptors: applyAttributeDescriptors
   },
 
+  // eslint-disable-next-line no-unused-vars
   get: function get(key) {
     throw new Error('Method `get` must be implemented by sub-class');
   },
 
+  // eslint-disable-next-line no-unused-vars
   set: function set(key, value) {
     throw new Error('Method `set` must be implemented by sub-class');
   },
 
   assign: function assign(props) {
     for (var key in props) {
-      if (props.hasOwnProperty(key)) {
+      if (hasOwnProp.call(props, key)) {
         this.set(key, props[key]);
       }
     }

@@ -1,5 +1,5 @@
 /**
- * Extag v0.2.0
+ * Extag v0.2.1
  * (c) enjolras.chen
  * Released under the MIT License.
  */
@@ -14,8 +14,8 @@
   // var PATH_DELIMITER = /\[|\]?\./;
   var PATH_DELIMITER_1 = /\./;
   var PATH_DELIMITER_2 = /(\]\.)|\.|\[|\]/g;
-  var PATH_REGEXP_1 = /^[\$_A-Z][\$_A-Z0-9]*(\.[\$_A-Z0-9]+)*$/i;
-  var PATH_REGEXP_2 = /^[\$_A-Z][\$_A-Z0-9]*((\[\d+\])|(\.[\$_A-Z0-9]+))*$/i;
+  var PATH_REGEXP_1 = /^[$_A-Z][$_A-Z0-9]*(\.[$_A-Z0-9]+)*$/i;
+  var PATH_REGEXP_2 = /^[$_A-Z][$_A-Z0-9]*((\[\d+\])|(\.[$_A-Z0-9]+))*$/i;
 
   /**
    * Find the resource in the scope
@@ -84,6 +84,7 @@
         if (typeof window !== 'undefined') {
           res = find(path, window);
         } else if (typeof global !== 'undefined') {
+          // eslint-disable-next-line no-undef
           res = find(path, global);
         }
       }
@@ -124,6 +125,8 @@
     return Array$slice.call(array, start, stop);
   }
 
+  var hasOwnProp = Object.prototype.hasOwnProperty;
+
   function Helper(target) {
     this.target = target;
   }
@@ -142,6 +145,7 @@
   function help(target) {
     return new Helper(target);
   }
+
   var assign = Object.assign || function assign(target/*,..sources*/) {
     if (target == null) {
       throw  new TypeError('Cannot convert undefined or null to object');
@@ -169,7 +173,7 @@
       }
 
       for (key in source) {
-        if (source.hasOwnProperty(key)) {
+        if (hasOwnProp.call(source, key)) {
           Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
         }
       }
@@ -229,7 +233,7 @@
       var observer = new MutationObserver(function() {
         var callback;
 
-        while (callback = cbs.pop()) {
+        while ((callback = cbs.pop())) {
           callback();
         }
 
@@ -291,7 +295,7 @@
     for (i = 0, n = sources.length; i < n; ++i) {
       source = sources[i];
       for (var key in source) {
-        if (source.hasOwnProperty(key)) {
+        if (hasOwnProp.call(source, key)) {
           defineProp(target, key, Object.getOwnPropertyDescriptor(source, key));
         }
       }
@@ -306,7 +310,7 @@
     var subClass, superClass, mixins, statics, sources;
 
     // superClass
-    if (proto.hasOwnProperty('extends')) {
+    if (hasOwnProp.call(proto, 'extends')) {
       superClass = proto.extends;
 
       if (typeof superClass !== 'function') {
@@ -317,7 +321,7 @@
     }
 
     // subClass
-    if (proto.hasOwnProperty('constructor')) {
+    if (hasOwnProp.call(proto, 'constructor')) {
       subClass = proto.constructor;
       //delete proto.constructor;
       if (typeof subClass !== 'function') {
@@ -382,7 +386,7 @@
   //   return object.__extag_descriptors__ ? object.__extag_descriptors__[attrName] : null;
   // }
 
-  var HTML_CHAR_ENTITY_REGEXP = /\&[\w\#]{2,6};/;
+  var HTML_CHAR_ENTITY_REGEXP = /&[\w#]{2,6};/;
   var encodeHTML, decodeHTML;
 
   try {
@@ -411,10 +415,10 @@
       if (!/[<>&"\u00a0]/.test(text)) {
         return text;
       }
-      return  text.replace(/\&/g, '&amp;')
-                  .replace(/\</g, '&lt;')
-                  .replace(/\>/g, '&gt;')
-                  .replace(/\"/g, '&quot;')
+      return  text.replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')
+                  .replace(/"/g, '&quot;')
                   .replace(/\u00a0/g, '&nbsp;');
     };
     decodeHTML = function(html) {
@@ -430,11 +434,11 @@
       //   }
       // }
     
-      return  html.replace(/\&nbsp;/g, String.fromCharCode(160))
-                  .replace(/\&quot;/g, '"')
-                  .replace(/\&lt;/g, '<')
-                  .replace(/\&gt;/g, '>')
-                  .replace(/\&amp;/g, '&');
+      return  html.replace(/&nbsp;/g, String.fromCharCode(160))
+                  .replace(/&quot;/g, '"')
+                  .replace(/&lt;/g, '<')
+                  .replace(/&gt;/g, '>')
+                  .replace(/&amp;/g, '&');
     };
   }
 
@@ -479,31 +483,7 @@
   var WHITE_SPACE_REGEXP = /\s/g;
   var CAPITAL_REGEXP = /^[A-Z]/;
   var CONTEXT_REGEXP = /^this\./;
-  var HANDLER_REGEXP = /^(this\.)?[\w\$\_]+$/;
-
-  // src/share/logger.js 
-
-  function log(fn, args, prefix) {
-    args = slice(args, 0);
-    // args.unshift(prefix);
-    args[0] = prefix + ' ' + args[0];
-    fn.apply(console, args);
-  }
-
-  var logger = {
-    info: function info() {
-      log(console.log, arguments, '[EXTAG INFO]');
-    },
-    warn: function warn() {
-      log(console.warn, arguments, '[EXTAG WARN]');
-    },
-    error: function error() {
-      log(console.error, arguments, '[EXTAG ERROR]');
-    },
-    debug: function debug() {
-      log(console.log, arguments, '[EXTAG DEBUG]');
-    }
-  };
+  var HANDLER_REGEXP = /^(this\.)?[\w$_]+$/;
 
   // src/base/Parent.js
 
@@ -1029,10 +1009,10 @@
      */
     on: function on(type, func, opts) {
       if (typeof type === 'object') {
-        var configs = type;
-        for (type in configs) {
-          if (configs.hasOwnProperty(type)) {
-            var conf = configs[type];
+        var config = type;
+        for (type in config) {
+          if (hasOwnProp.call(config, type)) {
+            var conf = config[type];
             if (!Array.isArray(conf)) {
               addEventHandler(this, type, conf);
             } else {
@@ -1075,10 +1055,10 @@
           removeEventHandler(this, type, func, opts);
         }
       } else if (t === 'object') { // e.g. off({click: onClick})
-        var configs = type;
-        for (type in configs) {
-          if (configs.hasOwnProperty(type)) { 
-            var conf = configs[type];
+        var config = type;
+        for (type in config) {
+          if (hasOwnProp.call(config, type)) { 
+            var conf = config[type];
             if (!Array.isArray(conf)) {
               if (conf == null) {
                 removeEventHandler(this, type);
@@ -1142,6 +1122,30 @@
     }
   });
 
+  // src/share/logger.js 
+
+  function log(fn, args, prefix) {
+    args = slice(args, 0);
+    // args.unshift(prefix);
+    args[0] = prefix + ' ' + args[0];
+    fn.apply(console, args);
+  }
+
+  var logger = {
+    info: function info() {
+      log(console.log, arguments, '[EXTAG INFO]');
+    },
+    warn: function warn() {
+      log(console.warn, arguments, '[EXTAG WARN]');
+    },
+    error: function error() {
+      log(console.error, arguments, '[EXTAG ERROR]');
+    },
+    debug: function debug() {
+      log(console.log, arguments, '[EXTAG DEBUG]');
+    }
+  };
+
   // src/base/Generator.js
 
   /**
@@ -1199,11 +1203,11 @@
           case 5:
             return new ctor(args[0], args[1], args[2], args[3], args[4]);
           default:
+            // eslint-disable-next-line no-undef
             {
               logger.warn('Sorry but `anew` only supports 6 argumnets at most. Using `inst` instead.');
             }
             throw new Error('`anew` arguments length must not exceed 6.');
-            // break;
         }
       }
     }
@@ -1219,7 +1223,7 @@
   var getters = {}, setters = {};
 
   function makeGetter(key) {
-    if (!getters.hasOwnProperty(key)) {
+    if (!hasOwnProp.call(getters, key)) {
       getters[key] = function() {
         return this.get(key);
       };
@@ -1228,7 +1232,7 @@
   }
 
   function makeSetter(key) {
-    if (!setters.hasOwnProperty(key)) {
+    if (!hasOwnProp.call(setters, key)) {
       setters[key] = function(val) {
         this.set(key, val);
       };
@@ -1262,7 +1266,7 @@
     var defaultValues = {}, descriptors = target.__extag_descriptors__;
     if (descriptors) {
       for (var key in descriptors) {
-        if (descriptors.hasOwnProperty(key)) {
+        if (hasOwnProp.call(descriptors, key)) {
           var desc = descriptors[key];
           var type = typeof desc.value;
           if (type === 'undefined') {
@@ -1284,7 +1288,7 @@
   }
 
   function applyAttributeDescriptors(prototype, descriptors, override) {
-    if (prototype.hasOwnProperty('__extag_descriptors__')) {
+    if (hasOwnProp.call(prototype, '__extag_descriptors__')) {
       return;
     }
     if (Array.isArray(descriptors)) {
@@ -1301,8 +1305,9 @@
     var key, desc;
 
     for (key in descriptors) { // define getter/setter for each key
-      if (descriptors.hasOwnProperty(key) /*&& !prototype.hasOwnProperty(key)*/) {
+      if (hasOwnProp.call(descriptors, key) /*&& !prototype.hasOwnProperty(key)*/) {
         if ((key in prototype) && !override) {
+          // eslint-disable-next-line no-undef
           {
             logger.warn('`' + key + '` is already defined in the prototype of ' + prototype.constructor);
           }
@@ -1360,17 +1365,19 @@
       applyAttributeDescriptors: applyAttributeDescriptors
     },
 
+    // eslint-disable-next-line no-unused-vars
     get: function get(key) {
       throw new Error('Method `get` must be implemented by sub-class');
     },
 
+    // eslint-disable-next-line no-unused-vars
     set: function set(key, value) {
       throw new Error('Method `set` must be implemented by sub-class');
     },
 
     assign: function assign(props) {
       for (var key in props) {
-        if (props.hasOwnProperty(key)) {
+        if (hasOwnProp.call(props, key)) {
           this.set(key, props[key]);
         }
       }
@@ -1481,6 +1488,7 @@
     }
 
     if (trouble) {
+      // eslint-disable-next-line no-undef
       {
         warn && logger.warn('Attribute Validation:', trouble);
       }
@@ -1501,6 +1509,7 @@
     // }
 
     if (trouble) {
+      // eslint-disable-next-line no-undef
       {
         warn && logger.warn('Attribute Validation:', trouble);
       }
@@ -1536,7 +1545,7 @@
       var descriptors = target.__extag_descriptors__;
       for (key in descriptors) {
         desc = descriptors[key];
-        if (desc.required && (!props || !props.hasOwnProperty(key))) {
+        if (desc.required && (!props || !hasOwnProp.call(props, key))) {
           logger.warn('Attribute Validation:', 'required `' + key + '` for ' + (target.constructor.fullName || target.constructor.name));
         }
       }
@@ -1625,11 +1634,11 @@
      */
     hasDirty: function hasDirty(key) {
       var _dirty = this._dirty;
-      return _dirty ? (key == null || _dirty.hasOwnProperty(key)) : false;
+      return _dirty ? (key == null || hasOwnProp.call(_dirty, key)) : false;
     }
   });
 
-  // src/core/Schedule.js
+  /* eslint-disable no-unused-vars */
 
   var updateQueue = []; 
     var renderQueue = [];
@@ -1866,135 +1875,6 @@
     },
   };
 
-  // src/core/bindings/Binding.js
-
-  function Binding(scope, target, property, collect, reflect) {
-    this.sync = true;
-    this.scope = scope;
-    this.target = target;
-    this.property = property;
-
-    if (typeof collect === 'function') {
-      this.invalidate = this.invalidate.bind(this);
-      this.exec = this.exec.bind(this);
-      this.collect = collect;
-      this.flag = 1;
-      this.exec();
-      
-      if (this.depsCount > 0) {
-        Binding.record(target, this);
-      }
-      // var deps = this.deps;
-      // var keys = Object.keys(deps);
-      // if (deps && keys.length) {
-      //   Binding.record(target, this);
-      //   if (keys.length > 1) {
-      //     this.sync = false;
-      //     scope.on('updating', this.exec);
-      //   }
-      // }
-
-      if (typeof reflect === 'function') {
-        this.reflect = reflect;
-        this.back = this.back.bind(this);
-        target.on('changed.' + property, this.back);
-      }
-    }
-  }
-
-  defineClass({
-    constructor: Binding,
-
-    statics: {
-      // assign: function assign(target, key, val, binding) {
-      //   if (binding.locked) {
-      //     return;
-      //   }
-      //   binding.locked = true;
-      //   if (target.set) {
-      //     target.set(key, val);
-      //   } else {
-      //     target[key] = val;
-      //   }
-      //   binding.locked = false;
-      // },
-
-      record: function record(target, binding) {
-        var _bindings = target._bindings;
-
-        if (_bindings) {
-          _bindings.push(binding);
-        } else {
-          defineProp(target, '_bindings', {
-            value: [binding], writable: false, enumerable: false, configurable: true
-          });
-        }
-      },
-
-      remove: function remove(target, binding) {
-        var _bindings = target._bindings;
-
-        if (_bindings && _bindings.length) {
-          _bindings.splice(_bindings.lastIndexOf(binding), 1);
-        }
-      },
-
-      create: function(scope, target, property, collect, reflect) {
-        return new Binding(scope, target, property, collect, reflect);
-      },
-
-      destroy: function(binding) {
-        var target = binding.target, scope = binding.scope;
-
-        if (typeof binding.reflect == 'function') {
-          target.off('changed.' + binding.property, binding.back);
-        }
-        
-        if (!binding.sync && typeof binding.collect === 'function') {
-          scope.off('updating', binding.exec);
-        }
-
-        Dependency.clean(binding);
-
-        Binding.remove(scope, binding);
-      }
-    },
-
-    exec: function() {
-      if (this.flag === 0) {
-        return;
-      }
-
-      Dependency.begin(this);
-      var value = this.collect.call(this.scope);
-      Dependency.end();
-      this.target.set(this.property, value);
-      this.flag = 0;
-
-      if (this.depsCount > 1 && this.sync) {
-        this.scope.on('updating', this.exec);
-        this.sync = false;
-      }
-    },
-
-    back: function() {
-      this.reflect.call(this.scope, this.target[this.property]);
-    },
-
-    invalidate: function(flag) {
-      // if (this.flag < flag) {
-      //   this.flag = flag;
-      // }
-      this.flag = 1;
-      // console.log('sync', this.sync, flag)
-      if (this.sync) {
-        this.exec();
-      } else {
-        this.scope.invalidate(FLAG_CHANGED);
-      }
-    }
-  });
-
   // src/core/models/Store.js
 
   var storeGuid = -1;
@@ -2046,6 +1926,7 @@
           this.setup();
         }
 
+        // eslint-disable-next-line no-undef
         {
           Validator.validate0(store, props);
         }
@@ -2095,6 +1976,7 @@
         return;
       }
       // validation in development 
+      // eslint-disable-next-line no-undef
       {
         Validator.validate(this, key, val, true);
       }
@@ -2137,10 +2019,8 @@
    * @param {Object} owner 
    */
   function Cache(owner) { // internal class
-    // defineProp(this, '_props', {value: props ? assign({}, props) : {}/*, configurable: true*/});
     defineProp(this, '_owner', {value: owner || EMPTY_OWNER/*, configurable: true*/});
     defineProp(this, '_props', {value: {}/*, configurable: true*/});
-    // this._owner = owner || EMPTY_OWNER;
   }
 
   defineClass({
@@ -2151,13 +2031,6 @@
     },
 
     set: function set(key, val) {
-      // if (arguments.length === 1) {
-      //   var opts = key;
-      //   for (key in opts) {
-      //     this.set(key, opts[key]);
-      //   }
-      //   return this;
-      // }
       var props = this._props;
       var old = props[key];
       if (val !== old) {
@@ -2274,6 +2147,7 @@
       }
       
       var viewEngine = Shell.getViewEngine(this);
+      // eslint-disable-next-line no-undef
       {
         if (!viewEngine) {
           logger.warn('There is no available viewEngine, so the error occurs below. Usually that is ExtagDom. You can use <script> to include extag-dom.js in broswer.');
@@ -2291,7 +2165,7 @@
       if (this._actions) {
         var type, action, actions = this._actions;
         for (type in actions) {
-          if (!actions.hasOwnProperty(type)) { continue; }
+          if (!hasOwnProp.call(actions, type)) { continue; }
           action = actions[type];
           if (!action) { continue; }
           var handlers = action.handlers, handler;
@@ -2318,9 +2192,9 @@
      * @param {boolean} force - if not, detaching can be prevented, so this shell and the skin can be reused.
      */
     detach: function detach(force) {
-      if (!force && this._props && this._props.hasOwnProperty('preventDetach')) {
-        return false;
-      }
+      // if (!force && this._props && hasOwnProp.call(this._props, 'preventDetach')) {
+      //   return false;
+      // }
 
       var parent = this._parent;
       if (parent && !parent._parent/* && parent.$body === this*/) {
@@ -2408,7 +2282,7 @@
        * @param {string} ns     - namespace, defalut '', can be 'svg', 'math'...
        */
       initialize: function initialize(shell, type, tag, ns) {
-        if (!shell.hasOwnProperty('_props')) {
+        if (!hasOwnProp.call(shell, '_props')) {
           defineProp(shell, '_props', {
             value: {}, writable: false, enumerable: false, configurable: true
           });
@@ -2576,6 +2450,7 @@
        * @param {string} data
        */
       initialize: function(text, data) {
+        // eslint-disable-next-line no-undef
         {
           if (text.constructor !== Text) {
             throw new TypeError('Text is final class and can not be extended');
@@ -2667,6 +2542,7 @@
 
     statics: {
       initialize: function initialize(element, ns, tag, props, scopes, template) {
+        // eslint-disable-next-line no-undef
         {
           if (element.constructor !== Element) {
             throw new TypeError('Element is final class and can not be extended');
@@ -2849,6 +2725,7 @@
 
     statics: {
       initialize: function initialize(fragment, props, scopes, template) {
+        // eslint-disable-next-line no-undef
         {
           if (fragment.constructor !== Fragment) {
             throw new TypeError('Fragment is final class and can not be extended');
@@ -2942,190 +2819,119 @@
     }
   });
 
-  // src/base/Evaluator.js
+  // src/core/bindings/Binding.js
 
-  /**
-   * @class
-   * @constructor
-   * @param {Function} func 
-   * @param {string} expr
-   */
-  function Evaluator(func, expr) {
-    this.func = func;    // function to be applied
-    this.expr = expr;
-  }
+  function Binding(scope, target, property, collect, reflect) {
+    this.sync = true;
+    this.scope = scope;
+    this.target = target;
+    this.property = property;
 
-  defineClass({
-    constructor: Evaluator,
-
-    /**
-     * @param {Array} scopes  - local varaibles
-     * @param {*} value       - value returned by the prevoius evluator/converter in data-binding expression.
-     */
-    execute: function(scopes, value) {
-      var args = scopes.slice(1);
-      if (arguments.length > 1) {
-        args.push(value);
-      }
+    if (typeof collect === 'function') {
+      this.invalidate = this.invalidate.bind(this);
+      this.exec = this.exec.bind(this);
+      this.collect = collect;
+      this.flag = 1;
+      this.exec();
       
-      { 
-        try {
-          return this.func.apply(scopes[0], args);
-        } catch (e) {
-          var constructor = scopes[0].constructor;
-          logger.warn('The expression `' + (this.expr || this.func.toString()) + 
-                      '` maybe illegal in the template of Component ' + (constructor.fullName || constructor.name));
-          throw e;
-        }
-      } 
-      return this.func.apply(scopes[0], args);
+      if (this.depsCount > 0) {
+        Binding.record(target, this);
+      }
+      // var deps = this.deps;
+      // var keys = Object.keys(deps);
+      // if (deps && keys.length) {
+      //   Binding.record(target, this);
+      //   if (keys.length > 1) {
+      //     this.sync = false;
+      //     scope.on('updating', this.exec);
+      //   }
+      // }
+
+      if (typeof reflect === 'function') {
+        this.reflect = reflect;
+        this.back = this.back.bind(this);
+        target.on('changed.' + property, this.back);
+      }
     }
-  });
-
-  // src/core/bindings/DataBinding.js
-
-  var MODES = { ASSIGN: -1, ONE_TIME: 0, ONE_WAY: 1, TWO_WAY: 2, ANY_WAY: 3 };
-
-  function applyConverters(converters, scopes, value) {
-    for (var i = 0; i < converters.length; ++i) {
-      value = converters[i].execute(scopes, value);
-    }
-    return value;
-  }
-
-  function isBindable(src, prop) {
-    var desc = Accessor.getAttrDesc(src, prop);
-    return desc && desc.bindable;
-  }
-
-  function DataBinding(pattern) {
-    this.mode = pattern.mode;
-    this.path = pattern.path;
-    this.paths = pattern.paths;
-    this.evaluator = pattern.evaluator;
-    this.converters = pattern.converters;
-    this.identifiers = pattern.identifiers;
   }
 
   defineClass({
-    constructor: DataBinding,
-    statics: {
-      MODES: MODES,
+    constructor: Binding,
 
-      // create: function(pattern) {
-      //   return new DataBinding(pattern);
+    statics: {
+      // assign: function assign(target, key, val, binding) {
+      //   if (binding.locked) {
+      //     return;
+      //   }
+      //   binding.locked = true;
+      //   if (target.set) {
+      //     target.set(key, val);
+      //   } else {
+      //     target[key] = val;
+      //   }
+      //   binding.locked = false;
       // },
 
-      compile: function(pattern, property, target, scopes) {
-        return (new DataBinding(pattern)).link(property, target, scopes);
+      record: function record(target, binding) {
+        var _bindings = target._bindings;
+
+        if (_bindings) {
+          _bindings.push(binding);
+        } else {
+          defineProp(target, '_bindings', {
+            value: [binding], writable: false, enumerable: false, configurable: true
+          });
+        }
+      },
+
+      remove: function remove(target, binding) {
+        var _bindings = target._bindings;
+
+        if (_bindings && _bindings.length) {
+          _bindings.splice(_bindings.lastIndexOf(binding), 1);
+        }
+      },
+
+      create: function(scope, target, property, collect, reflect) {
+        return new Binding(scope, target, property, collect, reflect);
       },
 
       destroy: function(binding) {
-        var target = binding.target, scopes = binding.scopes;
+        var target = binding.target, scope = binding.scope;
 
-        if (binding.mode === MODES.TWO_WAY)  {
-          if (isBindable(binding.target, binding.targetProp)) {
-            binding.target.off('changed.' + binding.targetProp, binding.back);
-          }
-        }
-
-        if (!binding.sync) {
-          scopes[0].off('updating', binding.exec);
-        }
-
-        Binding.remove(target, binding);
-
-        Dependency.clean(binding);
-      }
-    },
-
-    link: function(property, target, scopes) {
-      this.flag = 0;
-      this.sync = true;
-      this.scopes = scopes;
-      this.target = target;
-      this.targetProp = property;
-
-      if (this.mode === MODES.ASSIGN) {
-        this.target.set(this.targetProp, this.eval());
-        return;
-      }
-
-      this.exec = this.exec.bind(this);
-      this.invalidate = this.invalidate.bind(this);
-
-      if (this.mode === MODES.TWO_WAY) {
-        this.back = this.back.bind(this);
-        var path = this.path;//Path.parse(this.path);
-        var from = this.identifiers.indexOf(path[0]);
-        this.sourceProp = path[path.length - 1];
-        if (from >= 0) {
-          this.source = Path.search(path.slice(1, path.length - 1), scopes[from], true);
-        } else {
-          this.source = Path.search(path.slice(1, path.length - 1), scopes[0].constructor.resources, true);
+        if (typeof binding.reflect == 'function') {
+          target.off('changed.' + binding.property, binding.back);
         }
         
-        if (isBindable(this.target, this.targetProp)) {
-          this.target.on('changed.' + this.targetProp, this.back);
+        if (!binding.sync && typeof binding.collect === 'function') {
+          scope.off('updating', binding.exec);
         }
-      }
 
-      if (this.mode === MODES.ANY_WAY) {
-        this.sync = false;
-        this.scopes[0].on('updating', this.exec);
-        this.target.set(this.targetProp, this.eval());
-      } else {
-        this.sync = true;
-        this.flag = 1;
-        this.exec();
-        if (this.depsCount > 0) {
-          Binding.record(target, this);
-        }
+        Dependency.clean(binding);
+
+        Binding.remove(scope, binding);
       }
     },
 
-    eval: function(back) {
-      if (this.mode === MODES.TWO_WAY) {
-        if (back) {
-          return this.target[this.targetProp];
-        } else {
-          return this.source[this.sourceProp];
-        }
-      } 
-
-      var converters = this.converters;
-      if (converters && converters.length) {
-        return applyConverters(converters, this.scopes, this.evaluator.execute(this.scopes));
-      } else {
-        return this.evaluator.execute(this.scopes);
-      }
-    },
-
-    exec: function exec() {
-      if (this.mode === MODES.ANY_WAY) {
-        this.target.set(this.targetProp, this.eval());
-        return;
-      }
+    exec: function() {
       if (this.flag === 0) {
         return;
       }
 
       Dependency.begin(this);
-      var value = this.eval();
+      var value = this.collect.call(this.scope);
       Dependency.end();
-      this.target.set(this.targetProp, value);
-
+      this.target.set(this.property, value);
       this.flag = 0;
-      if (this.mode === MODES.ONE_TIME) {
-        DataBinding.destroy(this);
-      } else if (this.depsCount > 1 && this.sync) {
-        this.scopes[0].on('updating', this.exec);
+
+      if (this.depsCount > 1 && this.sync) {
+        this.scope.on('updating', this.exec);
         this.sync = false;
       }
     },
 
-    back: function back() {
-      this.source.set(this.sourceProp, this.eval(true));
+    back: function() {
+      this.reflect.call(this.scope, this.target[this.property]);
     },
 
     invalidate: function() {
@@ -3133,7 +2939,7 @@
       if (this.sync) {
         this.exec();
       } else {
-        this.scopes[0].invalidate(FLAG_CHANGED);
+        this.scope.invalidate(FLAG_CHANGED);
       }
     }
   });
@@ -3195,6 +3001,7 @@
         var attributes = constructor.attributes;
         var _template = constructor.__extag_template__;
 
+        // eslint-disable-next-line no-undef
         {
           if (!_template) {
             (function() {
@@ -3219,7 +3026,7 @@
         }
 
             // TODO: check attributes
-          // 1. initialize attribute descriptors once and only once.
+        // 1. initialize attribute descriptors once and only once.
         // if (!prototype.hasOwnProperty('__extag_descriptors__')) {
           Accessor.applyAttributeDescriptors(prototype, attributes, true); //
         // }
@@ -3352,6 +3159,7 @@
         return;
       }
       // validation in development 
+      // eslint-disable-next-line no-undef
       {
         Validator.validate(this, key, val, true);
       }
@@ -3535,205 +3343,183 @@
      * @param {Shell} part
      */
     addNamedPart: function (name, part) {
-      // if (name in this) {
-      //   throw new Error(this.toString() + ' has `' + name + '` already!');
-      // }
       this[name] = part;
     }
   });
 
-  // src/core/template/parsers/EvaluatorParser.js
+  // src/core/shells/Block.js
 
-  var DIVISION_REGEXP = /[\w).+\-_$\]]/;
 
-  var JS_KEYWORDS = 'abstract arguments boolean break byte case catch char class const continue debugger default delete do double else enum eval export extends false final finally float for function goto if implements import in instanceof int interface let long native new null package private protected public return short static super switch synchronized this throw throws transient true try typeof undefined var void volatile while with yield Array Date Infinity Math NaN Number Object String Boolean';
-  var JS_KEYWORD_MAP = {};
-  (function() {
-    var keywords = JS_KEYWORDS.split(/\s+/);
-    for (var i = 0, n = keywords.length; i < n; ++i) {
-      JS_KEYWORD_MAP[keywords[i]] = true;
-    }
-  })();
-
-  // function skipWhiteSpace(expr, index) {
-  //   var cc, length = expr.length;
-  //   while (index < length) {
-  //     cc = expr.charCodeAt(index);
-  //     //    \             \f\n\r\t\v
-  //     if (!(cc === 32 || (cc >=9 && cc <= 13))) {
-  //       break;
-  //     }
-  //     ++index;
-  //   }
-  //   return index;
-  // }
-
-  function notPropertyName(expr, index) {
-    var cc, length = expr.length;
-    while (index < length) {
-      cc = expr.charCodeAt(index);
-      //    \             \f\n\r\t\v
-      if (!(cc === 32 || (cc >=9 && cc <= 13))) {
-        return cc !== 44 && cc !== 123; // not ',' and '{'
-      }
-      --index;
-    }
+  function Block(props, scopes, template) {
+    Block.initialize(this, props, scopes, template);
   }
 
-  function skipToPathEnding(expr, index) {
-    var cc, dot, space, length = expr.length;
-    while (index < length) {
-      cc = expr.charCodeAt(index);
-      if (cc === 32 || (cc >=9 && cc <= 13)) {
-        space = true;
-        ++index;
-        continue;
-      }
-      if (cc === 46) {
-        if (dot) {
-          throwError("Unexpected token '.'.", {
-            code: 1001, 
-            expr: expr
-          });
+  defineClass({
+    constructor: Block, extends: Component,
+
+    statics: {
+      initialize: function initialize(block, props, scopes, template) {
+        Component.initialize(block, props);
+
+        block.mode = 0;
+
+        if (!template) {
+          return;
         }
-        space = false;
-        dot = true;
-      } else {
-        if (!isLegalVarStartCharCode(cc) && !(cc >= 48 && cc <= 57)) {
-          if (dot) {
-            throwError("Unexpected token '" + expr[index] + "'.", {
-              code: 1001, 
-              expr: expr
-            });
-          }
-          break;
-        } else {
-          if (space && !dot) {
-            throwError("Unexpected token '" + expr[index] + "'.", {
-              code: 1001, 
-              expr: expr
-            });
+
+        block.scopes = scopes;
+        block.template = assign({}, template);
+        delete block.template.xkey;
+        delete block.template.xfor;
+        delete block.template.xif;
+        
+        block.set('condition', true);
+
+        // var ctrls = template.ctrls || {};
+        var expression;
+
+        if (template.xif) {
+          block.mode = 1;
+          expression = template.xif;
+          expression.compile('condition', block, scopes);
+        }
+
+        if (template.xfor) {
+          block.mode = 2;
+          expression = template.xfor[1];
+          expression.compile('iterable', block, scopes);
+          if (template.xkey) {
+            block.keyEval = template.xkey;//.evaluator;
           }
         }
-        space = false;
-        dot = false;
-      }
-      ++index;
-    }
-    return index;
-  }
 
-  function isLegalVarStartCharCode(cc) {
-    //       a-z                       A-Z                       _            $
-    return  (cc >= 97 && cc <= 122) || (cc >= 65 && cc <= 90) || cc === 95 || cc === 36;
-  }
+        block.on('updating', block.onUpdating.bind(block));
+      },
+      template: '<x:frag></x:frag>'
+    },
 
-  function getIdentifierIndices(expr) {
-    var indices = [];
-    var b0, b1, b2, cb, cc;
-    var n = expr.length, i = 0, j;
-    while(i < n) {
-      cb = cc;
-      cc = expr.charCodeAt(i);
-      switch (cc) {
-        case 39: // 39: '
-          if (!b0) { b0 = true; } 
-          else if (cb !== 92) { b0 = false; }// 92: \
-          break;
-        case 34: // 34: "
-          if (!b1) { b1 = true; } 
-          else if (cb !== 92) { b1 = false; } // 92: \
-          break;
-        case 47: // 47: /, maybe regexp
-          if (!b2) {
-            var cp;
-            for (; j >= 0; --j) {
-              cp = expr.charCodeAt(j);
-              if (!(cp === 32 || (cp >=9 && cp <= 13))) {
-                break;
-              }
-            }
-            if (!cp || !DIVISION_REGEXP.test(cp)) {
-              b2 = true;
-            }
-          } else if (cb !== 92) { b2 = false; }
-          break;
-        // TODO: ``
-        default:
-          if (!b0 && !b1 && !b2 && cb !== 46 && isLegalVarStartCharCode(cc)) {
-            j = skipToPathEnding(expr, i + 1); 
-            cc = expr.charCodeAt(j);
-            if (cc !== 58) { // 58: :, not a property name of object
-              indices.push(i, j);
-            } else if (notPropertyName(expr, i - 1)) {
-              indices.push(i, j);
-            }
-            i = j;
-          }
-          break;
+    onUpdating: function onUpdating() {
+      if (!this.mode) {
+        return;
       }
-      ++i;
-    }
+
+      var condition = this.get('condition');
+      var template = this.template;
+      var scopes = this.scopes;
+      var fragment = [];
+
+      if (!condition) {
+        this.setChildren(fragment);
+        return;
+      }
+
+      var HTMXEngine = config.HTMXEngine;
+
+      if (this.mode === 1) {
+        content = HTMXEngine.makeContent(template, scopes);
+        if (content) {
+          fragment.push(content);
+        }
+        this.setChildren(fragment);
+        return;
+      }
+
+      var indices = {}, index, content, item, key, n, i;
+      var iterable = this.get('iterable') || [];
+      var children = this._children || [];
+      var keyEval = this.keyEval;
+      var newScopes;
     
-    return indices;
+      for (i = 0, n = children.length; i < n; ++i) {
+        key = children[i].__key__;
+        if (key) {
+          indices[key] = i;
+        }
+      }
+
+      for (i = 0, n = iterable.length; i < n; ++i) {
+        key = null;
+        content = null;
+        item = iterable[i];
+        newScopes = scopes.concat([item]);
+
+        if (keyEval) {
+          key = keyEval.execute(newScopes);
+          index = indices[key];
+          if (index != null) {
+            content = children[index];
+
+          }
+        }
+    
+        if (!content) {
+          content = HTMXEngine.makeContent(template, newScopes);
+          content.__key__ = key;
+        }
+    
+        fragment.push(content);
+      }
+
+      this.setChildren(fragment);
+    }
+  });
+
+  // src/base/Evaluator.js
+
+  /**
+   * @class
+   * @constructor
+   * @param {Function} func 
+   * @param {string} expr
+   */
+  function Evaluator(func, expr) {
+    this.func = func;    // function to be applied
+    this.expr = expr;
   }
 
-  var EvaluatorParser = {
+  defineClass({
+    constructor: Evaluator,
+
     /**
-     * @param {string} expr - e.g. "a + b" in @{a + b} or value@="a + b".
-     * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
-     * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
-     * @returns {PropEvaluator|FuncEvaluator}
+     * @param {Array} scopes  - local varaibles
+     * @param {*} value       - value returned by the prevoius evluator/converter in data-binding expression.
      */
-    parse: function parse(expr, prototype, identifiers) {
-      var args = identifiers.slice(1);
-      var expanded = 0, piece, path;
-      var lines = [], i, j;
-      // if (PROP_EXPR_REGEXP.test(expr)) {
-      //   evaluator = new PropEvaluator(expr.trim());
-      //   if (prototype && identifiers) {
-      //     evaluator.connect(prototype, identifiers);
-      //   }
-      //   return evaluator;
-      // }
-
-      var indices = getIdentifierIndices(expr);
-
-      var resources = prototype.constructor.resources || EMPTY_OBJECT;
-
-      for (j = 0; j < indices.length; j += 2) {
-        if (indices[j+1] < 0) { continue; }
-        piece = expr.slice(indices[j] + expanded, indices[j+1] + expanded);
-        path = Path.parse(piece.replace(WHITE_SPACE_REGEXP, ''));
-        if (JS_KEYWORD_MAP.hasOwnProperty(path[0])) {
-          continue;
-        }
-        i = identifiers.indexOf(path[0]);
-        if (i >= 0) ; else if (path[0] in resources) {
-          lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
-        } else {
-          expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
-          expanded += 5;
-        }
+    execute: function(scopes, value) {
+      var args = scopes.slice(1);
+      if (arguments.length > 1) {
+        args.push(value);
       }
-
-      lines.push('return ' + expr);
-      args.push(lines.join('\n'));
-
-      try {
-        var func = Function.apply(null, args);
-        return new Evaluator(func, expr);
-      } catch (e) {
-        throwError(e, {
-          code: 1001,
-          expr: arguments[0],
-          desc: 'Illegal expression `' + arguments[0] + '`.'
-        });
+      
+      // eslint-disable-next-line no-undef
+      { 
+        try {
+          return this.func.apply(scopes[0], args);
+        } catch (e) {
+          var constructor = scopes[0].constructor;
+          logger.warn('The expression `' + (this.expr || this.func.toString()) + 
+                      '` maybe illegal in the template of Component ' + (constructor.fullName || constructor.name));
+          throw e;
+        }
       }
     }
-  };
+  });
 
   // src/template/Expression.js
+
+  // function parseEvaluator(expr, prototype, identifiers) {
+  //   var type = typeof expr;
+  //   if (type === 'string') {
+  //     // if (PROP_EXPR_REGEXP.test(expr)) {
+  //     //   return new PropEvaluator(expr.trim());
+  //     // }
+  //     return EvaluatorParser.parse(expr, prototype, identifiers);
+  //   } else if (type === 'function') {
+  //     // var evaluator = new FuncEvaluator(expr);
+  //     // evaluator.connect(prototype, identifiers);
+  //     // return evaluator;
+  //     return new Evaluator(expr, null);
+  //   }
+  // }
 
   /**
    * Expression parsed from 'checked@="selected"' and so on, in the component pattern.
@@ -3777,6 +3563,7 @@
       //   }
       // }
     },
+    // eslint-disable-next-line no-unused-vars
     connect: function(prototype, identifiers) {
       if (!this.unparsed) {
         return;
@@ -3784,16 +3571,14 @@
       var pattern = this.pattern;
       var evaluator = pattern.evaluator;
       var converters = pattern.converters;
-      if (evaluator) {
-        // evaluator.connect(prototype, identifiers);
-        // pattern.evaluator = parseEvaluator(evaluator, prototype, identifiers);
+      if (typeof evaluator === 'function') {
         pattern.evaluator = new Evaluator(evaluator);
       } 
       if (converters) {
         for (var i = 0; i < converters.length; ++i) {
-          // converters[i].connect(prototype, identifiers);
-          // pattern.converters[i] = parseEvaluator(converters[i], prototype, identifiers);
-          pattern.converters[i] = new Evaluator(converters[i]);
+          if (typeof converters[i] === 'function') {
+            pattern.converters[i] = new Evaluator(converters[i]);
+          }
         }
       }
       this.unparsed = false;
@@ -3807,185 +3592,6 @@
      */
     compile: function(property, target, scopes) {
       return this.binding.compile(this.pattern, property, target, scopes);
-    }
-  });
-
-  // src/core/shells/Block.js
-
-
-  function Block(props, scopes, template) {
-    Block.initialize(this, props, scopes, template);
-  }
-
-  defineClass({
-    constructor: Block, extends: Component,
-
-    statics: {
-      initialize: function initialize(block, props, scopes, template) {
-        Component.initialize(block, props);
-
-        block.mode = 0;
-
-        if (!template) {
-          return;
-        }
-
-        // block.template = template;
-        block.scopes = scopes;
-        block.template = assign({}, template);
-        delete block.template.xkey;
-        delete block.template.xfor;
-        delete block.template.xif;
-        
-        block.set('condition', true);
-
-        // var ctrls = template.ctrls || {};
-        var expression;
-
-        if (template.xif) {
-          block.mode = 1;
-          expression = template.xif;
-          expression.compile('condition', block, scopes);
-          // Expression.compile({condition: expressions.xIf}, block, scope, locals);
-        }
-
-        if (template.xfor) {
-          block.mode = 2;
-          expression = template.xfor[1];
-          // var path = expression.template.evaluator.paths[0]; // $.items in x-for="item of $.items | filter"
-    
-          // if (Array.isArray(path)) { // TODO:
-          //   var local = locals[path[0]];
-          //   var prop = path[path.length - 1];
-          //   var src = path.length < 2 ? local : RES.search(path.slice(1, path.length - 1), local, true);
-      
-          //   if (src && src.on && src.emit) {
-          //     var dst = src[prop];
-      
-          //     var handler = function() {
-          //       src.emit('changed.' + prop);
-          //     }
-      
-          //     if (dst && dst instanceof List) {
-          //       dst.on('changed', handler);
-          //     }
-      
-          //     src.on('changed.' + prop, function(event) {
-          //       if (dst === src[prop]) { return; }
-          //       if (dst && dst instanceof List) {
-          //         dst.off('changed', handler);
-          //       }
-          //       dst = src[prop];
-          //       if (dst && dst instanceof List) {
-          //         dst.on('changed', handler);
-          //       }
-          //     })
-          //   }
-          // }
-    
-          // Expression.compile({iterable: expression}, block, scope, locals);
-          expression.compile('iterable', block, scopes);
-    
-          if (template.xkey) {
-            block.keyEval = template.xkey;//.evaluator;
-          }
-        }
-
-        block.on('updating', block.onUpdating.bind(block));
-      },
-      template: '<x:frag></x:frag>'
-    },
-
-    onUpdating: function onUpdating() {
-      if (!this.mode) {
-        return;
-      }
-
-      var condition = this.get('condition');
-      var template = this.template;
-      var scopes = this.scopes;
-      var fragment = [];
-      // var children;
-
-      if (!condition) {
-        this.setChildren(fragment);
-        return;
-      }
-
-      var HTMXEngine = config.HTMXEngine;
-
-      if (this.mode === 1) {
-        // if (template.tag === 'x:block') {
-        //   children = template.children;
-        // } else {
-        //   children = [template];
-        // }
-        // for (var i = 0, n = children.length; i < n; ++i) {
-        //   content = HTMXEngine.makeContent(children[i], scopes);
-        //   if (content) {
-        //     fragment.push(content);
-        //   }
-        // }
-        content = HTMXEngine.makeContent(template, scopes);
-        if (content) {
-          fragment.push(content);
-        }
-        this.setChildren(fragment);
-        return;
-      }
-
-      var indices = {}, index, content, item, key, n, i;
-      var iterable = this.get('iterable') || [];
-      var children = this._children || [];
-      var keyEval = this.keyEval;
-      var newScopes;
-    
-      // for (i = 0, n = children.size(); i < n; ++i) {
-      //   key = children.get(i).__key__;
-      for (i = 0, n = children.length; i < n; ++i) {
-        key = children[i].__key__;
-        if (key) {
-          indices[key] = i;
-        }
-      }
-
-      for (i = 0, n = iterable.length; i < n; ++i) {
-        key = null;
-        content = null;
-        item = iterable[i];
-        newScopes = scopes.concat([item]);
-        // newScopes = scopes.concat([i, item]);
-    
-        if (keyEval) {
-          key = keyEval.execute(newScopes);
-          index = indices[key];
-          if (index != null) {
-            content = children[index];
-
-          }
-        }
-    
-        if (!content) {
-          // if (template.tag !== 'x:block') {
-          //   content = HTMXEngine.makeContent(template, newScopes);
-          // } else if (template.children && template.children.length === 1) {
-          //   content = HTMXEngine.makeContent(template.children[0], newScopes);
-          // } else {
-          //   // content = new Fragment(); HTMXEngine.start(template, content, newScopes);
-          // }
-          content = HTMXEngine.makeContent(template, newScopes);
-          content.__key__ = key;
-        }
-    
-        fragment.push(content);
-      }
-
-      // if (template.xName) {
-      //   // scope[template.xName] = fragment;
-      //   scope.addNamedPart(template.xName, fragment);
-      // }
-
-      this.setChildren(fragment);
     }
   });
 
@@ -4008,7 +3614,7 @@
 
   function toClasses(classList) {
     if (typeof classList === 'string') {
-      classList = classList.trim().split(WHITE_SPACES_REGEXG);
+      classList = classList.trim().split(WHITE_SPACES_REGEXP);
     }
     if (Array.isArray(classList)) {
       var i, classes = {};
@@ -4137,6 +3743,7 @@
       } else if (!props && template.props) {
         props = template.props;
       }
+      // eslint-disable-next-line no-undef
       {
         Validator.validate0(target, props);
       }
@@ -4158,6 +3765,7 @@
         driveContents(target, template.children,scopes);
       }
     } else if (props) {
+      // eslint-disable-next-line no-undef
       {
         Validator.validate0(target, props);
       }
@@ -4240,7 +3848,7 @@
       var __style = shell.__style;
       if (!__style) {
         __style = new Cache(shell);
-        defineProp(target, '__style', {
+        defineProp(shell, '__style', {
           value: __style, 
           configurable: true
         });
@@ -4261,7 +3869,7 @@
       var __classes = shell.__classes;
       if (!__classes) {
         __classes = new Cache(shell);
-        defineProp(target, '__classes', {
+        defineProp(shell, '__classes', {
           value: __classes, 
           configurable: true
         });
@@ -4358,6 +3966,162 @@
     }
   });
 
+  // src/core/bindings/DataBinding.js
+
+  var MODES = { ASSIGN: -1, ONE_TIME: 0, ONE_WAY: 1, TWO_WAY: 2, ANY_WAY: 3 };
+
+  function applyConverters(converters, scopes, value) {
+    for (var i = 0; i < converters.length; ++i) {
+      value = converters[i].execute(scopes, value);
+    }
+    return value;
+  }
+
+  function isBindable(src, prop) {
+    var desc = Accessor.getAttrDesc(src, prop);
+    return desc && desc.bindable;
+  }
+
+  function DataBinding(pattern) {
+    this.mode = pattern.mode;
+    this.path = pattern.path;
+    this.paths = pattern.paths;
+    this.evaluator = pattern.evaluator;
+    this.converters = pattern.converters;
+    this.identifiers = pattern.identifiers;
+  }
+
+  defineClass({
+    constructor: DataBinding,
+    statics: {
+      MODES: MODES,
+
+      // create: function(pattern) {
+      //   return new DataBinding(pattern);
+      // },
+
+      compile: function(pattern, property, target, scopes) {
+        return (new DataBinding(pattern)).link(property, target, scopes);
+      },
+
+      destroy: function(binding) {
+        var target = binding.target, scopes = binding.scopes;
+
+        if (binding.mode === MODES.TWO_WAY)  {
+          if (isBindable(binding.target, binding.targetProp)) {
+            binding.target.off('changed.' + binding.targetProp, binding.back);
+          }
+        }
+
+        if (!binding.sync) {
+          scopes[0].off('updating', binding.exec);
+        }
+
+        Binding.remove(target, binding);
+
+        Dependency.clean(binding);
+      }
+    },
+
+    link: function(property, target, scopes) {
+      this.flag = 0;
+      this.sync = true;
+      this.scopes = scopes;
+      this.target = target;
+      this.targetProp = property;
+
+      if (this.mode === MODES.ASSIGN) {
+        this.target.set(this.targetProp, this.eval());
+        return;
+      }
+
+      this.exec = this.exec.bind(this);
+      this.invalidate = this.invalidate.bind(this);
+
+      if (this.mode === MODES.TWO_WAY) {
+        this.back = this.back.bind(this);
+        var path = this.path;//Path.parse(this.path);
+        var from = this.identifiers.indexOf(path[0]);
+        this.sourceProp = path[path.length - 1];
+        if (from >= 0) {
+          this.source = Path.search(path.slice(1, path.length - 1), scopes[from], true);
+        } else {
+          this.source = Path.search(path.slice(1, path.length - 1), scopes[0].constructor.resources, true);
+        }
+        
+        if (isBindable(this.target, this.targetProp)) {
+          this.target.on('changed.' + this.targetProp, this.back);
+        }
+      }
+
+      if (this.mode === MODES.ANY_WAY) {
+        this.sync = false;
+        this.scopes[0].on('updating', this.exec);
+        this.target.set(this.targetProp, this.eval());
+      } else {
+        this.sync = true;
+        this.flag = 1;
+        this.exec();
+        if (this.depsCount > 0) {
+          Binding.record(target, this);
+        }
+      }
+    },
+
+    eval: function(back) {
+      if (this.mode === MODES.TWO_WAY) {
+        if (back) {
+          return this.target[this.targetProp];
+        } else {
+          return this.source[this.sourceProp];
+        }
+      } 
+
+      var converters = this.converters;
+      if (converters && converters.length) {
+        return applyConverters(converters, this.scopes, this.evaluator.execute(this.scopes));
+      } else {
+        return this.evaluator.execute(this.scopes);
+      }
+    },
+
+    exec: function exec() {
+      if (this.mode === MODES.ANY_WAY) {
+        this.target.set(this.targetProp, this.eval());
+        return;
+      }
+      if (this.flag === 0) {
+        return;
+      }
+
+      Dependency.begin(this);
+      var value = this.eval();
+      Dependency.end();
+      this.target.set(this.targetProp, value);
+
+      this.flag = 0;
+      if (this.mode === MODES.ONE_TIME) {
+        DataBinding.destroy(this);
+      } else if (this.depsCount > 1 && this.sync) {
+        this.scopes[0].on('updating', this.exec);
+        this.sync = false;
+      }
+    },
+
+    back: function back() {
+      this.source.set(this.sourceProp, this.eval(true));
+    },
+
+    invalidate: function() {
+      this.flag = 1;
+      if (this.sync) {
+        this.exec();
+      } else {
+        this.scopes[0].invalidate(FLAG_CHANGED);
+      }
+    }
+  });
+
   // src/core/bindings/EventBinding.js
 
   function EventBinding(pattern) {
@@ -4385,6 +4149,7 @@
 
         
         if (!func) {
+          // eslint-disable-next-line no-undef
           {
             logger.warn('No such handler method named ' + handler + ' in ' + scopes[0], scopes[0]);
           }
@@ -4422,12 +4187,8 @@
         }
       } else {
         if (!modifiers || !modifiers.length) {
-          target.on(type, function(event) {
-            // if (event) {
-            //   evaluator.execute(scopes.concat([event]));
-            // } else {
-              evaluator.execute(scopes);
-            // }
+          target.on(type, function() {
+            evaluator.execute(scopes);
           });
         } else {
           wrapper = function(event) {
@@ -4586,10 +4347,13 @@
 
   /**
    * Check if the node matches the child element or child component.
-   * @param {Shell} oldChild  - child element or component
+   * @param {Shell} oldChild  - text, element or component
    * @param {Object} newChild - node
    */
   function matchesChild(oldChild, newChild) {
+    if (!oldChild.tag && !newChild.__extag_node__) {
+      return true;
+    }
     return oldChild.xkey === newChild.xkey && 
             (newChild.type ? oldChild.constructor === newChild.type : 
               (oldChild.tag === newChild.tag && oldChild.ns === newChild.ns));
@@ -4643,6 +4407,7 @@
     return child;
   }
 
+  // eslint-disable-next-line no-unused-vars
   function updatePropsAndEvents(node, target, scope) {
     var name, desc;
     var newProps = node.props;
@@ -4883,22 +4648,21 @@
       if (typeof type === 'function') {
         ctor = type;
       } else if (typeof type === 'string') {
-        if (/^url\(.*\)$/.test(type)) {
-          // TODO: check `require`
-          require([type], (function(ctor) {
-            // this.attrs.set('x:type', ctor);
-            this.set('xtype', ctor);
-          }).bind(this));
-          return;
-        } else {
-          var resources = scope.constructor.resources;
+        // if (/^url\(.*\)$/.test(type)) {
+        //   // TODO: check `require`
+        //   require([type], (function(ctor) {
+        //     this.set('xtype', ctor);
+        //   }).bind(this));
+        //   return;
+        // } else {
+          var resources = scopes[0].constructor.resources;
           ctor = resources && resources[type];
-        }
+        // }
       } else if (typeof type === 'object' && typeof Promise === 'function' && type instanceof Promise) {
         type.then((function(ctor) {
-          // this.attrs.set('x:type', ctor);
           this.set('xtype', ctor);
         }).bind(this));
+        return;
       }
 
       if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
@@ -4919,7 +4683,7 @@
   // import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 
   function parseJsxNode(node, prototype) {
-    var props = node.props, value, key;
+    var props = node.props, value, key, ctor;
     if (node.xif) {
       node.xif.connect(prototype, node.identifiers);
     }
@@ -4941,8 +4705,9 @@
       }
     }
     if (node.type && typeof node.type === 'string') {
-      var ctor = Path.search(node.type, prototype.constructor.resources);
+      ctor = Path.search(node.type, prototype.constructor.resources);
       if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
+        // eslint-disable-next-line no-undef
         {
           logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in static resources.');
         }
@@ -4952,7 +4717,7 @@
       node.type = ctor;
     }
     if (node.type == null && CAPITAL_REGEXP.test(node.tag)) {
-      var ctor = Path.search(node.tag, prototype.constructor.resources);
+      ctor = Path.search(node.tag, prototype.constructor.resources);
       if (typeof ctor === 'function' && ctor.__extag_component_class__) {
         node.type = ctor;
       }
@@ -5000,6 +4765,9 @@
 
   function parseJsxChildren(node, prototype) {
     var children = node.children;
+    if (!children || !children.length) {
+      return;
+    }
     var i, j = -1, child;
     var hasExpr;
     for (i = children.length - 1; i >= 0; --i) {
@@ -5130,7 +4898,7 @@
       var props = node.props = {};
 
       for (var key in attrs) {
-        if (attrs.hasOwnProperty(key) && !RESERVED_PARAMS.hasOwnProperty(key)) {
+        if (hasOwnProp.call(attrs, key) && !(key in RESERVED_PARAMS)) {
           props[key] = attrs[key];
         }
       }
@@ -5273,6 +5041,199 @@
   };
 
   config.JSXParser = JSXParser;
+
+  // src/core/template/parsers/EvaluatorParser.js
+
+  var DIVISION_REGEXP = /[\w).+\-_$\]]/;
+
+  var JS_KEYWORDS = 'abstract arguments boolean break byte case catch char class const continue debugger default delete do double else enum eval export extends false final finally float for function goto if implements import in instanceof int interface let long native new null package private protected public return short static super switch synchronized this throw throws transient true try typeof undefined var void volatile while with yield Array Date Infinity Math NaN Number Object String Boolean';
+  var JS_KEYWORD_MAP = {};
+  (function() {
+    var keywords = JS_KEYWORDS.split(/\s+/);
+    for (var i = 0, n = keywords.length; i < n; ++i) {
+      JS_KEYWORD_MAP[keywords[i]] = true;
+    }
+  })();
+
+  // function skipWhiteSpace(expr, index) {
+  //   var cc, length = expr.length;
+  //   while (index < length) {
+  //     cc = expr.charCodeAt(index);
+  //     //    \             \f\n\r\t\v
+  //     if (!(cc === 32 || (cc >=9 && cc <= 13))) {
+  //       break;
+  //     }
+  //     ++index;
+  //   }
+  //   return index;
+  // }
+
+  function notPropertyName(expr, index) {
+    var cc, length = expr.length;
+    while (index < length) {
+      cc = expr.charCodeAt(index);
+      //    \             \f\n\r\t\v
+      if (!(cc === 32 || (cc >=9 && cc <= 13))) {
+        return cc !== 44 && cc !== 123; // not ',' and '{'
+      }
+      --index;
+    }
+  }
+
+  function skipToPathEnding(expr, index) {
+    var cc, dot, space, length = expr.length;
+    while (index < length) {
+      cc = expr.charCodeAt(index);
+      if (cc === 32 || (cc >=9 && cc <= 13)) {
+        space = true;
+        ++index;
+        continue;
+      }
+      if (cc === 46) {
+        if (dot) {
+          throwError("Unexpected token '.'.", {
+            code: 1001, 
+            expr: expr
+          });
+        }
+        space = false;
+        dot = true;
+      } else {
+        if (!isLegalVarStartCharCode(cc) && !(cc >= 48 && cc <= 57)) {
+          if (dot) {
+            throwError("Unexpected token '" + expr[index] + "'.", {
+              code: 1001, 
+              expr: expr
+            });
+          }
+          break;
+        } else {
+          if (space && !dot) {
+            throwError("Unexpected token '" + expr[index] + "'.", {
+              code: 1001, 
+              expr: expr
+            });
+          }
+        }
+        space = false;
+        dot = false;
+      }
+      ++index;
+    }
+    return index;
+  }
+
+  function isLegalVarStartCharCode(cc) {
+    //       a-z                       A-Z                       _            $
+    return  (cc >= 97 && cc <= 122) || (cc >= 65 && cc <= 90) || cc === 95 || cc === 36;
+  }
+
+  function getIdentifierIndices(expr) {
+    var indices = [];
+    var b0, b1, b2, cb, cc;
+    var n = expr.length, i = 0, j;
+    while(i < n) {
+      cb = cc;
+      cc = expr.charCodeAt(i);
+      switch (cc) {
+        case 39: // 39: '
+          if (!b0) { b0 = true; } 
+          else if (cb !== 92) { b0 = false; }// 92: \
+          break;
+        case 34: // 34: "
+          if (!b1) { b1 = true; } 
+          else if (cb !== 92) { b1 = false; } // 92: \
+          break;
+        case 47: // 47: /, maybe regexp
+          if (!b2) {
+            var cp;
+            for (; j >= 0; --j) {
+              cp = expr.charCodeAt(j);
+              if (!(cp === 32 || (cp >=9 && cp <= 13))) {
+                break;
+              }
+            }
+            if (!cp || !DIVISION_REGEXP.test(cp)) {
+              b2 = true;
+            }
+          } else if (cb !== 92) { b2 = false; }
+          break;
+        // TODO: ``
+        default:
+          if (!b0 && !b1 && !b2 && cb !== 46 && isLegalVarStartCharCode(cc)) {
+            j = skipToPathEnding(expr, i + 1); 
+            cc = expr.charCodeAt(j);
+            if (cc !== 58) { // 58: :, not a property name of object
+              indices.push(i, j);
+            } else if (notPropertyName(expr, i - 1)) {
+              indices.push(i, j);
+            }
+            i = j;
+          }
+          break;
+      }
+      ++i;
+    }
+    
+    return indices;
+  }
+
+  var EvaluatorParser = {
+    /**
+     * @param {string} expr - e.g. "a + b" in @{a + b} or value@="a + b".
+     * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
+     * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
+     * @returns {PropEvaluator|FuncEvaluator}
+     */
+    parse: function parse(expr, prototype, identifiers) {
+      var args = identifiers.slice(1);
+      var expanded = 0, piece, path;
+      var lines = [], i, j;
+      // if (PROP_EXPR_REGEXP.test(expr)) {
+      //   evaluator = new PropEvaluator(expr.trim());
+      //   if (prototype && identifiers) {
+      //     evaluator.connect(prototype, identifiers);
+      //   }
+      //   return evaluator;
+      // }
+
+      var indices = getIdentifierIndices(expr);
+
+      var resources = prototype.constructor.resources || EMPTY_OBJECT;
+
+      for (j = 0; j < indices.length; j += 2) {
+        if (indices[j+1] < 0) { continue; }
+        piece = expr.slice(indices[j] + expanded, indices[j+1] + expanded);
+        path = Path.parse(piece.replace(WHITE_SPACE_REGEXP, ''));
+        if (hasOwnProp.call(JS_KEYWORD_MAP, path[0])) {
+          continue;
+        }
+        i = identifiers.indexOf(path[0]);
+        if (i < 0) {
+          if (path[0] in resources) {
+            lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
+          } else {
+            expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
+            expanded += 5;
+          }
+        } 
+      }
+
+      lines.push('return ' + expr);
+      args.push(lines.join('\n'));
+
+      try {
+        var func = Function.apply(null, args);
+        return new Evaluator(func, expr);
+      } catch (e) {
+        throwError(e, {
+          code: 1001,
+          expr: arguments[0],
+          desc: 'Illegal expression `' + arguments[0] + '`.'
+        });
+      }
+    }
+  };
 
   // src/core/template/parsers/PrimaryLiteralParser.js
 
@@ -5469,7 +5430,7 @@
   // src/core/template/parsers/ClassStyleParser.js
 
   var STYLE_DELIMITER = /;/g;
-  var CSS_NAME_REGEXP = /^[a-z0-9\-\_]+$/i;
+  var CSS_NAME_REGEXP = /^[a-z0-9\-_]+$/i;
   // var SINGLE_BINDING_REGEXP = /^@\{[^@]*\}$/;
   var SINGLE_BINDING_REGEXP = new RegExp(
     '^' + BINDING_OPERATORS.DATA +'\\' + BINDING_BRACKETS[0] + '[^' + BINDING_OPERATORS.DATA + ']*\\' + BINDING_BRACKETS[1] + '$'
@@ -5487,7 +5448,7 @@
     parse: function parse(expr, prototype, identifiers, viewEngine, camelCase) {
       var group = {};
       var pieces = expr.split(STYLE_DELIMITER); 
-      var result, piece, expr, name, names, n, i, j, k;
+      var result, piece, name, names, n, i, j, k;
 
       for (i = 0, n = pieces.length; i < n; ++i) {
         piece = pieces[i].trim();
@@ -5531,6 +5492,7 @@
           }
           result = FragmentBindingParser.parse(expr, prototype, identifiers);
         } catch (e) {
+          // eslint-disable-next-line no-undef
           {
             if (e.code === 1001) {
               e.expr = BINDING_FORMAT.replace('0', e.expr);
@@ -5596,32 +5558,32 @@
 
   // src/core/template/parsers/HTMXParser.js
 
-  var FOR_LOOP_REGEXP = /^([\_\$\w]+)\s+of\s+(.+)$/;
+  var FOR_LOOP_REGEXP = /^([_$\w]+)\s+of\s+(.+)$/;
   var LETTER_REGEXP = /[a-zA-Z]/;
-  var TAGNAME_STOP = /[\s\/>]/;
+  var TAGNAME_STOP = /[\s/>]/;
 
   var viewEngine = null;
 
   var SELF_CLOSING_TAGS = {
     '!': true,
-  	br: true,
-  	hr: true,
-  	area: true,
-  	base: true,
-  	img: true,
-  	input: true,
-  	link: true,
-  	meta: true,
-  	basefont: true,
-  	param: true,
-  	col: true,
-  	frame: true,
-  	embed: true,
-  	keygen: true,
-  	source: true,
-  	command: true,
-  	track: true,
-  	wbr: true
+    br: true,
+    hr: true,
+    area: true,
+    base: true,
+    img: true,
+    input: true,
+    link: true,
+    meta: true,
+    basefont: true,
+    param: true,
+    col: true,
+    frame: true,
+    embed: true,
+    keygen: true,
+    source: true,
+    command: true,
+    track: true,
+    wbr: true
   };
 
   var DIRECTIVES = {
@@ -5649,7 +5611,7 @@
   }
 
   function isSelfClosingTag(tagName) {
-    return SELF_CLOSING_TAGS.hasOwnProperty(tagName);
+    return hasOwnProp.call(SELF_CLOSING_TAGS, tagName);
   }
 
   function parseDirective(name, expr, node, prototype, identifiers) {
@@ -5748,6 +5710,7 @@
           try {
             result = FragmentBindingParser.parse(attrValue, prototype, identifiers);
           } catch (e) {
+            // eslint-disable-next-line no-undef
             {
               if (e.code === 1001) {
                 e.expr = BINDING_FORMAT.replace('0', e.expr);
@@ -5794,10 +5757,10 @@
     ]
   }
 
-  function parseAttributes(htmx, from, node, prototype, identifiers) {
+  function parseAttributes(htmx, from, node, prototype) {
     var idx = from, start = from, stop = from, end = htmx.length;
     var cc, attrName, attrNames;//, operator, attributes = [];
-  	while (idx < end) {
+    while (idx < end) {
       cc = htmx[idx];
       if (attrName) {
         if (!WHITE_SPACE_REGEXP.test(cc)) {
@@ -5819,6 +5782,7 @@
                 parseAttribute(attrName, htmx.slice(start, stop), node, prototype, node.identifiers);
               }
             } catch(e) {
+              // eslint-disable-next-line no-undef
               {
                 if (e.code === 1001) {
                   var snapshot = getSnapshot(htmx, e.expr, node, start);
@@ -5879,6 +5843,7 @@
       try {
         result = FragmentBindingParser.parse(text, prototype, identifiers);
       } catch (e) {
+        // eslint-disable-next-line no-undef
         {
           if (e.code === 1001) {
             var snapshot = getSnapshot(htmx, BINDING_FORMAT.replace('0', e.expr), parent, start);
@@ -5939,6 +5904,7 @@
           node.tag = tagName;
           node.__extag_node__ = true;
 
+          // eslint-disable-next-line no-undef
           {
             node.range = [start-1, -1];
           }
@@ -5993,6 +5959,7 @@
             parent = node;
           }
 
+          // eslint-disable-next-line no-undef
           {
             node.range[1] = stop;
           }
@@ -6010,6 +5977,7 @@
           tagName = htmx.slice(start, stop);
           // console.log('end tag: ' + htmx.slice(start, stop))
           if (tagName !== parent.tag) {
+            // eslint-disable-next-line no-undef
             {
               var snapshot = getSnapshot(htmx, tagName, parent, start);
               logger.warn('Unclosed tag `' + parent.tag + '`. In the template of component ' 
@@ -6109,11 +6077,11 @@
 
   config.HTMXParser = HTMXParser;
 
-  // src/Extag.js 
+  /* eslint-disable no-unused-vars */
 
 
   if (typeof window !== 'undefined' && window.ExtagDom) {
-    config.set('view-engine', ExtagDom);
+    config.set('view-engine', window.ExtagDom);
   }
 
   var Extag = {
@@ -6187,7 +6155,8 @@
     node: JSXParser.node,
     expr: JSXParser.expr,
 
-    version: "0.2.0"
+    // eslint-disable-next-line no-undef
+    version: "0.2.1"
   };
 
   return Extag;

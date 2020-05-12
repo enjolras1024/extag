@@ -7,6 +7,8 @@ function slice(array, start, stop) {
   return Array$slice.call(array, start, stop);
 }
 
+var hasOwnProp = Object.prototype.hasOwnProperty;
+
 function copy(source) {
   if (Array.isArray(source)) {
     var copy = source.__extag_copy__;
@@ -57,7 +59,7 @@ Helper.prototype.bind = function() {
 
 function help(target) {
   return new Helper(target);
-};
+}
 
 var assign = Object.assign || function assign(target/*,..sources*/) {
   if (target == null) {
@@ -86,7 +88,7 @@ var assign = Object.assign || function assign(target/*,..sources*/) {
     }
 
     for (key in source) {
-      if (source.hasOwnProperty(key)) {
+      if (hasOwnProp.call(source, key)) {
         Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
       }
     }
@@ -146,7 +148,7 @@ var setImmediate = (function(Promise, setImmediate, MutationObserver, requestAni
     var observer = new MutationObserver(function() {
       var callback;
 
-      while (callback = cbs.pop()) {
+      while ((callback = cbs.pop())) {
         callback();
       }
 
@@ -208,7 +210,7 @@ function defineProps(target, sources) {
   for (i = 0, n = sources.length; i < n; ++i) {
     source = sources[i];
     for (var key in source) {
-      if (source.hasOwnProperty(key)) {
+      if (hasOwnProp.call(source, key)) {
         defineProp(target, key, Object.getOwnPropertyDescriptor(source, key));
       }
     }
@@ -223,7 +225,7 @@ function defineClass(proto) {
   var subClass, superClass, mixins, statics, sources;
 
   // superClass
-  if (proto.hasOwnProperty('extends')) {
+  if (hasOwnProp.call(proto, 'extends')) {
     superClass = proto.extends;
 
     if (typeof superClass !== 'function') {
@@ -234,7 +236,7 @@ function defineClass(proto) {
   }
 
   // subClass
-  if (proto.hasOwnProperty('constructor')) {
+  if (hasOwnProp.call(proto, 'constructor')) {
     subClass = proto.constructor;
     //delete proto.constructor;
     if (typeof subClass !== 'function') {
@@ -299,7 +301,7 @@ function defineClass(proto) {
 //   return object.__extag_descriptors__ ? object.__extag_descriptors__[attrName] : null;
 // }
 
-var HTML_CHAR_ENTITY_REGEXP = /\&[\w\#]{2,6};/;
+var HTML_CHAR_ENTITY_REGEXP = /&[\w#]{2,6};/;
 var encodeHTML, decodeHTML;
 
 try {
@@ -328,10 +330,10 @@ try {
     if (!/[<>&"\u00a0]/.test(text)) {
       return text;
     }
-    return  text.replace(/\&/g, '&amp;')
-                .replace(/\</g, '&lt;')
-                .replace(/\>/g, '&gt;')
-                .replace(/\"/g, '&quot;')
+    return  text.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
                 .replace(/\u00a0/g, '&nbsp;');
   }
   decodeHTML = function(html) {
@@ -347,11 +349,11 @@ try {
     //   }
     // }
   
-    return  html.replace(/\&nbsp;/g, String.fromCharCode(160))
-                .replace(/\&quot;/g, '"')
-                .replace(/\&lt;/g, '<')
-                .replace(/\&gt;/g, '>')
-                .replace(/\&amp;/g, '&');
+    return  html.replace(/&nbsp;/g, String.fromCharCode(160))
+                .replace(/&quot;/g, '"')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&amp;/g, '&');
   }
 }
 
@@ -393,6 +395,7 @@ export {
   throwError,
   encodeHTML, 
   decodeHTML,
+  hasOwnProp,
   defineProp, 
   defineClass, 
   setImmediate

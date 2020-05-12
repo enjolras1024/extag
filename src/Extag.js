@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/Extag.js 
 import Path from 'src/base/Path'
 import Parent from 'src/base/Parent'
@@ -51,7 +52,7 @@ import {
 
 
 if (typeof window !== 'undefined' && window.ExtagDom) {
-  config.set('view-engine', ExtagDom);
+  config.set('view-engine', window.ExtagDom);
 }
 
 export default {
@@ -125,5 +126,6 @@ export default {
   node: JSXParser.node,
   expr: JSXParser.expr,
 
+  // eslint-disable-next-line no-undef
   version: __VERSION__
 }

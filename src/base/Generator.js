@@ -47,28 +47,22 @@ defineClass({
       switch (args.length) {
         case 0:
           return new ctor();
-          break;
         case 1:
           return new ctor(args[0]);
-          break;
         case 2:
           return new ctor(args[0], args[1]);
-          break;
         case 3:
           return new ctor(args[0], args[1], args[2]);
-          break;
         case 4:
           return new ctor(args[0], args[1], args[2], args[3]);
-          break;
         case 5:
           return new ctor(args[0], args[1], args[2], args[3], args[4]);
-          break;
         default:
+          // eslint-disable-next-line no-undef
           if (__ENV__ === 'development') {
             logger.warn('Sorry but `anew` only supports 6 argumnets at most. Using `inst` instead.');
           }
           throw new Error('`anew` arguments length must not exceed 6.');
-          // break;
       }
     }
   }

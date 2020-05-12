@@ -15,7 +15,7 @@ import {
 } from 'src/share/constants'
 
 var STYLE_DELIMITER = /;/g;
-var CSS_NAME_REGEXP = /^[a-z0-9\-\_]+$/i;
+var CSS_NAME_REGEXP = /^[a-z0-9\-_]+$/i;
 // var SINGLE_BINDING_REGEXP = /^@\{[^@]*\}$/;
 var SINGLE_BINDING_REGEXP = new RegExp(
   '^' + BINDING_OPERATORS.DATA +'\\' + BINDING_BRACKETS[0] + '[^' + BINDING_OPERATORS.DATA + ']*\\' + BINDING_BRACKETS[1] + '$'
@@ -33,7 +33,7 @@ export default {
   parse: function parse(expr, prototype, identifiers, viewEngine, camelCase) {
     var group = {};
     var pieces = expr.split(STYLE_DELIMITER); 
-    var result, piece, expr, name, names, n, i, j, k;
+    var result, piece, name, names, n, i, j, k;
 
     for (i = 0, n = pieces.length; i < n; ++i) {
       piece = pieces[i].trim();
@@ -77,6 +77,7 @@ export default {
         }
         result = FragmentBindingParser.parse(expr, prototype, identifiers);
       } catch (e) {
+        // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
           if (e.code === 1001) {
             e.expr = BINDING_FORMAT.replace('0', e.expr);

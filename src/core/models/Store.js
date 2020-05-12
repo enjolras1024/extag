@@ -4,8 +4,6 @@ import Watcher from 'src/base/Watcher'
 import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
 import Dependency from 'src/core/Dependency'
-import Binding from 'src/core/bindings/Binding'
-import config from 'src/share/config'
 import { defineProp, defineClass } from 'src/share/functions'
 
 var storeGuid = -1;
@@ -57,6 +55,7 @@ defineClass({
         this.setup();
       }
 
+      // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         Validator.validate0(store, props);
       }
@@ -106,6 +105,7 @@ defineClass({
       return;
     }
     // validation in development 
+    // eslint-disable-next-line no-undef
     if (__ENV__ === 'development') {
       Validator.validate(this, key, val, true);
     }

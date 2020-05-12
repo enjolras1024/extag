@@ -4,7 +4,7 @@ import Accessor from 'src/base/Accessor'
 import Dependency from 'src/core/Dependency'
 import Binding from 'src/core/bindings/Binding'
 import { defineClass } from 'src/share/functions'
-import { CONTEXT_SYMBOL, FLAG_CHANGED } from 'src/share/constants'
+import { FLAG_CHANGED } from 'src/share/constants'
 
 var MODES = { ASSIGN: -1, ONE_TIME: 0, ONE_WAY: 1, TWO_WAY: 2, ANY_WAY: 3 };
 

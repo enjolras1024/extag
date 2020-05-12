@@ -1,12 +1,13 @@
 import Path from 'src/base/Path'
 import View from 'src/core/shells/View'
 import Slot from 'src/core/shells/Slot'
-import Block from 'src/core/shells/Block'
+// import Block from 'src/core/shells/Block'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import FragmentBinding  from 'src/core/bindings/FragmentBinding'
+import { hasOwnProp } from 'src/share/functions'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
 
@@ -15,7 +16,7 @@ import {
   CONTEXT_REGEXP,
   HANDLER_REGEXP,
   CAPITAL_REGEXP,
-  PROP_EXPR_REGEXP
+  // PROP_EXPR_REGEXP
  } from 'src/share/constants'
 import { slice, flatten, throwError } from 'src/share/functions'
 
@@ -24,7 +25,7 @@ import { slice, flatten, throwError } from 'src/share/functions'
 // import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 
 function parseJsxNode(node, prototype) {
-  var props = node.props, value, key;
+  var props = node.props, value, key, ctor;
   if (node.xif) {
     node.xif.connect(prototype, node.identifiers);
   }
@@ -46,8 +47,9 @@ function parseJsxNode(node, prototype) {
     }
   }
   if (node.type && typeof node.type === 'string') {
-    var ctor = Path.search(node.type, prototype.constructor.resources);
+    ctor = Path.search(node.type, prototype.constructor.resources);
     if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
+      // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in static resources.');
       }
@@ -57,7 +59,7 @@ function parseJsxNode(node, prototype) {
     node.type = ctor;
   }
   if (node.type == null && CAPITAL_REGEXP.test(node.tag)) {
-    var ctor = Path.search(node.tag, prototype.constructor.resources);
+    ctor = Path.search(node.tag, prototype.constructor.resources);
     if (typeof ctor === 'function' && ctor.__extag_component_class__) {
       node.type = ctor;
     }
@@ -105,7 +107,10 @@ function parseJsxEvents(node, prototype) {
 
 function parseJsxChildren(node, prototype) {
   var children = node.children;
-  var i, j = -1, k, n, child;
+  if (!children || !children.length) {
+    return;
+  }
+  var i, j = -1, child;
   var hasExpr;
   for (i = children.length - 1; i >= 0; --i) {
     child = children[i];
@@ -235,7 +240,7 @@ function node(type, attrs, children) {
     var props = node.props = {};
 
     for (var key in attrs) {
-      if (attrs.hasOwnProperty(key) && !RESERVED_PARAMS.hasOwnProperty(key)) {
+      if (hasOwnProp.call(attrs, key) && !(key in RESERVED_PARAMS)) {
         props[key] = attrs[key];
       }
     }

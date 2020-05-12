@@ -1,10 +1,10 @@
 // src/core/template/parsers/EvaluatorParser.js
 
 import Path from 'src/base/Path'
-import { throwError } from 'src/share/functions'
+import { hasOwnProp, throwError } from 'src/share/functions'
 import { 
   EMPTY_OBJECT,
-  PROP_EXPR_REGEXP,
+  // PROP_EXPR_REGEXP,
   WHITE_SPACE_REGEXP
  } from 'src/share/constants'
 import Evaluator from 'src/core/template/Evaluator'
@@ -170,18 +170,18 @@ export default {
       if (indices[j+1] < 0) { continue; }
       piece = expr.slice(indices[j] + expanded, indices[j+1] + expanded);
       path = Path.parse(piece.replace(WHITE_SPACE_REGEXP, ''));
-      if (JS_KEYWORD_MAP.hasOwnProperty(path[0])) {
+      if (hasOwnProp.call(JS_KEYWORD_MAP, path[0])) {
         continue;
       }
       i = identifiers.indexOf(path[0]);
-      if (i >= 0) {
-        
-      } else if (path[0] in resources) {
-        lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
-      } else {
-        expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
-        expanded += 5;
-      }
+      if (i < 0) {
+        if (path[0] in resources) {
+          lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
+        } else {
+          expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
+          expanded += 5;
+        }
+      } 
     }
 
     lines.push('return ' + expr);

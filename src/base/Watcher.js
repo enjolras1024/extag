@@ -1,7 +1,7 @@
 // src/base/Watcher.js
 
 // import Event from 'src/base/Event'
-import { slice, defineProp, defineClass } from 'src/share/functions'
+import { slice, hasOwnProp, defineProp, defineClass } from 'src/share/functions'
 
 export default function Watcher() {
   // this._actions = null;
@@ -243,10 +243,10 @@ defineClass({
    */
   on: function on(type, func, opts) {
     if (typeof type === 'object') {
-      var configs = type;
-      for (type in configs) {
-        if (configs.hasOwnProperty(type)) {
-          var conf = configs[type];
+      var config = type;
+      for (type in config) {
+        if (hasOwnProp.call(config, type)) {
+          var conf = config[type];
           if (!Array.isArray(conf)) {
             addEventHandler(this, type, conf);
           } else {
@@ -289,10 +289,10 @@ defineClass({
         removeEventHandler(this, type, func, opts);
       }
     } else if (t === 'object') { // e.g. off({click: onClick})
-      var configs = type;
-      for (type in configs) {
-        if (configs.hasOwnProperty(type)) { 
-          var conf = configs[type];
+      var config = type;
+      for (type in config) {
+        if (hasOwnProp.call(config, type)) { 
+          var conf = config[type];
           if (!Array.isArray(conf)) {
             if (conf == null) {
               removeEventHandler(this, type);

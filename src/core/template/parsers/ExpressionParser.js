@@ -73,12 +73,20 @@ var ExpressionParser = {
         default:
           return;
       }
-      return new Expression(DataBinding, {
-        mode: mode,
-        path: mode === 2 ? expr : null,
-        evaluator: createEvaluator(base),
-        converters: more ? createConverters(more) : null
-      });
+      if (mode !== 2) {
+        return new Expression(DataBinding, {
+          mode: mode,
+          evaluator: createEvaluator(base),
+          converters: more ? createConverters(more) : null
+        });
+      } else {
+        return new Expression(DataBinding, {
+          mode: mode,
+          path: base,
+          evaluator: createEvaluator(more)
+        });
+      }
+      
     } else if (type === '+') {
       if (typeof base === 'string' && HANDLER_REGEXP.test(base)) {
         return new Expression(EventBinding, {
@@ -92,10 +100,10 @@ var ExpressionParser = {
         });
       }
     } else if (type === '#') {
-      if (more) {
-        more.unshift(base);
-      } else {
+      if (!more) {
         more = [base];
+      } else {
+        more = [base].concat(more);
       }
       return new Expression(FragmentBinding, more);
     }

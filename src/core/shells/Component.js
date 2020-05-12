@@ -5,13 +5,13 @@ import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
 import Schedule from 'src/core/Schedule'
 import Dependency from 'src/core/Dependency'
-import Cache from 'src/core/models/Cache'
+// import Cache from 'src/core/models/Cache'
 import Shell from 'src/core/shells/Shell'
 import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
-import Evaluator from 'src/core/template/Evaluator'
+// import Evaluator from 'src/core/template/Evaluator'
 import Binding from 'src/core/bindings/Binding'
-import DataBinding from 'src/core/bindings/DataBinding'
+// import DataBinding from 'src/core/bindings/DataBinding'
 // import JSXEngine from 'src/core/template/JSXEngine.3'
 // import HTMXEngine from 'src/core/template/HTMXEngine'
 // import HTMXTemplate from 'src/core/template/HTMXTemplate'
@@ -20,12 +20,12 @@ import DataBinding from 'src/core/bindings/DataBinding'
 // import Dep from 'src/core/Dep'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
-import { slice, assign, defineProp, defineClass } from 'src/share/functions'
+import { defineProp, defineClass } from 'src/share/functions'
 import {
   FLAG_NORMAL,
   FLAG_CHANGED,
+  // FLAG_CHANGED_COMMANDS,
   FLAG_CHANGED_CHILDREN,
-  FLAG_CHANGED_COMMANDS,
   FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
 
@@ -84,6 +84,7 @@ defineClass({
       var attributes = constructor.attributes;
       var _template = constructor.__extag_template__;
 
+      // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         if (!_template) {
           (function() {
@@ -108,7 +109,7 @@ defineClass({
       }
 
           // TODO: check attributes
-        // 1. initialize attribute descriptors once and only once.
+      // 1. initialize attribute descriptors once and only once.
       // if (!prototype.hasOwnProperty('__extag_descriptors__')) {
         Accessor.applyAttributeDescriptors(prototype, attributes, true); //
       // }
@@ -241,6 +242,7 @@ defineClass({
       return;
     }
     // validation in development 
+    // eslint-disable-next-line no-undef
     if (__ENV__ === 'development') {
       Validator.validate(this, key, val, true);
     }
@@ -424,9 +426,6 @@ defineClass({
    * @param {Shell} part
    */
   addNamedPart: function (name, part) {
-    // if (name in this) {
-    //   throw new Error(this.toString() + ' has `' + name + '` already!');
-    // }
     this[name] = part;
   }
 });

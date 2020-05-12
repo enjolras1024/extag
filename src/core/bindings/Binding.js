@@ -117,12 +117,8 @@ defineClass({
     this.reflect.call(this.scope, this.target[this.property]);
   },
 
-  invalidate: function(flag) {
-    // if (this.flag < flag) {
-    //   this.flag = flag;
-    // }
+  invalidate: function() {
     this.flag = 1;
-    // console.log('sync', this.sync, flag)
     if (this.sync) {
       this.exec();
     } else {

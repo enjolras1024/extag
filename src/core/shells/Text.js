@@ -31,6 +31,7 @@ defineClass({
      * @param {string} data
      */
     initialize: function(text, data) {
+      // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         if (text.constructor !== Text) {
           throw new TypeError('Text is final class and can not be extended');

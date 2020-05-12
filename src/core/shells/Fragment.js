@@ -6,7 +6,7 @@ import Shell from 'src/core/shells/Shell'
 import { defineClass } from 'src/share/functions'
 import {
   FLAG_NORMAL,
-  FLAG_CHANGED,
+  // FLAG_CHANGED,
   FLAG_CHANGED_CHILDREN,
   FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
@@ -22,6 +22,7 @@ defineClass({
 
   statics: {
     initialize: function initialize(fragment, props, scopes, template) {
+      // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         if (fragment.constructor !== Fragment) {
           throw new TypeError('Fragment is final class and can not be extended');

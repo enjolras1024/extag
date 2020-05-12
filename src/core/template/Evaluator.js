@@ -27,6 +27,7 @@ defineClass({
       args.push(value);
     }
     
+    // eslint-disable-next-line no-undef
     if (__ENV__ === 'development') { 
       try {
         return this.func.apply(scopes[0], args);
@@ -36,7 +37,8 @@ defineClass({
                     '` maybe illegal in the template of Component ' + (constructor.fullName || constructor.name));
         throw e;
       }
-    } 
-    return this.func.apply(scopes[0], args);
+    } else {
+      return this.func.apply(scopes[0], args);
+    }
   }
 });

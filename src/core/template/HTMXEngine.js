@@ -10,6 +10,7 @@ import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
 // import Component from 'src/core/shells/Component'
 import Expression from 'src/core/template/Expression'
+import { WHITE_SPACES_REGEXP } from 'src/share/constants'
 import { defineProp, assign } from 'src/share/functions'
 import config from 'src/share/config'
 
@@ -30,7 +31,7 @@ function toStyle(cssText, viewEngine) {
 
 function toClasses(classList) {
   if (typeof classList === 'string') {
-    classList = classList.trim().split(WHITE_SPACES_REGEXG);
+    classList = classList.trim().split(WHITE_SPACES_REGEXP);
   }
   if (Array.isArray(classList)) {
     var i, classes = {};
@@ -159,6 +160,7 @@ function driveComponent(target, _template, scopes, template, props) {
     } else if (!props && template.props) {
       props = template.props;
     }
+    // eslint-disable-next-line no-undef
     if (__ENV__ === 'development') {
       Validator.validate0(target, props);
     }
@@ -180,6 +182,7 @@ function driveComponent(target, _template, scopes, template, props) {
       driveContents(target, template.children,scopes);
     }
   } else if (props) {
+    // eslint-disable-next-line no-undef
     if (__ENV__ === 'development') {
       Validator.validate0(target, props);
     }
@@ -262,7 +265,7 @@ function transferProperties(shell) {
     var __style = shell.__style;
     if (!__style) {
       __style = new Cache(shell);
-      defineProp(target, '__style', {
+      defineProp(shell, '__style', {
         value: __style, 
         configurable: true
       });
@@ -283,7 +286,7 @@ function transferProperties(shell) {
     var __classes = shell.__classes;
     if (!__classes) {
       __classes = new Cache(shell);
-      defineProp(target, '__classes', {
+      defineProp(shell, '__classes', {
         value: __classes, 
         configurable: true
       });

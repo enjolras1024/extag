@@ -28,6 +28,7 @@ defineClass({
 
       
       if (!func) {
+        // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
           logger.warn('No such handler method named ' + handler + ' in ' + scopes[0], scopes[0]);
         }
@@ -65,12 +66,8 @@ defineClass({
       }
     } else {
       if (!modifiers || !modifiers.length) {
-        target.on(type, function(event) {
-          // if (event) {
-          //   evaluator.execute(scopes.concat([event]));
-          // } else {
-            evaluator.execute(scopes);
-          // }
+        target.on(type, function() {
+          evaluator.execute(scopes);
         });
       } else {
         wrapper = function(event) {

@@ -1,5 +1,6 @@
 // src/base/Validator.js
 
+import { hasOwnProp } from 'src/share/functions'
 import Accessor from 'src/base/Accessor'
 import logger from 'src/share/logger'
 
@@ -104,6 +105,7 @@ function troubleShoot(target, key, value, warn) {
   }
 
   if (trouble) {
+    // eslint-disable-next-line no-undef
     if (__ENV__ === 'development') {
       warn && logger.warn('Attribute Validation:', trouble);
     }
@@ -124,6 +126,7 @@ function troubleShoot(target, key, value, warn) {
   // }
 
   if (trouble) {
+    // eslint-disable-next-line no-undef
     if ( __ENV__ === 'development') {
       warn && logger.warn('Attribute Validation:', trouble);
     }
@@ -159,7 +162,7 @@ export default {
     var descriptors = target.__extag_descriptors__;
     for (key in descriptors) {
       desc = descriptors[key];
-      if (desc.required && (!props || !props.hasOwnProperty(key))) {
+      if (desc.required && (!props || !hasOwnProp.call(props, key))) {
         logger.warn('Attribute Validation:', 'required `' + key + '` for ' + (target.constructor.fullName || target.constructor.name));
       }
     }

@@ -1,31 +1,31 @@
 // src/template/Expression.js
 
 import { defineClass } from 'src/share/functions'
-import { 
-  CONTEXT_REGEXP,
-  HANDLER_REGEXP,
-  CAPITAL_REGEXP,
-  PROP_EXPR_REGEXP
- } from 'src/share/constants'
+// import { 
+//   CONTEXT_REGEXP,
+//   HANDLER_REGEXP,
+//   CAPITAL_REGEXP,
+//   PROP_EXPR_REGEXP
+//  } from 'src/share/constants'
 //  import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator';
 // import PropEvaluator from 'src/core/template/evaluators/PropEvaluator';
-import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
+// import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 import Evaluator from 'src/core/template/Evaluator';
 
-function parseEvaluator(expr, prototype, identifiers) {
-  var type = typeof expr;
-  if (type === 'string') {
-    // if (PROP_EXPR_REGEXP.test(expr)) {
-    //   return new PropEvaluator(expr.trim());
-    // }
-    return EvaluatorParser.parse(expr, prototype, identifiers);
-  } else if (type === 'function') {
-    // var evaluator = new FuncEvaluator(expr);
-    // evaluator.connect(prototype, identifiers);
-    // return evaluator;
-    return new Evaluator(expr, null);
-  }
-}
+// function parseEvaluator(expr, prototype, identifiers) {
+//   var type = typeof expr;
+//   if (type === 'string') {
+//     // if (PROP_EXPR_REGEXP.test(expr)) {
+//     //   return new PropEvaluator(expr.trim());
+//     // }
+//     return EvaluatorParser.parse(expr, prototype, identifiers);
+//   } else if (type === 'function') {
+//     // var evaluator = new FuncEvaluator(expr);
+//     // evaluator.connect(prototype, identifiers);
+//     // return evaluator;
+//     return new Evaluator(expr, null);
+//   }
+// }
 
 /**
  * Expression parsed from 'checked@="selected"' and so on, in the component pattern.
@@ -69,6 +69,7 @@ defineClass({
     //   }
     // }
   },
+  // eslint-disable-next-line no-unused-vars
   connect: function(prototype, identifiers) {
     if (!this.unparsed) {
       return;
@@ -76,16 +77,14 @@ defineClass({
     var pattern = this.pattern;
     var evaluator = pattern.evaluator;
     var converters = pattern.converters;
-    if (evaluator) {
-      // evaluator.connect(prototype, identifiers);
-      // pattern.evaluator = parseEvaluator(evaluator, prototype, identifiers);
+    if (typeof evaluator === 'function') {
       pattern.evaluator = new Evaluator(evaluator);
     } 
     if (converters) {
       for (var i = 0; i < converters.length; ++i) {
-        // converters[i].connect(prototype, identifiers);
-        // pattern.converters[i] = parseEvaluator(converters[i], prototype, identifiers);
-        pattern.converters[i] = new Evaluator(converters[i]);
+        if (typeof converters[i] === 'function') {
+          pattern.converters[i] = new Evaluator(converters[i]);
+        }
       }
     }
     this.unparsed = false;

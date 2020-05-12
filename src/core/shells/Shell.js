@@ -1,6 +1,5 @@
 // src/core/shells/Shell.js
 
-import Parent from 'src/base/Parent'
 import Watcher from 'src/base/Watcher'
 import Accessor from 'src/base/Accessor'
 import DirtyMarker from 'src/base/DirtyMarker'
@@ -8,12 +7,12 @@ import Schedule from 'src/core/Schedule'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
 import { VIEW_ENGINE } from 'src/share/constants'
-import { slice, assign, defineProp, defineClass } from 'src/share/functions'
+import { slice, hasOwnProp, defineProp, defineClass } from 'src/share/functions'
 import {
   FLAG_NORMAL, 
   FLAG_CHANGED, 
-  FLAG_CHANGED_CHILDREN,
   FLAG_CHANGED_COMMANDS,
+  // FLAG_CHANGED_CHILDREN,
   FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
 
@@ -107,6 +106,7 @@ defineClass({
     }
     
     var viewEngine = Shell.getViewEngine(this);
+    // eslint-disable-next-line no-undef
     if (__ENV__ === 'development') {
       if (!viewEngine) {
         logger.warn('There is no available viewEngine, so the error occurs below. Usually that is ExtagDom. You can use <script> to include extag-dom.js in broswer.');
@@ -122,9 +122,9 @@ defineClass({
     });
 
     if (this._actions) {
-      var type, event, action, actions = this._actions;
+      var type, action, actions = this._actions;
       for (type in actions) {
-        if (!actions.hasOwnProperty(type)) { continue; }
+        if (!hasOwnProp.call(actions, type)) { continue; }
         action = actions[type];
         if (!action) { continue; }
         var handlers = action.handlers, handler;
@@ -151,9 +151,9 @@ defineClass({
    * @param {boolean} force - if not, detaching can be prevented, so this shell and the skin can be reused.
    */
   detach: function detach(force) {
-    if (!force && this._props && this._props.hasOwnProperty('preventDetach')) {
-      return false;
-    }
+    // if (!force && this._props && hasOwnProp.call(this._props, 'preventDetach')) {
+    //   return false;
+    // }
 
     var parent = this._parent;
     if (parent && !parent._parent/* && parent.$body === this*/) {
@@ -241,7 +241,7 @@ defineClass({
      * @param {string} ns     - namespace, defalut '', can be 'svg', 'math'...
      */
     initialize: function initialize(shell, type, tag, ns) {
-      if (!shell.hasOwnProperty('_props')) {
+      if (!hasOwnProp.call(shell, '_props')) {
         defineProp(shell, '_props', {
           value: {}, writable: false, enumerable: false, configurable: true
         });

@@ -1,6 +1,8 @@
 //######################################################################################################################
 // src/view/ExtagDom.js
 //######################################################################################################################
+var hasOwnProp = Object.prototype.hasOwnProperty;
+
 function assign(target/*,..sources*/) { // Object.assign
   if (target == null) {
     throw  new TypeError('Cannot convert undefined or null to object');
@@ -28,7 +30,7 @@ function assign(target/*,..sources*/) { // Object.assign
     }
 
     for (key in source) {
-      if (source.hasOwnProperty(key)) {
+      if (hasOwnProp.call(source, key)) {
         Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
       }
     }
@@ -41,10 +43,11 @@ var supportsPassiveOption = false;
 try {
   var opts = Object.defineProperty({}, 'passive', {
     get: function() {
-      supportsPassiveOption = true;
+      return (supportsPassiveOption = true);
     }
   });
   window.addEventListener('test-passive', null, opts);
+// eslint-disable-next-line no-empty
 } catch (e) {}
 
 var tag2events = {};
@@ -474,7 +477,7 @@ JS_TO_HTML.cssFloat = 'float'; // TODO
 var HTML_TO_JS = (function(map) {
   var key, cache = {};
   for (key in map) {
-    if (map.hasOwnProperty(key)){
+    if (hasOwnProp.call(map, key)){
       cache[map[key]] = key;
     }
   }
@@ -599,6 +602,7 @@ function ExtagDom() {
 }
 
 assign(ExtagDom, {
+  // eslint-disable-next-line no-undef
   version: __VERSION__,
   /**
    * @required
@@ -633,7 +637,7 @@ assign(ExtagDom, {
     return $doc.createTextNode(data);
   },
 
-  createElement: function createElement(ns, tag, type) {//TODO: cache, clone
+  createElement: function createElement(ns, tag/*, type*/) {
     return !ns /*|| !$doc.createElementNS*/ ? $doc.createElement(tag) : $doc.createElementNS(namespaceURIs[ns], tag);
   },
 
@@ -655,7 +659,7 @@ assign(ExtagDom, {
   },
 
   hasNameSpace: function hasNameSpace(ns) {
-    return namespaceURIs.hasOwnProperty(ns);
+    return hasOwnProp.call(namespaceURIs, ns);
   },
 
   /**
@@ -674,7 +678,7 @@ assign(ExtagDom, {
     return null;
   },
 
-  toTemplate: function toTemplate($skin, $parent) {
+  toTemplate: function toTemplate($skin/*, $parent*/) {
     if (!ExtagDom.isElement($skin)) {
       return null;
     }
@@ -720,7 +724,7 @@ assign(ExtagDom, {
        
         name = $attr.namespaceURI ? (ExtagDom.toNameSpace($attr.namespaceURI) + ':' + $attr.name) : $attr.name;
         
-        if (HTML_TO_JS.hasOwnProperty(name)) {
+        if (hasOwnProp.call(HTML_TO_JS, name)) {
           desc = DOM_PROPERTY_DESCRIPTORS[HTML_TO_JS[name]];
           if (desc && desc.isBoolProperty) {
             attrs[name] = 'true';
@@ -873,6 +877,7 @@ assign(ExtagDom, {
           $skin[eventHook] = null;
           events[type] =  true;
         }
+      // eslint-disable-next-line no-empty
       } catch (e) {}
       if (value) {
         $skin.setAttribute(eventHook, value);
@@ -1049,7 +1054,7 @@ assign(ExtagDom, {
     var key, value, index, nsURI;
     //if (!dirty) { return; }
     for (key in dirty) {
-      if (!dirty.hasOwnProperty(key)) { continue; }
+      if (!hasOwnProp.call(dirty, key)) { continue; }
 
       value = attrs[key];
       index = key.indexOf(':');
@@ -1083,7 +1088,7 @@ assign(ExtagDom, {
     var key, desc, value;
     //if (!dirty) { return; }
     for (key in dirty) {
-      if (!dirty.hasOwnProperty(key)) { continue; }
+      if (!hasOwnProp.call(dirty, key)) { continue; }
       desc = DOM_PROPERTY_DESCRIPTORS[key];
       value = props[key];
       if (desc) {
@@ -1139,7 +1144,7 @@ assign(ExtagDom, {
     var key, $style = $skin.style;
     //if (!dirty) { return; }
     for (key in dirty) {
-      if (!dirty.hasOwnProperty(key)) { continue; }
+      if (!hasOwnProp.call(dirty, key)) { continue; }
 
       if (key in $style) {
         $style[key] = style[key];
@@ -1167,7 +1172,7 @@ assign(ExtagDom, {
     //if (!dirty) { return; }
     if (classList) {
       for (key in dirty) {
-        if (!dirty.hasOwnProperty(key)) { continue; }
+        if (!hasOwnProp.call(dirty, key)) { continue; }
 
         if (classes[key]) {
           classList.add(key);
@@ -1179,7 +1184,7 @@ assign(ExtagDom, {
       var names = [];
 
       for (key in classes) {
-        if (classes.hasOwnProperty(key) && classes[key]) {
+        if (hasOwnProp.call(classes, key) && classes[key]) {
           names.push(key);
         }
       }
@@ -1191,7 +1196,7 @@ assign(ExtagDom, {
   invokeCommands: function invokeCommands($skin, commands) {
     for (var i = 0, n = commands.length; i < n; ++i) {
       var command = commands[i];
-      console.log(command.name, command.args)
+      // console.log(command.name, command.args)
       ExtagDom.invoke($skin, command.name, command.args);
     }
   },
@@ -1254,7 +1259,7 @@ assign(ExtagDom, {
 });
 
 if (typeof window !== 'undefined' && window.Extag) {
-  Extag.conf('view-engine', ExtagDom);
+  window.Extag.conf('view-engine', ExtagDom);
 }
 
 export default ExtagDom

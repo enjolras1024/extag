@@ -1,8 +1,8 @@
 // src/core/shells/View.js
 
-import Shell from 'src/core/shells/Shell'
+// import Shell from 'src/core/shells/Shell'
 import Component from 'src/core/shells/Component'
-import Expression from 'src/core/template/Expression'
+// import Expression from 'src/core/template/Expression'
 import HTMXEngine from 'src/core/template/HTMXEngine'
 import { FLAG_CHANGED } from 'src/share/constants'
 import { assign, defineClass } from 'src/share/functions'
@@ -53,22 +53,21 @@ defineClass({
     if (typeof type === 'function') {
       ctor = type;
     } else if (typeof type === 'string') {
-      if (/^url\(.*\)$/.test(type)) {
-        // TODO: check `require`
-        require([type], (function(ctor) {
-          // this.attrs.set('x:type', ctor);
-          this.set('xtype', ctor);
-        }).bind(this));
-        return;
-      } else {
-        var resources = scope.constructor.resources;
+      // if (/^url\(.*\)$/.test(type)) {
+      //   // TODO: check `require`
+      //   require([type], (function(ctor) {
+      //     this.set('xtype', ctor);
+      //   }).bind(this));
+      //   return;
+      // } else {
+        var resources = scopes[0].constructor.resources;
         ctor = resources && resources[type];
-      }
+      // }
     } else if (typeof type === 'object' && typeof Promise === 'function' && type instanceof Promise) {
       type.then((function(ctor) {
-        // this.attrs.set('x:type', ctor);
         this.set('xtype', ctor);
       }).bind(this))
+      return;
     }
 
     if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {

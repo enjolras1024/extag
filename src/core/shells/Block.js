@@ -2,10 +2,10 @@
 
 // import RES from 'src/base/RES'
 // import List from 'src/core/models/List'
-import Shell from 'src/core/shells/Shell'
-import Fragment from 'src/core/shells/Fragment'
+// import Shell from 'src/core/shells/Shell'
+// import Fragment from 'src/core/shells/Fragment'
 import Component from 'src/core/shells/Component'
-import Expression from 'src/core/template/Expression'
+// import Expression from 'src/core/template/Expression'
 // import HTMXEngine from 'src/core/template/HTMXEngine'
 import { assign, defineClass } from 'src/share/functions'
 import config from 'src/share/config'
@@ -28,7 +28,6 @@ defineClass({
         return;
       }
 
-      // block.template = template;
       block.scopes = scopes;
       block.template = assign({}, template);
       delete block.template.xkey;
@@ -44,46 +43,12 @@ defineClass({
         block.mode = 1;
         expression = template.xif;
         expression.compile('condition', block, scopes);
-        // Expression.compile({condition: expressions.xIf}, block, scope, locals);
       }
 
       if (template.xfor) {
         block.mode = 2;
         expression = template.xfor[1];
-        // var path = expression.template.evaluator.paths[0]; // $.items in x-for="item of $.items | filter"
-  
-        // if (Array.isArray(path)) { // TODO:
-        //   var local = locals[path[0]];
-        //   var prop = path[path.length - 1];
-        //   var src = path.length < 2 ? local : RES.search(path.slice(1, path.length - 1), local, true);
-    
-        //   if (src && src.on && src.emit) {
-        //     var dst = src[prop];
-    
-        //     var handler = function() {
-        //       src.emit('changed.' + prop);
-        //     }
-    
-        //     if (dst && dst instanceof List) {
-        //       dst.on('changed', handler);
-        //     }
-    
-        //     src.on('changed.' + prop, function(event) {
-        //       if (dst === src[prop]) { return; }
-        //       if (dst && dst instanceof List) {
-        //         dst.off('changed', handler);
-        //       }
-        //       dst = src[prop];
-        //       if (dst && dst instanceof List) {
-        //         dst.on('changed', handler);
-        //       }
-        //     })
-        //   }
-        // }
-  
-        // Expression.compile({iterable: expression}, block, scope, locals);
         expression.compile('iterable', block, scopes);
-  
         if (template.xkey) {
           block.keyEval = template.xkey;//.evaluator;
         }
@@ -103,7 +68,6 @@ defineClass({
     var template = this.template;
     var scopes = this.scopes;
     var fragment = [];
-    // var children;
 
     if (!condition) {
       this.setChildren(fragment);
@@ -113,17 +77,6 @@ defineClass({
     var HTMXEngine = config.HTMXEngine;
 
     if (this.mode === 1) {
-      // if (template.tag === 'x:block') {
-      //   children = template.children;
-      // } else {
-      //   children = [template];
-      // }
-      // for (var i = 0, n = children.length; i < n; ++i) {
-      //   content = HTMXEngine.makeContent(children[i], scopes);
-      //   if (content) {
-      //     fragment.push(content);
-      //   }
-      // }
       content = HTMXEngine.makeContent(template, scopes);
       if (content) {
         fragment.push(content);
@@ -138,19 +91,11 @@ defineClass({
     var keyEval = this.keyEval;
     var newScopes;
   
-    // for (i = 0, n = children.size(); i < n; ++i) {
-    //   key = children.get(i).__key__;
     for (i = 0, n = children.length; i < n; ++i) {
       key = children[i].__key__;
       if (key) {
         indices[key] = i;
       }
-    }
-  
-    if (__ENV__ === 'development') {
-      // if (Object.keys(indices).length < children.size()) {
-      //   //console.warn('');
-      // }
     }
 
     for (i = 0, n = iterable.length; i < n; ++i) {
@@ -158,8 +103,7 @@ defineClass({
       content = null;
       item = iterable[i];
       newScopes = scopes.concat([item]);
-      // newScopes = scopes.concat([i, item]);
-  
+
       if (keyEval) {
         key = keyEval.execute(newScopes);
         index = indices[key];
@@ -170,24 +114,12 @@ defineClass({
       }
   
       if (!content) {
-        // if (template.tag !== 'x:block') {
-        //   content = HTMXEngine.makeContent(template, newScopes);
-        // } else if (template.children && template.children.length === 1) {
-        //   content = HTMXEngine.makeContent(template.children[0], newScopes);
-        // } else {
-        //   // content = new Fragment(); HTMXEngine.start(template, content, newScopes);
-        // }
         content = HTMXEngine.makeContent(template, newScopes);
         content.__key__ = key;
       }
   
       fragment.push(content);
     }
-
-    // if (template.xName) {
-    //   // scope[template.xName] = fragment;
-    //   scope.addNamedPart(template.xName, fragment);
-    // }
 
     this.setChildren(fragment);
   }

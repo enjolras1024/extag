@@ -10,7 +10,6 @@ import Slot from 'src/core/shells/Slot'
 import { EMPTY_OBJECT, EMPTY_ARRAY } from 'src/share/constants'
 import { defineProp, flatten } from 'src/share/functions'
 import config from 'src/share/config'
-import logger from 'src/share/logger'
 
 // function slot(name, children) {
 //   return {
@@ -25,10 +24,13 @@ import logger from 'src/share/logger'
 
 /**
  * Check if the node matches the child element or child component.
- * @param {Shell} oldChild  - child element or component
+ * @param {Shell} oldChild  - text, element or component
  * @param {Object} newChild - node
  */
 function matchesChild(oldChild, newChild) {
+  if (!oldChild.tag && !newChild.__extag_node__) {
+    return true;
+  }
   return oldChild.xkey === newChild.xkey && 
           (newChild.type ? oldChild.constructor === newChild.type : 
             (oldChild.tag === newChild.tag && oldChild.ns === newChild.ns));
@@ -82,6 +84,7 @@ function createChild(node, target, scope) {
   return child;
 }
 
+// eslint-disable-next-line no-unused-vars
 function updatePropsAndEvents(node, target, scope) {
   var name, desc;
   var newProps = node.props;

@@ -2,7 +2,6 @@
 
 import { defineProp, defineClass, throwError } from 'src/share/functions'
 import { FLAG_CHANGED_CHILDREN } from 'src/share/constants'
-import logger from 'src/share/logger'
 
 /**
  * Construct a parent like array.

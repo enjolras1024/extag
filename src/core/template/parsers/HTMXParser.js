@@ -9,12 +9,15 @@ import {
   WHITE_SPACE_REGEXP,
   WHITE_SPACES_REGEXP
 } from 'src/share/constants'
-import { decodeHTML, throwError } from 'src/share/functions'
+import { 
+  hasOwnProp,
+  decodeHTML, 
+  throwError } from 'src/share/functions'
 import logger from 'src/share/logger'
 import Path from 'src/base/Path'
 import View from 'src/core/shells/View'
 import Slot from 'src/core/shells/Slot'
-import Block from 'src/core/shells/Block'
+// import Block from 'src/core/shells/Block'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
@@ -27,32 +30,32 @@ import EventBindingParser from 'src/core/template/parsers/EventBindingParser'
 import FragmentBindingParser from 'src/core/template/parsers/FragmentBindingParser'
 import PrimaryLiteralParser from 'src/core/template/parsers/PrimaryLiteralParser'
 
-var FOR_LOOP_REGEXP = /^([\_\$\w]+)\s+of\s+(.+)$/;
+var FOR_LOOP_REGEXP = /^([_$\w]+)\s+of\s+(.+)$/;
 var LETTER_REGEXP = /[a-zA-Z]/;
-var TAGNAME_STOP = /[\s\/>]/;
+var TAGNAME_STOP = /[\s/>]/;
 
 var viewEngine = null;
 
 var SELF_CLOSING_TAGS = {
   '!': true,
-	br: true,
-	hr: true,
-	area: true,
-	base: true,
-	img: true,
-	input: true,
-	link: true,
-	meta: true,
-	basefont: true,
-	param: true,
-	col: true,
-	frame: true,
-	embed: true,
-	keygen: true,
-	source: true,
-	command: true,
-	track: true,
-	wbr: true
+  br: true,
+  hr: true,
+  area: true,
+  base: true,
+  img: true,
+  input: true,
+  link: true,
+  meta: true,
+  basefont: true,
+  param: true,
+  col: true,
+  frame: true,
+  embed: true,
+  keygen: true,
+  source: true,
+  command: true,
+  track: true,
+  wbr: true
 };
 
 var DIRECTIVES = {
@@ -80,7 +83,7 @@ function isDirective(name) {
 }
 
 function isSelfClosingTag(tagName) {
-  return SELF_CLOSING_TAGS.hasOwnProperty(tagName);
+  return hasOwnProp.call(SELF_CLOSING_TAGS, tagName);
 }
 
 function parseDirective(name, expr, node, prototype, identifiers) {
@@ -179,6 +182,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         try {
           result = FragmentBindingParser.parse(attrValue, prototype, identifiers);
         } catch (e) {
+          // eslint-disable-next-line no-undef
           if (__ENV__ === 'development') {
             if (e.code === 1001) {
               e.expr = BINDING_FORMAT.replace('0', e.expr);
@@ -225,10 +229,10 @@ function getSnapshot(htmx, expr, node, start) {
   ]
 }
 
-function parseAttributes(htmx, from, node, prototype, identifiers) {
+function parseAttributes(htmx, from, node, prototype) {
   var idx = from, start = from, stop = from, end = htmx.length;
   var cc, attrName, attrNames;//, operator, attributes = [];
-	while (idx < end) {
+  while (idx < end) {
     cc = htmx[idx];
     if (attrName) {
       if (!WHITE_SPACE_REGEXP.test(cc)) {
@@ -250,6 +254,7 @@ function parseAttributes(htmx, from, node, prototype, identifiers) {
               parseAttribute(attrName, htmx.slice(start, stop), node, prototype, node.identifiers);
             }
           } catch(e) {
+            // eslint-disable-next-line no-undef
             if (__ENV__ === 'development') {
               if (e.code === 1001) {
                 var snapshot = getSnapshot(htmx, e.expr, node, start);
@@ -310,6 +315,7 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
     try {
       result = FragmentBindingParser.parse(text, prototype, identifiers);
     } catch (e) {
+      // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         if (e.code === 1001) {
           var snapshot = getSnapshot(htmx, BINDING_FORMAT.replace('0', e.expr), parent, start);
@@ -370,6 +376,7 @@ function parseHTMX(htmx, prototype) {
         node.tag = tagName;
         node.__extag_node__ = true;
 
+        // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
           node.range = [start-1, -1];
         }
@@ -424,6 +431,7 @@ function parseHTMX(htmx, prototype) {
           parent = node;
         }
 
+        // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
           node.range[1] = stop;
         }
@@ -441,6 +449,7 @@ function parseHTMX(htmx, prototype) {
         tagName = htmx.slice(start, stop);
         // console.log('end tag: ' + htmx.slice(start, stop))
         if (tagName !== parent.tag) {
+          // eslint-disable-next-line no-undef
           if (__ENV__ === 'development') {
             var snapshot = getSnapshot(htmx, tagName, parent, start);
             logger.warn('Unclosed tag `' + parent.tag + '`. In the template of component ' 

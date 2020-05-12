@@ -28,7 +28,7 @@ export default {
    * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
    */
   parse: function(expr, prototype, identifiers) {
-    var i, j, n, template = [], start = 0, stop;
+    var i, n, template = [], start = 0, stop;
     var b0, b1, b2, ct = 0, cc, cb;
     var pattern, text;
     for (i = 0, n = expr.length; i < n; ++i) {

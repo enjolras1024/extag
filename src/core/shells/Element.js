@@ -5,7 +5,7 @@ import Schedule from 'src/core/Schedule'
 import Shell from 'src/core/shells/Shell'
 import Cache from 'src/core/models/Cache'
 import DirtyMarker from 'src/base/DirtyMarker'
-import { assign, defineProp, defineClass } from 'src/share/functions'
+import { defineProp, defineClass } from 'src/share/functions'
 import {
   FLAG_NORMAL,
   FLAG_WAITING_TO_RENDER
@@ -40,6 +40,7 @@ defineClass({
 
   statics: {
     initialize: function initialize(element, ns, tag, props, scopes, template) {
+      // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         if (element.constructor !== Element) {
           throw new TypeError('Element is final class and can not be extended');

@@ -3,8 +3,8 @@
 // var PATH_DELIMITER = /\[|\]?\./;
 var PATH_DELIMITER_1 = /\./;
 var PATH_DELIMITER_2 = /(\]\.)|\.|\[|\]/g;
-var PATH_REGEXP_1 = /^[\$_A-Z][\$_A-Z0-9]*(\.[\$_A-Z0-9]+)*$/i;
-var PATH_REGEXP_2 = /^[\$_A-Z][\$_A-Z0-9]*((\[\d+\])|(\.[\$_A-Z0-9]+))*$/i;
+var PATH_REGEXP_1 = /^[$_A-Z][$_A-Z0-9]*(\.[$_A-Z0-9]+)*$/i;
+var PATH_REGEXP_2 = /^[$_A-Z][$_A-Z0-9]*((\[\d+\])|(\.[$_A-Z0-9]+))*$/i;
 
 /**
  * Find the resource in the scope
@@ -73,6 +73,7 @@ export default {
       if (typeof window !== 'undefined') {
         res = find(path, window);
       } else if (typeof global !== 'undefined') {
+        // eslint-disable-next-line no-undef
         res = find(path, global);
       }
     }

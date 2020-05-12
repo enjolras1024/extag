@@ -37,8 +37,8 @@ var WHITE_SPACES_REGEXP = /\s+/;
 var WHITE_SPACE_REGEXP = /\s/g;
 var CAPITAL_REGEXP = /^[A-Z]/;
 var CONTEXT_REGEXP = /^this\./;
-var HANDLER_REGEXP = /^(this\.)?[\w\$\_]+$/;
-var PROP_EXPR_REGEXP = /^\s*[\$_a-zA-Z0-9]+\s*$/;
+var HANDLER_REGEXP = /^(this\.)?[\w$_]+$/;
+var PROP_EXPR_REGEXP = /^\s*[$_a-zA-Z0-9]+\s*$/;
 
 
 export {

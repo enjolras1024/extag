@@ -1,6 +1,6 @@
 // src/core/shells/Slot.js
 
-import Shell from 'src/core/shells/Shell'
+// import Shell from 'src/core/shells/Shell'
 import Component from 'src/core/shells/Component'
 import HTMXEngine from 'src/core/template/HTMXEngine'
 import { FLAG_CHANGED } from 'src/share/constants'

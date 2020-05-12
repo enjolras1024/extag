@@ -1,6 +1,6 @@
 {
   "name": "extag",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "An Event-driven and Component-based JavaScript Library for Building User Interfaces",
   "main": "dist/extag.js",
   "scripts": {
@@ -13,6 +13,7 @@
   "license": "MIT",
   "devDependencies": {
     "chai": "^3.5.0",
+    "eslint": "^7.0.0",
     "gulp": "^4.0.2",
     "karma": "^1.1.2",
     "karma-chai": "^0.1.0",
