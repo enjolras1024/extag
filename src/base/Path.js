@@ -26,7 +26,7 @@ function find(path, scope) {
   return value;
 }
 
-export default {
+var Path = {
   test: function(text) {
     return PATH_REGEXP_1.test(text);
   },
@@ -58,7 +58,7 @@ export default {
     var res;
 
     if (typeof path === 'string') {
-      path = this.parse(path);
+      path = Path.parse(path);
     }
 
     if (!path) {
@@ -81,3 +81,5 @@ export default {
     return res;
   },
 };
+
+export default Path;

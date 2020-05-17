@@ -341,7 +341,11 @@ defineClass({
           if (handler.flag & 4) { // once: 0b1xx
             this.off(type, handler.func, handler.flag ? flag2opts(handler.flag) : null);
           }
-          handler.func.apply(null, slice(arguments, 1));
+          try {
+            handler.func.apply(null, slice(arguments, 1));
+          } catch (e) {
+            console.error(e);
+          }
         }
       }
     }
