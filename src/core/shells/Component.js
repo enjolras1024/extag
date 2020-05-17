@@ -365,7 +365,7 @@ defineClass({
     if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
       // If this type is 0, we should ask its parent to render parent's children,
       // since its children are belong to its parent actually.
-      if (this.type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+      if (this.$type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
         // this._parent.invalidate(2); 
         var parent = this.getParent(true);
         parent.$flag |= FLAG_CHANGED_CHILDREN;

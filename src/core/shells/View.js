@@ -52,26 +52,29 @@ defineClass({
 
     if (typeof type === 'function') {
       ctor = type;
-    } else if (typeof type === 'string') {
-      // if (/^url\(.*\)$/.test(type)) {
-      //   // TODO: check `require`
-      //   require([type], (function(ctor) {
-      //     this.set('xtype', ctor);
-      //   }).bind(this));
-      //   return;
-      // } else {
+    } /*else if (typeof type === 'string') {
+      if (/^url\(.*\)$/.test(type)) {
+        // TODO: check `require`
+        require([type], (function(ctor) {
+          this.set('xtype', ctor);
+        }).bind(this));
+        return;
+      } else {
         var resources = scopes[0].constructor.resources;
-        ctor = resources && resources[type];
-      // }
-    } else if (typeof type === 'object' && typeof Promise === 'function' && type instanceof Promise) {
+        ctor = Path.search(type, resources);
+      }
+    }*/ else if (typeof type === 'object' && typeof Promise === 'function' && type instanceof Promise) {
       type.then((function(ctor) {
         this.set('xtype', ctor);
-      }).bind(this))
+      }).bind(this)).catch((function() {
+        this.set('xtype', null);
+      }).bind(this));
       return;
     }
 
     if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
       // throw new Error('No such component type `' + xType + '`');
+      this.setChildren([]);
       return;
     }
     

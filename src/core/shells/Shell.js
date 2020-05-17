@@ -79,9 +79,9 @@ defineClass({
       this.$flag = FLAG_CHANGED;
       Schedule.insertUpdateQueue(this);
     }
-    // if (flag) {
-      this.$flag |= flag;
-    // }
+    if ((this.$flag & flag) === 0) {
+    this.$flag |= flag;
+    }
     // return this;
   },
 
