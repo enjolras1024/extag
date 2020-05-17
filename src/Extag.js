@@ -55,6 +55,23 @@ if (typeof window !== 'undefined' && window.ExtagDom) {
   config.set('view-engine', window.ExtagDom);
 }
 
+// export {
+//   help,
+//   defineClass,
+
+//   Validator,
+//   Watcher, 
+
+//   Cache,
+//   Store, 
+
+//   Slot,
+//   Text,
+//   Element,
+//   Fragment,
+//   Component
+// }
+
 export default {
   anew: Generator.anew,
   inst: Generator.inst,
@@ -100,10 +117,10 @@ export default {
   // shells
   //#test Shell: Shell,
   //#test
-  // Slot: Slot,
+  Slot: Slot,
   Text: Text, 
   Element: Element, 
-  // Fragment: Fragment,
+  Fragment: Fragment,
   Component: Component,
 
   // bindings

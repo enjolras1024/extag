@@ -30,25 +30,27 @@ hello.attach(ExtagDom.query('#hello')); // hello.attach(document.getElementById(
 ```
 我们定义了一个Hello类，继承自Component。组件模板中使用了一个单向的数据绑定表达式@{ what }。包裹在 @{ } 内的自定义的特性what是可绑定的，其默认值为'World'。创建一个Hello类的实例，附着到页面上的一个元素上，'Hello, World!'的字样就会渲染到页面上。
 #### 数据绑定 & 事件监听
-我们在标签中使用 @= 绑定属性和表达式，使用 += 连接事件和处理函数：
+我们在标签上使用 @= 绑定属性和表达式，使用 += 连接事件和处理函数：
 ```javascript
 class Hello extends Extag.Component {
   static get template() {
-    return  `<div class@="className">
-                <input value@="value" change+="onChange">
+    return  `<div class="hello">
+                <h1>Hello, @{ what }!</h1>
+                <input value@="what" input+="onInput">
             </div>`;
   }
   static get attributes() {
     return {
-        value: '',
-        className: 'a', // 或者classObject: {a: true}
+        what: ''
     };
   }
   setup() {
-      this.onChange = this.onChange.bind(this);
-  },
-  onChange(event) {
-      this.value = event.target.value;
+    return {
+      onInput: this.onInput.bind(this)
+    }
+  }
+  onInput(event) {
+    this.what = event.target.value;
   }
 }
 ```

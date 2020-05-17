@@ -1,6 +1,9 @@
 //######################################################################################################################
 // src/view/ExtagDom.js
 //######################################################################################################################
+//#es6 import Extag from "extag"
+//#cjs var Extag = require("extag")
+
 var hasOwnProp = Object.prototype.hasOwnProperty;
 
 function assign(target/*,..sources*/) { // Object.assign
@@ -861,7 +864,7 @@ assign(ExtagDom, {
     
     var events = tag2events[tagName] || {};
     if (type in events) {
-      return true;
+      return events[type];
     }
     tag2events[tagName] = events
 
@@ -875,17 +878,22 @@ assign(ExtagDom, {
         $skin.setAttribute(eventHook, 'return;');
         if (typeof $skin[eventHook] === 'function') {
           $skin[eventHook] = null;
-          events[type] =  true;
+          events[type] = true;
+        } else {
+          events[type] = false;
         }
-      // eslint-disable-next-line no-empty
-      } catch (e) {}
+      } catch (e) {
+        events[type] = false;
+      }
       if (value) {
         $skin.setAttribute(eventHook, value);
       } else {
         $skin.removeAttribute(eventHook);
       }
+    } else {
+      events[type] = false;
     }
-    return (type in events);
+    return events[type];
   },
 
   // /**
@@ -1258,8 +1266,9 @@ assign(ExtagDom, {
   }
 });
 
-if (typeof window !== 'undefined' && window.Extag) {
-  window.Extag.conf('view-engine', ExtagDom);
+if (typeof Extag !== 'undefined') {
+  // eslint-disable-next-line no-undef
+  Extag.conf('view-engine', ExtagDom);
 }
 
 export default ExtagDom

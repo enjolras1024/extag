@@ -1,5 +1,5 @@
 /**
- * Extag v0.2.1
+ * Extag v0.2.3
  * (c) enjolras.chen
  * Released under the MIT License.
  */
@@ -69,7 +69,7 @@
       var res;
 
       if (typeof path === 'string') {
-        path = this.parse(path);
+        path = Path.parse(path);
       }
 
       if (!path) {
@@ -462,7 +462,6 @@
   var VIEW_ENGINE = 'view-engine';
   var EMPTY_OBJECT = {};
   var EMPTY_ARRAY = [];
-  var CONTEXT_SYMBOL = 'this';
   var BINDING_FORMAT = '@{0}';
   var BINDING_BRACKETS = '{}';
   var BINDING_OPERATORS = {
@@ -1107,7 +1106,11 @@
             if (handler.flag & 4) { // once: 0b1xx
               this.off(type, handler.func, handler.flag ? flag2opts(handler.flag) : null);
             }
-            handler.func.apply(null, slice(arguments, 1));
+            try {
+              handler.func.apply(null, slice(arguments, 1));
+            } catch (e) {
+              console.error(e);
+            }
           }
         }
       }
@@ -1670,7 +1673,7 @@
           shell = updateQueue[updateQueueCursor];
           // try {
             shell.update();
-          // } catch (e) {
+          // } catch (e) { 
           //   logger.error(e);
           // }
           ++updateQueueCursor;
@@ -1735,24 +1738,24 @@
   function insertUpdateQueue(shell) {
     var i, n = updateQueue.length, id = shell.$guid;
 
-    if (!updating) {
+    // if (!updating) {
       i = n - 1;
-      while (i >= 0 && id < updateQueue[i].$guid) {
+      while (i > updateQueueCursor && id < updateQueue[i].$guid) {
         --i;
       }
       ++i;
-    } else { // the method `invalidate` maybe called when updating
-      i = updateQueueCursor + 1;
-      // if (id < updateQueue[updateQueueCursor].$guid) {
-      //   if ("development" === 'development') {
-      //     logger.warn('Do not change properties or emit event to parent component on updating.');
-      //   }
-      //   throw new Error(shell.toString() + ' should not update after some child component has updated.');
-      // }
-      while (i < n && id >= updateQueue[i].$guid) {
-        ++i;
-      }
-    }
+    // } else { // the method `invalidate` maybe called when updating
+    //   i = updateQueueCursor + 1;
+    //   // if (id < updateQueue[updateQueueCursor].$guid) {
+    //   //   if ("development" === 'development') {
+    //   //     logger.warn('Do not change properties or emit event to parent component on updating.');
+    //   //   }
+    //   //   throw new Error(shell.toString() + ' should not update after some child component has updated.');
+    //   // }
+    //   while (i < n && id >= updateQueue[i].$guid) {
+    //     ++i;
+    //   }
+    // }
 
     if (i === n) {
       updateQueue.push(shell);
@@ -1815,6 +1818,68 @@
   var _binding;
   var _bindingStack = [];
 
+  // var Dependency = {
+  //   binding: function() {
+  //     return _binding != null;
+  //   },
+  //   begin: function begin(binding) {
+  //     _binding = binding;
+  //     _binding.execTimes = _binding.execTimes ? _binding.execTimes + 1 : 1;
+  //     _binding.depsCountNew = 0;
+  //     _binding.depsCountOld = 0;
+  //     if (!_binding.deps) {
+  //       _binding.deps = {};
+  //     }
+  //     _bindingStack.unshift(binding);
+  //   },
+  //   end: function end() {
+  //     if (_binding == null) { return; }
+  //     if (_binding.depsCountOld < _binding.depsCount) {
+  //       var uid, dep;
+  //       for (uid in _binding.deps) {
+  //         dep = _binding.deps[uid];
+  //         if (dep.cnt !== _binding.execTimes) {
+  //           delete _binding.deps[uid];
+  //           dep.src.off('changed.' + dep.key, _binding.invalidate);
+  //         }
+  //       }
+  //     }
+  //     _binding.depsCount = _binding.depsCountOld + _binding.depsCountNew;
+  //     //
+  //     _bindingStack.shift();
+  //     _binding = _bindingStack[0];
+  //   },
+  //   add: function(src, key) {
+  //     if (_binding == null) { return; }
+  //     var uid = src.$guid + '.' + key;
+  //     var dep = _binding.deps[uid];
+  //     if (dep) {
+  //       if (dep.cnt !== _binding.execTimes) {
+  //         dep.cnt = _binding.execTimes;
+  //         _binding.depsCountOld++;
+  //       }
+  //     } else {
+  //       src.on('changed.' + key, _binding.invalidate);
+  //       _binding.depsCountNew++;
+  //       _binding.deps[uid] = {
+  //         src: src,
+  //         key: key,
+  //         cnt: _binding.execTimes
+  //       }
+  //     }
+  //   },
+  //   clean: function(binding) {
+  //     var deps = binding.deps;
+  //     if (!deps) { return; }
+  //     var uid, dep;
+  //     for (uid in deps) {
+  //       dep = deps[uid];
+  //       dep.src.off('changed.' + dep.key, binding.invalidate);
+  //     }
+  //     binding.deps = null;
+  //   },
+  // }
+
   var Dependency = {
     binding: function() {
       return _binding != null;
@@ -1825,18 +1890,18 @@
       _binding.depsCountNew = 0;
       _binding.depsCountOld = 0;
       if (!_binding.deps) {
-        _binding.deps = {};
+        _binding.deps = [];
       }
       _bindingStack.unshift(binding);
     },
     end: function end() {
       if (_binding == null) { return; }
       if (_binding.depsCountOld < _binding.depsCount) {
-        var uid, dep;
-        for (uid in _binding.deps) {
-          dep = _binding.deps[uid];
+        var i, dep, deps = _binding.deps;
+        for (i = deps.length - 1; i >= 0; --i) {
+          dep = deps[i];
           if (dep.cnt !== _binding.execTimes) {
-            delete _binding.deps[uid];
+            deps.splice(i, 1);
             dep.src.off('changed.' + dep.key, _binding.invalidate);
           }
         }
@@ -1848,31 +1913,41 @@
     },
     add: function(src, key) {
       if (_binding == null) { return; }
-      var uid = src.$guid + '.' + key;
-      var dep = _binding.deps[uid];
-      if (dep) {
-        dep.cnt = _binding.execTimes;
+      var i, dep, oldDep;
+      var deps = _binding.deps;
+      if (deps.length) {
+        for (i = 0; i < deps.length; ++i) {
+          dep = deps[i];
+          if (dep.key === key 
+              && dep.src === src) {
+            oldDep = dep;
+            break;
+          }
+        }
+      }
+      if (oldDep) {
         _binding.depsCountOld++;
+        oldDep.cnt = _binding.execTimes;
       } else {
-        src.on('changed.' + key, _binding.invalidate);
         _binding.depsCountNew++;
-        _binding.deps[uid] = {
+        src.on('changed.' + key, _binding.invalidate);
+        deps.push({
           src: src,
-          key: key,
+          ley: key,
           cnt: _binding.execTimes
-        };
+        });
       }
     },
     clean: function(binding) {
       var deps = binding.deps;
       if (!deps) { return; }
-      var uid, dep;
-      for (uid in deps) {
-        dep = deps[uid];
+      var i, dep;
+      for (i = 0; i < deps.length; ++i) {
+        dep = deps[i];
         dep.src.off('changed.' + dep.key, binding.invalidate);
       }
-      binding.deps = null;
-    },
+      binding.deps.length = 0;
+    }
   };
 
   // src/core/models/Store.js
@@ -2120,9 +2195,9 @@
         this.$flag = FLAG_CHANGED;
         Schedule.insertUpdateQueue(this);
       }
-      // if (flag) {
-        this.$flag |= flag;
-      // }
+      if ((this.$flag & flag) === 0) {
+      this.$flag |= flag;
+      }
       // return this;
     },
 
@@ -3282,7 +3357,7 @@
       if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
         // If this type is 0, we should ask its parent to render parent's children,
         // since its children are belong to its parent actually.
-        if (this.type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+        if (this.$type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
           // this._parent.invalidate(2); 
           var parent = this.getParent(true);
           parent.$flag |= FLAG_CHANGED_CHILDREN;
@@ -3762,7 +3837,7 @@
         driveProps(target.classes, template.classes, scopes);
       }
       if (template.children) {
-        driveContents(target, template.children,scopes);
+        driveContents(target, template.children, scopes);
       }
     } else if (props) {
       // eslint-disable-next-line no-undef
@@ -3854,7 +3929,7 @@
         });
       }
       DirtyMarker.clean(__props, 'style');
-      style = __props.style;
+      style = __props.get('style');
       if (typeof style === 'object') {
         __style.reset(style);
       } else if (typeof style === 'string') {
@@ -3875,7 +3950,7 @@
         });
       }
       DirtyMarker.clean(__props, 'classes');
-      classes = __props.classes;
+      classes = __props.get('classes');
       if (typeof classes !== 'object') {
         classes = toClasses(classes);
       }
@@ -4471,7 +4546,7 @@
 
     if (target instanceof Component && target !== scope) {
       oldChildren = target._contents || EMPTY_ARRAY;
-      newChildren = node.contents || EMPTY_ARRAY;
+      newChildren = node.children || EMPTY_ARRAY;
     } else if (!(target instanceof Slot)) {
       oldChildren = target._children || EMPTY_ARRAY;
       newChildren = node.children || EMPTY_ARRAY;
@@ -4647,26 +4722,29 @@
 
       if (typeof type === 'function') {
         ctor = type;
-      } else if (typeof type === 'string') {
-        // if (/^url\(.*\)$/.test(type)) {
-        //   // TODO: check `require`
-        //   require([type], (function(ctor) {
-        //     this.set('xtype', ctor);
-        //   }).bind(this));
-        //   return;
-        // } else {
+      } /*else if (typeof type === 'string') {
+        if (/^url\(.*\)$/.test(type)) {
+          // TODO: check `require`
+          require([type], (function(ctor) {
+            this.set('xtype', ctor);
+          }).bind(this));
+          return;
+        } else {
           var resources = scopes[0].constructor.resources;
-          ctor = resources && resources[type];
-        // }
-      } else if (typeof type === 'object' && typeof Promise === 'function' && type instanceof Promise) {
+          ctor = Path.search(type, resources);
+        }
+      }*/ else if (typeof type === 'object' && typeof Promise === 'function' && type instanceof Promise) {
         type.then((function(ctor) {
           this.set('xtype', ctor);
+        }).bind(this)).catch((function() {
+          this.set('xtype', null);
         }).bind(this));
         return;
       }
 
       if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
         // throw new Error('No such component type `' + xType + '`');
+        this.setChildren([]);
         return;
       }
       
@@ -4702,6 +4780,14 @@
         if (typeof value === 'object' && value instanceof Expression) {
           value.connect(prototype, node.identifiers);
         }
+        if (typeof value === 'object') {
+          if (value instanceof Expression) {
+            value.connect(prototype, node.identifiers);
+          } else if (key === 'classes' || key === 'style' || key === 'attrs') {
+            node[key] = value;
+            delete props[key];
+          }
+        }
       }
     }
     if (node.type && typeof node.type === 'string') {
@@ -4720,6 +4806,9 @@
       ctor = Path.search(node.tag, prototype.constructor.resources);
       if (typeof ctor === 'function' && ctor.__extag_component_class__) {
         node.type = ctor;
+      // eslint-disable-next-line no-undef
+      } else {
+        logger.warn('`' + node.tag + '` maybe component but not found.');
       }
     }
     if (node.type == null) {
@@ -4809,9 +4898,10 @@
   }
 
   var RESERVED_PARAMS = {
-    ns: null,
-    on: null,
+    // ns: null,
+    // on: null,
     // tag: null,
+    xns: null,
     xif: null,
     xfor: null,
     xkey: null,
@@ -4824,7 +4914,7 @@
     // classes: null,
     // className: null,
     
-    // events: null,
+    events: null,
     // directs: null,
     children: null,
     contents: null
@@ -4833,11 +4923,11 @@
   /**
    *
    * @param {string|Function} tagOrType
-   * @param {Object} attrs
+   * @param {Object} options
    * @param {string|Array|Object} children
    * @returns {Object}
    */
-  function node(type, attrs, children) {
+  function node(type, options, children) {
     var node = {
       __extag_node__: true
     };
@@ -4863,22 +4953,26 @@
     //   attrs = null;
     // }
 
-    if (attrs != null) {
+    if (options != null) {
+
+      if (options.xns) {
+        node.ns = options.xns;
+      }
       
-      if (attrs.xif) {
-        node.xif = attrs.xif;
+      if (options.xif) {
+        node.xif = options.xif;
       }
-      if (attrs.xfor) {
-        node.xfor = attrs.xfor;
+      if (options.xfor) {
+        node.xfor = options.xfor;
       }
-      if (attrs.xkey) {
-        node.xkey = attrs.xkey;
+      if (options.xkey) {
+        node.xkey = options.xkey;
       }
-      if (attrs.xname) {
-        node.name = attrs.xname;
+      if (options.xname) {
+        node.name = options.xname;
       }
-      if (attrs.xtype && !node.type) {
-        node.type = attrs.xtype;
+      if (options.xtype && !node.type) {
+        node.type = options.xtype;
       }
       // if (attrs.style) {
       //   node.style = attrs.style;
@@ -4889,17 +4983,17 @@
       // if (attrs.xclass) { // TODO: className
       //   node.classes = attrs.xclass;
       // }
-      if (attrs.on) {
-        node.events = attrs.on;
+      if (options.events) {
+        node.events = options.events;
       }
 
       // node.directs = attrs.directs;
 
       var props = node.props = {};
 
-      for (var key in attrs) {
-        if (hasOwnProp.call(attrs, key) && !(key in RESERVED_PARAMS)) {
-          props[key] = attrs[key];
+      for (var key in options) {
+        if (hasOwnProp.call(options, key) && !(key in RESERVED_PARAMS)) {
+          props[key] = options[key];
         }
       }
     }
@@ -4913,11 +5007,11 @@
       } else {
         children = [children];
       }
-      if (node.type) {
-        node.contents = children;
-      } else {
+      // if (node.type) {
+      //   node.contents = children;
+      // } else {
         node.children = children;
-      }
+      // }
     }
 
     return node;
@@ -5020,7 +5114,7 @@
     expr: expr,
     parse: function(template, prototype) {
       var _node = template(node, expr);
-      _node.identifiers = [CONTEXT_SYMBOL];
+      _node.identifiers = ['this'];
       parseJsxNode(_node, prototype);
       parseJsxChildren(_node, prototype);
 
@@ -5046,7 +5140,8 @@
 
   var DIVISION_REGEXP = /[\w).+\-_$\]]/;
 
-  var JS_KEYWORDS = 'abstract arguments boolean break byte case catch char class const continue debugger default delete do double else enum eval export extends false final finally float for function goto if implements import in instanceof int interface let long native new null package private protected public return short static super switch synchronized this throw throws transient true try typeof undefined var void volatile while with yield Array Date Infinity Math NaN Number Object String Boolean';
+  var JS_KEYWORDS = 'abstract arguments boolean break byte case catch char class const continue debugger default delete do double else enum eval export extends false final finally float for function goto if implements import in instanceof int interface let long native new null package private protected public return short static super switch synchronized this throw throws transient true try typeof undefined var void volatile while with yield ' 
+                    +  'isNaN isFinite parseFloat parseInt Array Date Infinity Math NaN Number Object String Boolean RegExp JSON';
   var JS_KEYWORD_MAP = {};
   (function() {
     var keywords = JS_KEYWORDS.split(/\s+/);
@@ -5108,11 +5203,15 @@
           }
           break;
         } else {
+          // if (space && !dot) {
+          //   throwError("Unexpected token '" + expr[index] + "'.", {
+          //     code: 1001, 
+          //     expr: expr
+          //   });
+          // }
           if (space && !dot) {
-            throwError("Unexpected token '" + expr[index] + "'.", {
-              code: 1001, 
-              expr: expr
-            });
+            --index;
+            break;
           }
         }
         space = false;
@@ -5561,6 +5660,7 @@
   var FOR_LOOP_REGEXP = /^([_$\w]+)\s+of\s+(.+)$/;
   var LETTER_REGEXP = /[a-zA-Z]/;
   var TAGNAME_STOP = /[\s/>]/;
+  var ATTRNAME_SPLITTER = /[\s\/]+/;
 
   var viewEngine = null;
 
@@ -5603,6 +5703,10 @@
       node[name] = group = {};
     }
     return group;
+  }
+
+  function getPropName(attrName) {
+    return attrName !== 'class' ? viewEngine.toCamelCase(attrName) : 'classes';
   }
 
   function isDirective(name) {
@@ -5680,7 +5784,7 @@
   function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
     var lastChar = attrName[attrName.length - 1];
     var result, group, key;
-    var asProp;
+    var index;
 
     if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
       group = getGroup(node, 'events');
@@ -5688,13 +5792,20 @@
       result = EventBindingParser.parse(attrValue, prototype, identifiers);
       group[key] = new Expression(EventBinding, result);
     } else {
-      asProp = attrName.indexOf(':') < 0;
-      group = asProp ? getGroup(node, 'props') : getGroup(node, 'attrs');
+      index = attrName.indexOf(':');
+      if (index < 0) {
+        group = getGroup(node, 'props');
+      } else {
+        group = getGroup(node, 'attrs');
+        // :title => title
+        if (index === 0) {
+          attrName = attrName.slice(1);
+        }
+      }
       switch (lastChar) {
         case BINDING_OPERATORS.DATA: // last char is '@'
-          key = asProp ? 
-                viewEngine.toCamelCase(attrName.slice(0, -1)) : 
-                attrName.slice(1, -1);
+          attrName = attrName.slice(0, -1);
+          key = index < 0 ? getPropName(attrName) : attrName;
           result = PrimaryLiteralParser.tryParse(attrValue);
           if (result != null) {
             group[key] = result;
@@ -5704,9 +5815,8 @@
           }
           break;
         case BINDING_OPERATORS.TEXT: // last char is '#'
-          key = asProp ? 
-                viewEngine.toCamelCase(attrName.slice(0, -1)) : 
-                attrName.slice(1, -1);
+          attrName = attrName.slice(0, -1);
+          key = index < 0 ? getPropName(attrName) : attrName;
           try {
             result = FragmentBindingParser.parse(attrValue, prototype, identifiers);
           } catch (e) {
@@ -5726,7 +5836,7 @@
           }
           break;
         default:
-          key = asProp ? viewEngine.toCamelCase(attrName) : attrName;
+          key = index < 0 ? getPropName(attrName) : attrName;
           group[key] = viewEngine.isBoolProp(key) || attrValue;
       }
     }
@@ -5807,11 +5917,11 @@
       } else if (cc === '>') {
         stop = idx;
         if (start < stop) {
-          attrNames = htmx.slice(start, stop).trim().split(WHITE_SPACES_REGEXP);
+          attrNames = htmx.slice(start, stop).trim().split(ATTRNAME_SPLITTER);
           while(attrNames.length > 0) {
             attrName = attrNames.shift();
             if (attrName && node) {
-              getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = true;
+              getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
             }
           }
         }
@@ -5819,11 +5929,11 @@
       } else if (cc === '=') {
         stop = idx;
         if (start < stop) {
-          attrNames = htmx.slice(start, stop).trim().split(WHITE_SPACES_REGEXP);
+          attrNames = htmx.slice(start, stop).trim().split(ATTRNAME_SPLITTER);
           while(attrNames.length > 1) {
             attrName = attrNames.shift();
             if (attrName && node) {
-              getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = true;
+              getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
             }
           }
           attrName = attrNames.shift();
@@ -5930,6 +6040,9 @@
             var ctor = Path.search(tagName, prototype.constructor.resources);
             if (typeof ctor === 'function' && ctor.__extag_component_class__) {
               node.type = ctor;
+            // eslint-disable-next-line no-undef
+            } else {
+              logger.warn('`' + node.tag + '` maybe component but not found.');
             }
           }
           if (node.type == null) {
@@ -6084,6 +6197,23 @@
     config.set('view-engine', window.ExtagDom);
   }
 
+  // export {
+  //   help,
+  //   defineClass,
+
+  //   Validator,
+  //   Watcher, 
+
+  //   Cache,
+  //   Store, 
+
+  //   Slot,
+  //   Text,
+  //   Element,
+  //   Fragment,
+  //   Component
+  // }
+
   var Extag = {
     anew: Generator.anew,
     inst: Generator.inst,
@@ -6129,10 +6259,10 @@
     // shells
     // Shell: Shell,
     //
-    // Slot: Slot,
+    Slot: Slot,
     Text: Text, 
     Element: Element, 
-    // Fragment: Fragment,
+    Fragment: Fragment,
     Component: Component,
 
     // bindings
@@ -6156,7 +6286,7 @@
     expr: JSXParser.expr,
 
     // eslint-disable-next-line no-undef
-    version: "0.2.1"
+    version: "0.2.3"
   };
 
   return Extag;
