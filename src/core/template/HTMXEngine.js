@@ -179,7 +179,7 @@ function driveComponent(target, _template, scopes, template, props) {
       driveProps(target.classes, template.classes, scopes);
     }
     if (template.children) {
-      driveContents(target, template.children,scopes);
+      driveContents(target, template.children, scopes);
     }
   } else if (props) {
     // eslint-disable-next-line no-undef
@@ -271,7 +271,7 @@ function transferProperties(shell) {
       });
     }
     DirtyMarker.clean(__props, 'style');
-    style = __props.style;
+    style = __props.get('style');
     if (typeof style === 'object') {
       __style.reset(style);
     } else if (typeof style === 'string') {
@@ -292,7 +292,7 @@ function transferProperties(shell) {
       });
     }
     DirtyMarker.clean(__props, 'classes');
-    classes = __props.classes;
+    classes = __props.get('classes');
     if (typeof classes !== 'object') {
       classes = toClasses(classes);
     }

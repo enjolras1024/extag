@@ -148,7 +148,7 @@ function updateChildrenOrContents(node, target, scope) {
 
   if (target instanceof Component && target !== scope) {
     oldChildren = target._contents || EMPTY_ARRAY;
-    newChildren = node.contents || EMPTY_ARRAY;
+    newChildren = node.children || EMPTY_ARRAY;
   } else if (!(target instanceof Slot)) {
     oldChildren = target._children || EMPTY_ARRAY;
     newChildren = node.children || EMPTY_ARRAY;
