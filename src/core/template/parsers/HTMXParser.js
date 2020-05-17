@@ -6,8 +6,7 @@ import {
   BINDING_FORMAT,
   CAPITAL_REGEXP,
   BINDING_OPERATORS,
-  WHITE_SPACE_REGEXP,
-  WHITE_SPACES_REGEXP
+  WHITE_SPACE_REGEXP
 } from 'src/share/constants'
 import { 
   hasOwnProp,
@@ -33,6 +32,7 @@ import PrimaryLiteralParser from 'src/core/template/parsers/PrimaryLiteralParser
 var FOR_LOOP_REGEXP = /^([_$\w]+)\s+of\s+(.+)$/;
 var LETTER_REGEXP = /[a-zA-Z]/;
 var TAGNAME_STOP = /[\s/>]/;
+var ATTRNAME_SPLITTER = /[\s\/]+/;
 
 var viewEngine = null;
 
@@ -75,6 +75,10 @@ function getGroup(node, name) {
     node[name] = group = {};
   }
   return group;
+}
+
+function getPropName(attrName) {
+  return attrName !== 'class' ? viewEngine.toCamelCase(attrName) : 'classes';
 }
 
 function isDirective(name) {
@@ -152,7 +156,7 @@ function parseDirective(name, expr, node, prototype, identifiers) {
 function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
   var lastChar = attrName[attrName.length - 1];
   var result, group, key;
-  var asProp;
+  var index;
 
   if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
     group = getGroup(node, 'events');
@@ -160,13 +164,20 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
     result = EventBindingParser.parse(attrValue, prototype, identifiers);
     group[key] = new Expression(EventBinding, result);
   } else {
-    asProp = attrName.indexOf(':') < 0;
-    group = asProp ? getGroup(node, 'props') : getGroup(node, 'attrs');
+    index = attrName.indexOf(':');
+    if (index < 0) {
+      group = getGroup(node, 'props');
+    } else {
+      group = getGroup(node, 'attrs');
+      // :title => title
+      if (index === 0) {
+        attrName = attrName.slice(1);
+      }
+    }
     switch (lastChar) {
       case BINDING_OPERATORS.DATA: // last char is '@'
-        key = asProp ? 
-              viewEngine.toCamelCase(attrName.slice(0, -1)) : 
-              attrName.slice(1, -1);
+        attrName = attrName.slice(0, -1);
+        key = index < 0 ? getPropName(attrName) : attrName;
         result = PrimaryLiteralParser.tryParse(attrValue);
         if (result != null) {
           group[key] = result;
@@ -176,9 +187,8 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         }
         break;
       case BINDING_OPERATORS.TEXT: // last char is '#'
-        key = asProp ? 
-              viewEngine.toCamelCase(attrName.slice(0, -1)) : 
-              attrName.slice(1, -1);
+        attrName = attrName.slice(0, -1);
+        key = index < 0 ? getPropName(attrName) : attrName;
         try {
           result = FragmentBindingParser.parse(attrValue, prototype, identifiers);
         } catch (e) {
@@ -198,7 +208,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         }
         break;
       default:
-        key = asProp ? viewEngine.toCamelCase(attrName) : attrName;
+        key = index < 0 ? getPropName(attrName) : attrName;
         group[key] = viewEngine.isBoolProp(key) || attrValue;
     }
   }
@@ -279,11 +289,11 @@ function parseAttributes(htmx, from, node, prototype) {
     } else if (cc === '>') {
       stop = idx;
       if (start < stop) {
-        attrNames = htmx.slice(start, stop).trim().split(WHITE_SPACES_REGEXP);
+        attrNames = htmx.slice(start, stop).trim().split(ATTRNAME_SPLITTER);
         while(attrNames.length > 0) {
           attrName = attrNames.shift();
           if (attrName && node) {
-            getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = true;
+            getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
           }
         }
       }
@@ -291,11 +301,11 @@ function parseAttributes(htmx, from, node, prototype) {
     } else if (cc === '=') {
       stop = idx;
       if (start < stop) {
-        attrNames = htmx.slice(start, stop).trim().split(WHITE_SPACES_REGEXP);
+        attrNames = htmx.slice(start, stop).trim().split(ATTRNAME_SPLITTER);
         while(attrNames.length > 1) {
           attrName = attrNames.shift();
           if (attrName && node) {
-            getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = true;
+            getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
           }
         }
         attrName = attrNames.shift();
@@ -402,6 +412,9 @@ function parseHTMX(htmx, prototype) {
           var ctor = Path.search(tagName, prototype.constructor.resources);
           if (typeof ctor === 'function' && ctor.__extag_component_class__) {
             node.type = ctor;
+          // eslint-disable-next-line no-undef
+          } else if (__ENV__ === 'development') {
+            logger.warn('`' + node.tag + '` maybe component but not found.');
           }
         }
         if (node.type == null) {

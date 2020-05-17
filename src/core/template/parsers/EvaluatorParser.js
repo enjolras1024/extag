@@ -11,7 +11,8 @@ import Evaluator from 'src/core/template/Evaluator'
 
 var DIVISION_REGEXP = /[\w).+\-_$\]]/;
 
-var JS_KEYWORDS = 'abstract arguments boolean break byte case catch char class const continue debugger default delete do double else enum eval export extends false final finally float for function goto if implements import in instanceof int interface let long native new null package private protected public return short static super switch synchronized this throw throws transient true try typeof undefined var void volatile while with yield Array Date Infinity Math NaN Number Object String Boolean';
+var JS_KEYWORDS = 'abstract arguments boolean break byte case catch char class const continue debugger default delete do double else enum eval export extends false final finally float for function goto if implements import in instanceof int interface let long native new null package private protected public return short static super switch synchronized this throw throws transient true try typeof undefined var void volatile while with yield ' 
+                  +  'isNaN isFinite parseFloat parseInt Array Date Infinity Math NaN Number Object String Boolean RegExp JSON';
 var JS_KEYWORD_MAP = {};
 (function() {
   var keywords = JS_KEYWORDS.split(/\s+/);
@@ -73,11 +74,15 @@ function skipToPathEnding(expr, index) {
         }
         break;
       } else {
+        // if (space && !dot) {
+        //   throwError("Unexpected token '" + expr[index] + "'.", {
+        //     code: 1001, 
+        //     expr: expr
+        //   });
+        // }
         if (space && !dot) {
-          throwError("Unexpected token '" + expr[index] + "'.", {
-            code: 1001, 
-            expr: expr
-          });
+          --index;
+          break;
         }
       }
       space = false;

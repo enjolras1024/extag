@@ -12,7 +12,7 @@ import config from 'src/share/config'
 import logger from 'src/share/logger'
 
 import { 
-  CONTEXT_SYMBOL,
+  // CONTEXT_SYMBOL,
   CONTEXT_REGEXP,
   HANDLER_REGEXP,
   CAPITAL_REGEXP,
@@ -44,6 +44,14 @@ function parseJsxNode(node, prototype) {
       if (typeof value === 'object' && value instanceof Expression) {
         value.connect(prototype, node.identifiers);
       }
+      if (typeof value === 'object') {
+        if (value instanceof Expression) {
+          value.connect(prototype, node.identifiers);
+        } else if (key === 'classes' || key === 'style' || key === 'attrs') {
+          node[key] = value;
+          delete props[key];
+        }
+      }
     }
   }
   if (node.type && typeof node.type === 'string') {
@@ -62,6 +70,9 @@ function parseJsxNode(node, prototype) {
     ctor = Path.search(node.tag, prototype.constructor.resources);
     if (typeof ctor === 'function' && ctor.__extag_component_class__) {
       node.type = ctor;
+    // eslint-disable-next-line no-undef
+    } else if (__ENV__ === 'development') {
+      logger.warn('`' + node.tag + '` maybe component but not found.');
     }
   }
   if (node.type == null) {
@@ -151,9 +162,10 @@ function parseJsxChildren(node, prototype) {
 }
 
 var RESERVED_PARAMS = {
-  ns: null,
-  on: null,
+  // ns: null,
+  // on: null,
   // tag: null,
+  xns: null,
   xif: null,
   xfor: null,
   xkey: null,
@@ -166,7 +178,7 @@ var RESERVED_PARAMS = {
   // classes: null,
   // className: null,
   
-  // events: null,
+  events: null,
   // directs: null,
   children: null,
   contents: null
@@ -175,11 +187,11 @@ var RESERVED_PARAMS = {
 /**
  *
  * @param {string|Function} tagOrType
- * @param {Object} attrs
+ * @param {Object} options
  * @param {string|Array|Object} children
  * @returns {Object}
  */
-function node(type, attrs, children) {
+function node(type, options, children) {
   var node = {
     __extag_node__: true
   };
@@ -205,22 +217,26 @@ function node(type, attrs, children) {
   //   attrs = null;
   // }
 
-  if (attrs != null) {
+  if (options != null) {
+
+    if (options.xns) {
+      node.ns = options.xns;
+    }
     
-    if (attrs.xif) {
-      node.xif = attrs.xif;
+    if (options.xif) {
+      node.xif = options.xif;
     }
-    if (attrs.xfor) {
-      node.xfor = attrs.xfor;
+    if (options.xfor) {
+      node.xfor = options.xfor;
     }
-    if (attrs.xkey) {
-      node.xkey = attrs.xkey;
+    if (options.xkey) {
+      node.xkey = options.xkey;
     }
-    if (attrs.xname) {
-      node.name = attrs.xname;
+    if (options.xname) {
+      node.name = options.xname;
     }
-    if (attrs.xtype && !node.type) {
-      node.type = attrs.xtype;
+    if (options.xtype && !node.type) {
+      node.type = options.xtype;
     }
     // if (attrs.style) {
     //   node.style = attrs.style;
@@ -231,17 +247,17 @@ function node(type, attrs, children) {
     // if (attrs.xclass) { // TODO: className
     //   node.classes = attrs.xclass;
     // }
-    if (attrs.on) {
-      node.events = attrs.on;
+    if (options.events) {
+      node.events = options.events;
     }
 
     // node.directs = attrs.directs;
 
     var props = node.props = {};
 
-    for (var key in attrs) {
-      if (hasOwnProp.call(attrs, key) && !(key in RESERVED_PARAMS)) {
-        props[key] = attrs[key];
+    for (var key in options) {
+      if (hasOwnProp.call(options, key) && !(key in RESERVED_PARAMS)) {
+        props[key] = options[key];
       }
     }
   }
@@ -255,11 +271,11 @@ function node(type, attrs, children) {
     } else {
       children = [children];
     }
-    if (node.type) {
-      node.contents = children;
-    } else {
+    // if (node.type) {
+    //   node.contents = children;
+    // } else {
       node.children = children;
-    }
+    // }
   }
 
   return node;
@@ -362,7 +378,7 @@ var JSXParser = {
   expr: expr,
   parse: function(template, prototype) {
     var _node = template(node, expr);
-    _node.identifiers = [CONTEXT_SYMBOL];
+    _node.identifiers = ['this'];
     parseJsxNode(_node, prototype);
     parseJsxChildren(_node, prototype);
 
