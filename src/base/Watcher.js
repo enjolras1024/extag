@@ -1,6 +1,7 @@
 // src/base/Watcher.js
 
 // import Event from 'src/base/Event'
+import { FLAG_NONE, FLAG_ONCE, FLAG_CAPTURE, FLAG_PASSIVE } from 'src/share/constants'
 import { slice, hasOwnProp, defineProp, defineClass } from 'src/share/functions'
 
 export default function Watcher() {
@@ -34,16 +35,16 @@ function getEventTail(event) {
 
 var listeners = [
   function(event) {
-    this.emit(event.type + getEventTail(event), event, 0);
+    this.emit(event.type + getEventTail(event), event, FLAG_NONE);
   },
   function(event) {
-    this.emit(event.type + getEventTail(event), event, 1);
+    this.emit(event.type + getEventTail(event), event, FLAG_CAPTURE);
   },
   function(event) {
-    this.emit(event.type + getEventTail(event), event, 2);
+    this.emit(event.type + getEventTail(event), event, FLAG_PASSIVE);
   },
   function(event) {
-    this.emit(event.type + getEventTail(event), event, 3);
+    this.emit(event.type + getEventTail(event), event, (FLAG_CAPTURE | FLAG_PASSIVE));
   }
 ];
 
@@ -63,16 +64,16 @@ function removeEventListener(watcher, action, handler) {
 }
 
 function opts2flag(opts) {
-  var flag = 0;
+  var flag = FLAG_NONE;
   if (opts) {
     if (opts.capture) {
-      flag |= 1;
+      flag |= FLAG_CAPTURE;
     }
     if (opts.passive) {
-      flag |= 2;
+      flag |= FLAG_PASSIVE;
     }
     if (opts.once) {
-      flag |= 4;
+      flag |= FLAG_ONCE;
     }
   }
   return flag;
@@ -80,20 +81,20 @@ function opts2flag(opts) {
 
 function flag2opts(flag) {
   var opts = {};
-  if (flag & 1) {
+  if (flag & FLAG_CAPTURE) {
     opts.capture = true;
   }
-  if (flag & 2) {
+  if (flag & FLAG_PASSIVE) {
     opts.passive = true;
   }
-  if (flag & 4) {
+  if (flag & FLAG_ONCE) {
     opts.once = true;
   }
   return opts;
 }
 
 function equalCapture(flag0, flag1) {
-  return (flag0 & 1) === (flag1 & 1);
+  return (flag0 & FLAG_CAPTURE) === (flag1 & FLAG_CAPTURE);
 }
 
 function addEventHandler(watcher, type, func, opts) {
@@ -107,12 +108,6 @@ function addEventHandler(watcher, type, func, opts) {
       value: actions, writable: false, enumerable: false, configurable: true
     });
   }
-
-  // var idx = type.indexOf('.');
-  // if (idx > 0) {
-  //   var tail = type.slice(idx);
-  //   type = type.slice(0, idx);
-  // }
 
   var keys = type.split('.');
   if (keys.length > 2) {
@@ -138,8 +133,7 @@ function addEventHandler(watcher, type, func, opts) {
   for (i = 0; i < n; ++i) {
     handler = handlers[i];
     if (handler && func === handler.func 
-          // && (!tail || tail === handler.tail) 
-            && equalCapture(flag, handler.flag)) {
+        && equalCapture(flag, handler.flag)) {
       return;
     }
   }
@@ -148,9 +142,6 @@ function addEventHandler(watcher, type, func, opts) {
     func: func,
     flag: flag
   };
-  // if (tail) {
-  //   handler.tail = tail;
-  // }
 
   handlers.push(handler);
 
@@ -164,11 +155,6 @@ function removeEventHandler(watcher, type, func, opts) {
   
   if (!actions) { return; }
 
-  // var idx = type.indexOf('.');
-  // if (idx > 0) {
-  //   var tail = type.slice(idx);
-  //   type = type.slice(0, idx);
-  // }
   var keys = type.split('.');
   if (keys.length > 2) {
     type = keys[0] + '.' + keys.slice(1).sort().join('.');
@@ -179,17 +165,29 @@ function removeEventHandler(watcher, type, func, opts) {
   if (!action) { return; }
 
   var handlers = action.handlers;
-
-  var handler, i, n = handlers.length, canClearAll = true;
+  var handler, matched, listener;
+  var i, n = handlers.length;
 
   if (arguments.length === 2) {
-    // handlers.length = 0; // handlers.splice(0);
-    for (i = 0; i < n; ++i) {
-      handler = handlers[i];
-      if (handler && handler.func) {
-        removeEventHandler(watcher, type, handler.func, handler.flag ? flag2opts(handler.flag) : null);
+    if (action.listeners) {
+      for (i = n - 1; i >= 0; --i) {
+        handler = handlers[i];
+        if (handler) { 
+          listener = action.listeners[handler.flag & (FLAG_CAPTURE | FLAG_PASSIVE)];
+          if (listener) {
+            removeEventListener(watcher, action, handler);
+          }
+         }
       }
     }
+    handlers.length = 0;
+    delete actions[type];
+    // for (i = 0; i < n; ++i) {
+    //   handler = handlers[i];
+    //   if (handler && handler.func) {
+    //     removeEventHandler(watcher, type, handler.func, handler.flag ? flag2opts(handler.flag) : null);
+    //   }
+    // }
     return;
   }
   
@@ -200,22 +198,22 @@ function removeEventHandler(watcher, type, func, opts) {
         // && (!tail || tail === handler.tail) 
           && equalCapture(flag, handler.flag)) {
       handlers[i] = null;
-    }
-    if (handlers[i]) {
-      canClearAll = false;
+      matched = handler;
+      break;
     }
   }
 
-  if (action.listeners) {
-    var listener = action.listeners[handler.flag & 3];
+  for (i = n - 1; i >= 0; --i) {
+    if (!handlers[i]) {
+      handlers.splice(i, 1);
+    }
+  }
+
+  if (action.listeners && matched) {
+    listener = action.listeners[matched.flag & (FLAG_CAPTURE | FLAG_PASSIVE)];
     if (listener) {
-      removeEventListener(watcher, action, handler);
+      removeEventListener(watcher, action, matched);
     }
-  }
-
-  if (canClearAll) {
-    handlers.length = 0;
-    delete actions[type];
   }
 }
 
@@ -230,7 +228,7 @@ defineClass({
     opts2flag: opts2flag,
     flag2opts: flag2opts,
     getListenerByFlag: function(flag) {
-      return listeners[flag & 3];
+      return listeners[flag & (FLAG_CAPTURE | FLAG_PASSIVE)];
     }
   },
 
@@ -331,9 +329,7 @@ defineClass({
 
     if (action) {
       var flag = action.listeners ? arguments[2] : 0;
-      // event.dispatcher = watcher;
       var handler, handlers = action.handlers;
-
       for (var i = 0, n = handlers.length; i < n; ++i) {
         handler = handlers[i];
         if (handler

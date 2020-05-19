@@ -62,7 +62,7 @@ defineClass({
    * Render the dirty parts of this shell to the attached skin 
    */
   render: function render() {
-    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0 || !this.$skin) {
+    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
     //   this.$flag = FLAG_NORMAL;
     //   return false;
     // }

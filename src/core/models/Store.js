@@ -30,39 +30,35 @@ defineClass({
     },
 
     initialize: function initialize(store, props) {
-      var prototype = store.constructor.prototype;
-      var attributes = store.constructor.attributes;
+      var constructor = store.constructor;
+      if (constructor === Store) {
+        store.$props = {};
+        if (props) {
+          Accessor.applyAttributeDescriptors(store, Object.keys(props), false);
+          store.assign(props);
+        }
+      } else {
+        Accessor.applyAttributeDescriptors(
+          constructor.prototype, 
+          constructor.attributes, 
+          true
+        ); 
+        var defaults = Accessor.getAttributeDefaultValues(store);
 
-      // if (!prototype.hasOwnProperty('__extag_descriptors__')) {
-        Accessor.applyAttributeDescriptors(prototype, attributes, true); 
-      // }
+        defineProp(store, '$props', {
+          value: defaults, writable: false, enumerable: false, configurable: true
+        });
 
-      // if (props) {
-      //   Accessor.applyAttributeDescriptors(store, props, false); 
-      // }
-
-      var defaults = Accessor.getAttributeDefaultValues(store);
-
-      defineProp(store, '$props', {
-        value: defaults, writable: false, enumerable: false, configurable: true
-      });
-
-      defineProp(store, '$guid', {
-        value: storeGuid--, writable: false, enumerable: false, configurable: true
-      });
-
-      if (this.setup) {
-        this.setup();
-      }
-
-      // eslint-disable-next-line no-undef
-      if (__ENV__ === 'development') {
-        Validator.validate0(store, props);
-      }
-  
-      if (props) {
-        Accessor.applyAttributeDescriptors(store, props, false);
-        store.assign(props);
+        defineProp(store, '$guid', {
+          value: storeGuid--, writable: false, enumerable: false, configurable: true
+        });
+        // eslint-disable-next-line no-undef
+        if (__ENV__ === 'development') {
+          Validator.validate0(store, props);
+        }
+        if (props) {
+          store.assign(props);
+        }
       }
     }
   },
@@ -74,9 +70,6 @@ defineClass({
   get: function get(key) {
     var desc = Accessor.getAttrDesc(this, key);
     if (desc && desc.bindable) {
-      // if (Dep.binding && !desc.compute) {
-      //   Dep.add(this, key);
-      // }
       if (Dependency.binding()) {
         Dependency.add(this, key);
       }
@@ -96,11 +89,6 @@ defineClass({
     var desc = Accessor.getAttrDesc(this, key);
     // usual property
     if (!desc) {
-      // old = this[key];
-      // if (old !== val) {
-      //   this[key] = val;
-      //   this.emit('changed.' + key, key, val, old);
-      // }
       this[key] = val;
       return;
     }

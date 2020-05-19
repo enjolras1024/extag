@@ -2,7 +2,7 @@
 
 import Accessor from 'src/base/Accessor'
 import DirtyMarker from 'src/base/DirtyMarker'
-import { FLAG_CHANGED } from 'src/share/constants'
+import { FLAG_CHANGED_CACHE } from 'src/share/constants'
 import { defineProp, defineClass } from 'src/share/functions'
 
 var EMPTY_OWNER = {
@@ -31,7 +31,7 @@ defineClass({
     var old = props[key];
     if (val !== old) {
       props[key] = val;
-      this._owner.invalidate(FLAG_CHANGED);
+      this._owner.invalidate(FLAG_CHANGED_CACHE);
       DirtyMarker.check(this, key, val, old);
     }
   },

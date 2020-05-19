@@ -76,28 +76,6 @@ defineClass({
       Schedule.insertRenderQueue(this);
     }
     
-
-    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-    //   if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-    //     // We should ask its parent to render parent's children, 
-    //     // since its children are belong to its parent actually.
-    //     // this._parent.invalidate(2); 
-    //     // var parent = this._parent;
-    //     // if ((parent.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-    //     //   // parent.invalidate(FLAG_CHANGED_CHILDREN | FLAG_WAITING_TO_RENDER);
-    //     //   parent.$flag |= FLAG_WAITING_TO_RENDER;
-    //     //   parent.$flag |= FLAG_CHANGED_CHILDREN;
-    //     //   // Schedule.insertRenderQueue(parent);
-    //     //   parent.render();
-    //     // }
-    //     var parent = this.getParent(true);
-    //     parent.invalidate(FLAG_CHANGED_CHILDREN);
-    //   }
-    //   this.$flag |= FLAG_WAITING_TO_RENDER;
-    //   // Schedule.insertRenderQueue(this);
-    //   this.render();
-    // }
-
     // this.render();
     
     return true;

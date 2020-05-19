@@ -9,8 +9,11 @@ import logger from 'src/share/logger'
 import { VIEW_ENGINE } from 'src/share/constants'
 import { slice, hasOwnProp, defineProp, defineClass } from 'src/share/functions'
 import {
+  FLAG_CAPTURE, 
+  FLAG_PASSIVE,
   FLAG_NORMAL, 
-  FLAG_CHANGED, 
+  // FLAG_CHANGED, 
+  FLAG_CHANGED_CACHE, 
   FLAG_CHANGED_COMMANDS,
   // FLAG_CHANGED_CHILDREN,
   FLAG_WAITING_TO_RENDER
@@ -19,27 +22,6 @@ import {
 var shellGuid = 0;//Number.MIN_VALUE;
 
 var defaultViewEngine = null;
-
-// var ids = [0], id0 = 0;
-// function guid() {
-//   if (id0 < 100) {
-//     return id0++;
-//   }
-//   var n = ids.length;
-//   var id = ids[n - 1];
-//   if (id < 100) {
-//     ids[n - 1] = id + 1;
-//   } else {
-//     ids.push(0);
-//   }
-//   var arr = [String(id0)], i;
-//   for (i = 0, n = ids.length; i < n; ++i) {
-//     arr.push(String(ids[i]));
-//   }
-//   return arr.join(',')
-// }
-
-// var TAG_NAME_REGEXP = /^[a-z](\-?[a-z0-9])*/i;
 
 export default function Shell() {
   throw new Error('Shell is a base class and can not be instantiated');
@@ -76,11 +58,10 @@ defineClass({
    */
   invalidate: function invalidate(flag) {
     if (this.$flag === FLAG_NORMAL) {
-      this.$flag = FLAG_CHANGED;
       Schedule.insertUpdateQueue(this);
     }
     if ((this.$flag & flag) === 0) {
-    this.$flag |= flag;
+      this.$flag |= flag;
     }
     // return this;
   },
@@ -124,7 +105,10 @@ defineClass({
     if (this._actions) {
       var type, action, actions = this._actions;
       for (type in actions) {
-        if (!hasOwnProp.call(actions, type)) { continue; }
+        if (!hasOwnProp.call(actions, type) || 
+            !viewEngine.mayDispatchEvent($skin, type)) { 
+            continue; 
+        }
         action = actions[type];
         if (!action) { continue; }
         var handlers = action.handlers, handler;
@@ -210,7 +194,7 @@ defineClass({
   
     if (old !== val) {
       props[key] = val;
-      this.invalidate(FLAG_CHANGED);
+      this.invalidate(FLAG_CHANGED_CACHE);
       DirtyMarker.check(this, key, val, old);
     }
 
@@ -248,7 +232,7 @@ defineClass({
       }
 
       defineProp(shell, '$flag', {
-        value: 0, writable: true, enumerable: false, configurable: true
+        value: FLAG_NORMAL, writable: true, enumerable: false, configurable: true
       });
 
       // defineProp(shell, '$symb', {
@@ -330,10 +314,9 @@ defineClass({
 
     /**
      * ask viewEngine to add native event listeners
-     * @param {Shell} shell - elemnet or component
-     * @param {Object} action - event action without listener but handlers
-     * @param {string} type   - event type 
-     * @param {string} opts   - like {once: true, capture: true, passive: true}
+     * @param {Shell} shell     - elemnet or component
+     * @param {Object} action   - event action
+     * @param {string} handler  - event handler
      */
     addEventListener: function addEventListener(shell, action, handler) {
       var $skin = shell.getSkin();
@@ -345,17 +328,17 @@ defineClass({
       var event = index < 0 ? action.type : action.type.slice(0, index);
 
       if (viewEngine.mayDispatchEvent($skin, event)) {
+        var flag = handler.flag & (FLAG_CAPTURE | FLAG_PASSIVE);
         action.listeners = action.listeners || [];
-        var listener = action.listeners[handler.flag & 3];
+        var listener = action.listeners[flag];
         if (listener) { 
           listener.count++;
           return;
         }
         listener = Watcher.getListenerByFlag(handler.flag).bind(shell);
-        viewEngine.addEventListener($skin, event, listener, Watcher.flag2opts(handler.flag & 3));
-        action.listeners[handler.flag & 3] = listener;
+        viewEngine.addEventListener($skin, event, listener, Watcher.flag2opts(flag));
+        action.listeners[flag] = listener;
         listener.count = 1;
-        // console.log('addEventListener', action.type)
       } else {
         action.listeners = null;
       }
@@ -363,10 +346,9 @@ defineClass({
 
     /**
      * ask viewEngine to remove native event listeners
-     * @param {Shell} shell - elemnet or component
-     * @param {Object} action - event action with listener
-     * @param {string} type   - event type 
-     * @param {string} opts   - like {capture: true}
+     * @param {Shell} shell     - elemnet or component
+     * @param {Object} action   - event action
+     * @param {string} handler  - event handler
      */
     removeEventListener: function removeEventListener(shell, action, handler) {
       var $skin = shell.getSkin();
@@ -378,7 +360,8 @@ defineClass({
       var index = action.type.indexOf('.');
       var event = index < 0 ? action.type : action.type.slice(0, index);
       if (listener.count < 1 && viewEngine.mayDispatchEvent($skin, event)) {
-        viewEngine.removeEventListener($skin, event, listener, Watcher.flag2opts(handler.flag & 3));
+        var flag = handler.flag & (FLAG_CAPTURE | FLAG_PASSIVE);
+        viewEngine.removeEventListener($skin, event, listener, Watcher.flag2opts(flag));
         // console.log('removeEventListener', action.type)
       }
     }

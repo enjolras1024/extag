@@ -8,9 +8,14 @@ import DirtyMarker from 'src/base/DirtyMarker'
 import { defineProp, defineClass } from 'src/share/functions'
 import {
   FLAG_NORMAL,
+  FLAG_CHANGED_CACHE,
+  FLAG_CHANGED_CHILDREN,
+  FLAG_CHANGED_COMMANDS,
   FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
 import config from 'src/share/config'
+
+var FLAG_SHOULD_RENDER = (FLAG_CHANGED_CACHE | FLAG_CHANGED_CHILDREN | FLAG_CHANGED_COMMANDS);
 
 
 // function buildCache(element) {
@@ -192,7 +197,7 @@ defineClass({
    * Render the dirty parts of this shell to the attached skin 
    */
   render: function render() {
-    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0 || !this.$skin) {
+    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
     //   this.$flag = FLAG_NORMAL;
     //   return false;
     // }
@@ -201,7 +206,7 @@ defineClass({
       return false;
     }
 
-    if (this.$skin) {
+    if (this.$skin && (this.$flag & FLAG_SHOULD_RENDER)) {
       var viewEngine = Shell.getViewEngine(this);
 
       viewEngine.renderShell(this.$skin, this);

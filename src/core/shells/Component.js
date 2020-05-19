@@ -24,6 +24,7 @@ import { defineProp, defineClass } from 'src/share/functions'
 import {
   FLAG_NORMAL,
   FLAG_CHANGED,
+  FLAG_CHANGED_CACHE,
   // FLAG_CHANGED_COMMANDS,
   FLAG_CHANGED_CHILDREN,
   FLAG_WAITING_TO_RENDER
@@ -357,7 +358,9 @@ defineClass({
     // this.emit('update', this.$flag);
 
     if (this.$type !== 0) {
-      config.HTMXEngine.transferProperties(this);
+      if ((this.$flag & FLAG_CHANGED_CACHE)) {
+        config.HTMXEngine.transferProperties(this);
+      }
     } else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
       this._parent.invalidate(FLAG_CHANGED_CHILDREN);
     }
@@ -397,7 +400,7 @@ defineClass({
       fragmentProto.render.call(this);
     }
     var actions = this._actions;
-    if (actions && actions['rendered'] && this.$skin) {
+    if (actions && actions.rendered && this.$skin) {
       Schedule.pushCallbackQueue((function() {
         this.emit('rendered', this.$skin);
       }).bind(this));

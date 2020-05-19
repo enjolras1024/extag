@@ -1,11 +1,18 @@
 // src/share/constants.js 
 
-// flags
+// event flags
+var FLAG_NONE = 0;
+var FLAG_ONCE = 4;
+var FLAG_PASSIVE = 2
+var FLAG_CAPTURE = 1;
+
+// change flags
 var FLAG_NORMAL = 0;
 var FLAG_CHANGED = 1;
-var FLAG_CHANGED_CHILDREN = 2;
-var FLAG_CHANGED_COMMANDS = 4;
-var FLAG_WAITING_TO_RENDER = 8;
+var FLAG_CHANGED_CACHE = 12;
+var FLAG_CHANGED_CHILDREN = 4;
+var FLAG_CHANGED_COMMANDS = 8;
+var FLAG_WAITING_TO_RENDER = 16;
 
 var VIEW_ENGINE = 'view-engine';
 
@@ -42,8 +49,14 @@ var PROP_EXPR_REGEXP = /^\s*[$_a-zA-Z0-9]+\s*$/;
 
 
 export {
+  FLAG_NONE,
+  FLAG_ONCE,
+  FLAG_CAPTURE,
+  FLAG_PASSIVE,
+  
   FLAG_NORMAL,
   FLAG_CHANGED,
+  FLAG_CHANGED_CACHE,
   FLAG_CHANGED_CHILDREN,
   FLAG_CHANGED_COMMANDS,
   FLAG_WAITING_TO_RENDER,
