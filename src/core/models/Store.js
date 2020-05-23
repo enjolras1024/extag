@@ -6,7 +6,7 @@ import Validator from 'src/base/Validator'
 import Dependency from 'src/core/Dependency'
 import { defineProp, defineClass } from 'src/share/functions'
 
-var storeGuid = -1;
+// var storeGuid = -1;
 
 /**
  * Store for storing data an sending property-changed event with declaration.
@@ -32,7 +32,9 @@ defineClass({
     initialize: function initialize(store, props) {
       var constructor = store.constructor;
       if (constructor === Store) {
-        store.$props = {};
+        defineProp(store, '_props', {
+          value: {}, writable: false, enumerable: false, configurable: true
+        });
         if (props) {
           Accessor.applyAttributeDescriptors(store, Object.keys(props), false);
           store.assign(props);
@@ -45,13 +47,13 @@ defineClass({
         ); 
         var defaults = Accessor.getAttributeDefaultValues(store);
 
-        defineProp(store, '$props', {
+        defineProp(store, '_props', {
           value: defaults, writable: false, enumerable: false, configurable: true
         });
 
-        defineProp(store, '$guid', {
-          value: storeGuid--, writable: false, enumerable: false, configurable: true
-        });
+        // defineProp(store, '$guid', {
+        //   value: storeGuid--, writable: false, enumerable: false, configurable: true
+        // });
         // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
           Validator.validate0(store, props);
@@ -64,7 +66,7 @@ defineClass({
   },
 
   /**
-   * Get property stored in $props.
+   * Get property stored in _props.
    * @param {string} key
    */
   get: function get(key) {
@@ -74,8 +76,8 @@ defineClass({
         Dependency.add(this, key);
       }
       return !desc.get ? 
-                this.$props[key] : 
-                  desc.get.call(this, this.$props, key);
+                this._props[key] : 
+                  desc.get.call(this, this._props, key);
     }
     return this[key];
   },
@@ -102,21 +104,21 @@ defineClass({
       this[key] = val;
       return;
     }
-    // Custom attribute, stored in $props
-    var props = this.$props, old;
+    // Custom attribute, stored in _props
+    var props = this._props, old;
 
     if (!desc.get) { // usually, no custom `get` and `set`, checking if the property value is changed firstly.
       old = props[key];
       if (old !== val) {
         props[key] = val;
-        this.emit('changed.' + key, key);
+        this.emit('changed', key, val);
       }
     } else if (desc.set) { // else, `get`, `set` and `get` again, then check if the property value is changed.
       old = desc.get.call(this, props, key);
       desc.set.call(this, val, props);
       val = desc.get.call(this, props, key);
       if (old !== val) {
-        this.emit('changed.' + key, key);
+        this.emit('changed', key, val);
       }
     }
 

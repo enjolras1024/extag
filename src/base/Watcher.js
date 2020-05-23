@@ -8,45 +8,24 @@ export default function Watcher() {
   // this._actions = null;
 }
 
-function getEventTail(event) {
-  var tail = '';
-
-  if (event.key) {
-    tail += '.' + event.key[0].toLowerCase() + event.key.slice(1);
-  } else if (event.button) {
-    tail += ['.left', '.middle', '.right'][event.button]
-  }
-
-  if (event.altKey) {
-    tail += '.alt';
-  }
-  if (event.ctrlKey) {
-    tail += '.ctrl';
-  }
-  if (event.metaKey) {
-    tail += '.meta';
-  }
-  if (event.shiftKey) {
-    tail += '.shift';
-  }
-  
-  return tail;
-}
-
-var listeners = [
+var EVENT_LISTENERS = [
   function(event) {
-    this.emit(event.type + getEventTail(event), event, FLAG_NONE);
+    this.emit(event.type, event, FLAG_NONE);
   },
   function(event) {
-    this.emit(event.type + getEventTail(event), event, FLAG_CAPTURE);
+    this.emit(event.type, event, FLAG_CAPTURE);
   },
   function(event) {
-    this.emit(event.type + getEventTail(event), event, FLAG_PASSIVE);
+    this.emit(event.type, event, FLAG_PASSIVE);
   },
   function(event) {
-    this.emit(event.type + getEventTail(event), event, (FLAG_CAPTURE | FLAG_PASSIVE));
+    this.emit(event.type, event, (FLAG_CAPTURE | FLAG_PASSIVE));
   }
 ];
+
+function getEventListener(watcher, flag) {
+  return EVENT_LISTENERS[flag].bind(watcher);
+}
 
 function addEventListener(watcher, action, handler) {
   var constructor = watcher.constructor;
@@ -59,7 +38,11 @@ function addEventListener(watcher, action, handler) {
 function removeEventListener(watcher, action, handler) {
   var constructor = watcher.constructor;
   if (typeof constructor.removeEventListener === 'function') {
-    constructor.removeEventListener(watcher, action, handler);
+    if (arguments.length === 2) {
+      constructor.removeEventListener(watcher, action);
+    } else {
+      constructor.removeEventListener(watcher, action, handler);
+    }
   }
 }
 
@@ -104,46 +87,50 @@ function addEventHandler(watcher, type, func, opts) {
 
   if (!actions) {
     actions = {};
+    // watcher._actions = actions;
     defineProp(watcher, '_actions', {
       value: actions, writable: false, enumerable: false, configurable: true
     });
   }
 
-  var keys = type.split('.');
-  if (keys.length > 2) {
-    type = keys[0] + '.' + keys.slice(1).sort().join('.');
-  }
-
   var action = actions[type];
 
-  //  Create action
   if (!action) {
     action = actions[type] = { 
       type: type, 
-      handlers: []/*, listening: null*/ 
+      head: null,
+      tail: null
+      /*, listeners: null*/ 
     };
   }
 
   var flag = opts2flag(opts);
 
-  var handlers = action.handlers;
-
-  var handler, i, n = handlers.length;
-  // Check if func exists in handlers.
-  for (i = 0; i < n; ++i) {
-    handler = handlers[i];
-    if (handler && func === handler.func 
-        && equalCapture(flag, handler.flag)) {
-      return;
+  if (func.__extag_handler__) {
+    var curr = action.head;
+    while(curr) {
+      if (curr.func === func 
+          && equalCapture(flag, curr.flag)) {
+        return;
+      }
+      curr = curr.next;
     }
   }
-  
-  handler = {
+
+  var handler = {
     func: func,
     flag: flag
   };
 
-  handlers.push(handler);
+  func.__extag_handler__ = true;
+
+  if (action.head) {
+    action.tail.next = handler;
+    action.tail = handler;
+  } else {
+    action.head = handler;
+    action.tail = handler;
+  }
 
   if (!('listeners' in action) || action.listeners) {
     addEventListener(watcher, action, handler);
@@ -152,68 +139,41 @@ function addEventHandler(watcher, type, func, opts) {
 
 function removeEventHandler(watcher, type, func, opts) {
   var actions = watcher._actions;
-  
   if (!actions) { return; }
-
-  var keys = type.split('.');
-  if (keys.length > 2) {
-    type = keys[0] + '.' + keys.slice(1).sort().join('.');
-  }
-
   var action = actions[type];
-
   if (!action) { return; }
-
-  var handlers = action.handlers;
-  var handler, matched, listener;
-  var i, n = handlers.length;
 
   if (arguments.length === 2) {
     if (action.listeners) {
-      for (i = n - 1; i >= 0; --i) {
-        handler = handlers[i];
-        if (handler) { 
-          listener = action.listeners[handler.flag & (FLAG_CAPTURE | FLAG_PASSIVE)];
-          if (listener) {
-            removeEventListener(watcher, action, handler);
-          }
-         }
-      }
+      removeEventListener(watcher, action);
     }
-    handlers.length = 0;
-    delete actions[type];
-    // for (i = 0; i < n; ++i) {
-    //   handler = handlers[i];
-    //   if (handler && handler.func) {
-    //     removeEventHandler(watcher, type, handler.func, handler.flag ? flag2opts(handler.flag) : null);
-    //   }
-    // }
+    actions[type] = null;
     return;
   }
   
   var flag = opts2flag(opts);
-  for (i = 0; i < n; ++i) {
-    handler = handlers[i];
-    if (handler && func === handler.func 
-        // && (!tail || tail === handler.tail) 
-          && equalCapture(flag, handler.flag)) {
-      handlers[i] = null;
-      matched = handler;
+  var curr = action.head;
+  var prev = null;
+  while(curr) {
+    if (func === curr.func && equalCapture(flag, curr.flag)) {
+      if (action.listeners) {
+        var listener = action.listeners[curr.flag & (FLAG_CAPTURE | FLAG_PASSIVE)];
+        if (listener) {
+          removeEventListener(watcher, action, curr);
+        }
+      }
+      if (!curr.next) {
+        action.tail = prev;
+      }
+      if (prev) {
+        prev.next = curr.next;
+      } else {
+        action.head = curr.next;
+      }
       break;
     }
-  }
-
-  for (i = n - 1; i >= 0; --i) {
-    if (!handlers[i]) {
-      handlers.splice(i, 1);
-    }
-  }
-
-  if (action.listeners && matched) {
-    listener = action.listeners[matched.flag & (FLAG_CAPTURE | FLAG_PASSIVE)];
-    if (listener) {
-      removeEventListener(watcher, action, matched);
-    }
+    prev = curr;
+    curr = curr.next;
   }
 }
 
@@ -227,9 +187,7 @@ defineClass({
   statics: {
     opts2flag: opts2flag,
     flag2opts: flag2opts,
-    getListenerByFlag: function(flag) {
-      return listeners[flag & (FLAG_CAPTURE | FLAG_PASSIVE)];
-    }
+    getEventListener: getEventListener
   },
 
   /**
@@ -241,23 +199,20 @@ defineClass({
    */
   on: function on(type, func, opts) {
     if (typeof type === 'object') {
-      var config = type;
-      for (type in config) {
-        if (hasOwnProp.call(config, type)) {
-          var conf = config[type];
-          if (!Array.isArray(conf)) {
-            addEventHandler(this, type, conf);
+      opts = type;
+      for (type in opts) {
+        if (hasOwnProp.call(opts, type)) {
+          var value = opts[type];
+          if (!Array.isArray(value)) {
+            addEventHandler(this, type, value);
           } else {
-            addEventHandler(this, type, conf[0], conf[1]);
+            addEventHandler(this, type, value[0], value[1]);
           }
         }
       }
-      return this;
-    } 
-
-    addEventHandler(this, type, func, opts);
-
-    return this;
+    } else {
+      addEventHandler(this, type, func, opts);
+    }
   },
 
 
@@ -271,11 +226,8 @@ defineClass({
    */
   off: function off(type, func, opts) {
     var actions = this._actions;
-    
-    if (!actions) { return this; }
-
+    if (!actions) { return; }
     var n = arguments.length, t = typeof type;
-
     if (n === 0) {      // e.g. off()
       for (type in actions) {
         removeEventHandler(this, type);
@@ -287,24 +239,22 @@ defineClass({
         removeEventHandler(this, type, func, opts);
       }
     } else if (t === 'object') { // e.g. off({click: onClick})
-      var config = type;
-      for (type in config) {
-        if (hasOwnProp.call(config, type)) { 
-          var conf = config[type];
-          if (!Array.isArray(conf)) {
-            if (conf == null) {
+      opts = type;
+      for (type in opts) {
+        if (hasOwnProp.call(opts, type)) { 
+          var value = opts[type];
+          if (!Array.isArray(value)) {
+            if (value == null) {
               removeEventHandler(this, type);
             } else {
-              removeEventHandler(this, type, conf);
+              removeEventHandler(this, type, value);
             }
           } else {
-            removeEventHandler(this, type, conf[0], conf[1]);
+            removeEventHandler(this, type, value[0], value[1]);
           }
         }
       }
     }
-
-    return this;
   },
 
   /**
@@ -316,42 +266,28 @@ defineClass({
    */
   emit: function emit(type/*, ...rest*/) {
     var actions = this._actions;
-    
-    if (!actions) { return this; }
-
-    var keys = type.split('.');
-
-    if (keys.length > 2) {
-      type = keys[0] + '.' + keys.slice(1).sort().join('.');
-    }
-
+    if (!actions) { return; }
     var action = actions[type];
-
     if (action) {
       var flag = action.listeners ? arguments[2] : 0;
-      var handler, handlers = action.handlers;
-      for (var i = 0, n = handlers.length; i < n; ++i) {
-        handler = handlers[i];
-        if (handler
-              && equalCapture(flag, handler.flag)) {
-          if (handler.flag & 4) { // once: 0b1xx
-            this.off(type, handler.func, handler.flag ? flag2opts(handler.flag) : null);
+      var handler, handlers;
+      handler = action.head;
+      while (handler) {
+        if (equalCapture(flag, handler.flag)) {
+          handler.func.apply(null, slice(arguments, 1));
+          if (handler.flag & FLAG_ONCE) {
+            handlers = handlers || [];
+            handlers.push(handler);
           }
-          try {
-            handler.func.apply(null, slice(arguments, 1));
-          } catch (e) {
-            console.error(e);
-          }
+        }
+        handler = handler.next;
+      }
+      if (handlers) {
+        for (var i = 0; i < handlers.length; ++i) {
+          handler = handlers[i];
+          this.off(type, handler.func, handler.flag ? flag2opts(handler.flag) : null);
         }
       }
     }
-
-    if (keys.length > 1 && actions[keys[0]]) {
-      var args = slice(arguments, 1);
-      args.unshift(keys[0]);
-      this.emit.apply(this, args);
-    }
-    
-    return this;
   }
 });

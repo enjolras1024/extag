@@ -260,7 +260,7 @@ defineClass({
       if (old !== val) {
         props[key] = val;
         this.invalidate(FLAG_CHANGED);
-        this.emit('changed.' + key, key, val, this);
+        this.emit('changed', key, val);
       }
     } else if (desc.set) { // else, `get`, `set` and `get` again, then check if the property value is changed.
       old = desc.get.call(this, key, props);
@@ -268,7 +268,7 @@ defineClass({
       val = desc.get.call(this, key, props);
       if (old !== val) {
         this.invalidate(FLAG_CHANGED);
-        this.emit('changed.' + key, key, val, this);
+        this.emit('changed', key, val);
       }
     }
 
@@ -420,7 +420,7 @@ defineClass({
   setContents: function setContents(value) {
     if (this._contents !== value) {
       this._contents = value;
-      this.emit('changed.contents', 'contents', value, this);
+      this.emit('changed', 'contents', value);
     }
   },
 

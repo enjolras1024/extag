@@ -111,11 +111,10 @@ defineClass({
         }
         action = actions[type];
         if (!action) { continue; }
-        var handlers = action.handlers, handler;
-        for (var i = 0, n = handlers.length; i < n; ++i) {
-          handler = handlers[i]
-          if (!handler) { continue; }
+        var handler = action.head;
+        while(handler) {
           Shell.addEventListener(this, action, handler);
+          handler = handler.next;
         }
       }
     }
@@ -181,13 +180,6 @@ defineClass({
    * @param {any} val
    */
   set: function set(key, val) {
-    // if (arguments.length === 1) {
-    //   var opts = key;
-    //   for (key in opts) {
-    //     this.set(key, opts[key]);
-    //   }
-    //   return this;
-    // }
     var props = this._props;
   
     var old = props[key];
@@ -263,16 +255,11 @@ defineClass({
      * @param {Shell} shell
      */
     destroy: function(shell) {
-      // destroying children
-      var i, child, children = shell._children;
-      if (children) {
-        for (i = children.length - 1; i >= 0; --i) {
-          child = children[i];
-          child._parent = null;
-          child.constructor.destroy(child);
-        }
-        shell._children.length = 0;
-      }
+      var i;
+      // removing event linsteners and handlers
+      shell.off();
+      // cleaning
+      DirtyMarker.clean(shell);
       // destroying data bindings
       var binding, bindings = shell._bindings; //
       if (bindings) {
@@ -282,10 +269,19 @@ defineClass({
         }
         delete shell._bindings;
       }
-      // removing event linsteners and handlers
-      shell.off();
-      // cleaning
-      DirtyMarker.clean(shell);
+      // destroying children
+      var child, children = shell._children;
+      if (children) {
+        for (i = children.length - 1; i >= 0; --i) {
+          child = children[i];
+          child._parent = null;
+          child.detach();
+          // child.constructor.destroy(child);
+        }
+        shell._children.length = 0;
+      }
+      
+      
       // detaching
       var $skin = shell.$skin;
       if ($skin) {
@@ -321,13 +317,8 @@ defineClass({
     addEventListener: function addEventListener(shell, action, handler) {
       var $skin = shell.getSkin();
       var viewEngine = Shell.getViewEngine(shell);
-
       if (!$skin || !viewEngine) { return; }
-
-      var index = action.type.indexOf('.');
-      var event = index < 0 ? action.type : action.type.slice(0, index);
-
-      if (viewEngine.mayDispatchEvent($skin, event)) {
+      if (viewEngine.mayDispatchEvent($skin, action.type)) {
         var flag = handler.flag & (FLAG_CAPTURE | FLAG_PASSIVE);
         action.listeners = action.listeners || [];
         var listener = action.listeners[flag];
@@ -335,8 +326,8 @@ defineClass({
           listener.count++;
           return;
         }
-        listener = Watcher.getListenerByFlag(handler.flag).bind(shell);
-        viewEngine.addEventListener($skin, event, listener, Watcher.flag2opts(flag));
+        listener = Watcher.getEventListener(shell, handler.flag);
+        viewEngine.addEventListener($skin, action.type, listener, flag && Watcher.flag2opts(flag));
         action.listeners[flag] = listener;
         listener.count = 1;
       } else {
@@ -351,19 +342,31 @@ defineClass({
      * @param {string} handler  - event handler
      */
     removeEventListener: function removeEventListener(shell, action, handler) {
+      var i, flag, listener;
       var $skin = shell.getSkin();
+      var listeners = action.listeners;
       var viewEngine = Shell.getViewEngine(shell);
-      if (!$skin || !viewEngine) { return; }
-      var listener = action.listeners && action.listeners[handler.flag & 3];
-      if (!listener) { return; }
-      listener.count--;
-      var index = action.type.indexOf('.');
-      var event = index < 0 ? action.type : action.type.slice(0, index);
-      if (listener.count < 1 && viewEngine.mayDispatchEvent($skin, event)) {
-        var flag = handler.flag & (FLAG_CAPTURE | FLAG_PASSIVE);
-        viewEngine.removeEventListener($skin, event, listener, Watcher.flag2opts(flag));
-        // console.log('removeEventListener', action.type)
+      if (!$skin || !listeners || !viewEngine) { return; }
+      if (!viewEngine.mayDispatchEvent($skin, action.type)) { return; }
+      if (arguments.length === 2) {
+        for (i = 0; i < listeners.length; ++i) {
+          listener = listeners[i];
+          if (!listener) { continue; }
+          listener.count = 0;
+          listeners[i] = null;
+          viewEngine.removeEventListener($skin, action.type, listener, Watcher.flag2opts(i));
+        }
+      } else {
+        flag = handler.flag & (FLAG_CAPTURE | FLAG_PASSIVE)
+        listener = listeners[flag];
+        if (!listener) { return; }
+        listener.count--;
+        if (listener.count < 1) {
+          viewEngine.removeEventListener($skin, action.type, listener, Watcher.flag2opts(flag));
+          listeners[flag] = null;
+        }
       }
+      
     }
   }
 });

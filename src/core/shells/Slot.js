@@ -34,7 +34,8 @@ defineClass({
       slot.invalidate(FLAG_CHANGED);
       slot.on('updating', slot.onUpdating.bind(slot));
       // slot.invalidate = slot.invalidate.bind(slot);
-      scopes[0].on('changed.contents', function() {
+      scopes[0].on('changed', function(key) {
+        if (key !== 'contents') { return; }
         slot.invalidate(FLAG_CHANGED);
       });
     },

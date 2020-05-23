@@ -5,7 +5,6 @@ import { FLAG_CHANGED } from 'src/share/constants'
 import Dependency from 'src/core/Dependency'
 
 function Binding(scope, target, property, collect, reflect) {
-  this.sync = true;
   this.scope = scope;
   this.target = target;
   this.property = property;
@@ -17,23 +16,15 @@ function Binding(scope, target, property, collect, reflect) {
     this.flag = 1;
     this.exec();
     
-    if (this.depsCount > 0) {
+    if (this.keys && this.keys.length) {
       Binding.record(target, this);
+      this.scope.on('updating', this.exec);
     }
-    // var deps = this.deps;
-    // var keys = Object.keys(deps);
-    // if (deps && keys.length) {
-    //   Binding.record(target, this);
-    //   if (keys.length > 1) {
-    //     this.sync = false;
-    //     scope.on('updating', this.exec);
-    //   }
-    // }
 
     if (typeof reflect === 'function') {
       this.reflect = reflect;
       this.back = this.back.bind(this);
-      target.on('changed.' + property, this.back);
+      target.on('changed', this.back);
     }
   }
 }
@@ -82,17 +73,17 @@ defineClass({
     destroy: function(binding) {
       var target = binding.target, scope = binding.scope;
 
-      if (typeof binding.reflect == 'function') {
-        target.off('changed.' + binding.property, binding.back);
+      if (typeof binding.reflect === 'function') {
+        target.off('changed', binding.back);
       }
       
-      if (!binding.sync && typeof binding.collect === 'function') {
+      if (typeof binding.collect === 'function' && binding.keys) {
         scope.off('updating', binding.exec);
       }
 
       Dependency.clean(binding);
 
-      Binding.remove(scope, binding);
+      // Binding.remove(scope, binding);
     }
   },
 
@@ -100,29 +91,23 @@ defineClass({
     if (this.flag === 0) {
       return;
     }
-
     Dependency.begin(this);
     var value = this.collect.call(this.scope);
     Dependency.end();
     this.target.set(this.property, value);
     this.flag = 0;
+  },
 
-    if (this.depsCount > 1 && this.sync) {
-      this.scope.on('updating', this.exec);
-      this.sync = false;
+  back: function(key) {
+    if (key === this.property) {
+      this.reflect.call(this.scope, this.target[this.property]);
     }
   },
 
-  back: function() {
-    this.reflect.call(this.scope, this.target[this.property]);
-  },
-
-  invalidate: function() {
-    this.flag = 1;
-    if (this.sync) {
-      this.exec();
-    } else {
+  invalidate: function(key) {
+    if (this.keys.indexOf(key) >= 0) {
       this.scope.invalidate(FLAG_CHANGED);
+      this.flag = 1;
     }
   }
 });

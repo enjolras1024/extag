@@ -43,19 +43,19 @@ defineClass({
     },
 
     destroy: function(binding) {
-      var target = binding.target, scopes = binding.scopes;
+      var scopes = binding.scopes;
 
       if (binding.mode === MODES.TWO_WAY)  {
         if (isBindable(binding.target, binding.targetProp)) {
-          binding.target.off('changed.' + binding.targetProp, binding.back);
+          binding.target.off('changed', binding.back);
         }
       }
 
-      if (!binding.sync) {
+      if (binding.keys && binding.keys.length) {
         scopes[0].off('updating', binding.exec);
       }
 
-      Binding.remove(target, binding);
+      // Binding.remove(binding.target, binding);
 
       Dependency.clean(binding);
     }
@@ -63,7 +63,6 @@ defineClass({
 
   link: function(property, target, scopes) {
     this.flag = 0;
-    this.sync = true;
     this.scopes = scopes;
     this.target = target;
     this.targetProp = property;
@@ -88,33 +87,24 @@ defineClass({
       }
       
       if (isBindable(this.target, this.targetProp)) {
-        this.target.on('changed.' + this.targetProp, this.back);
+        this.target.on('changed', this.back);
       }
     }
 
     if (this.mode === MODES.ANY_WAY) {
-      this.sync = false;
       this.scopes[0].on('updating', this.exec);
       this.target.set(this.targetProp, this.eval());
     } else {
-      this.sync = true;
       this.flag = 1;
       this.exec();
-      if (this.depsCount > 0) {
+      if (this.keys && this.keys.length) {
         Binding.record(target, this);
+        scopes[0].on('updating', this.exec);
       }
     }
   },
 
-  eval: function(back) {
-    if (this.mode === MODES.TWO_WAY) {
-      if (back) {
-        return this.target[this.targetProp];
-      } else {
-        return this.source[this.sourceProp];
-      }
-    } 
-
+  eval: function() {
     var converters = this.converters;
     if (converters && converters.length) {
       return applyConverters(converters, this.scopes, this.evaluator.execute(this.scopes));
@@ -140,22 +130,20 @@ defineClass({
     this.flag = 0;
     if (this.mode === MODES.ONE_TIME) {
       DataBinding.destroy(this);
-    } else if (this.depsCount > 1 && this.sync) {
-      this.scopes[0].on('updating', this.exec);
-      this.sync = false;
     }
   },
 
-  back: function back() {
-    this.source.set(this.sourceProp, this.eval(true));
+  back: function back(key) {
+    if (key === this.targetProp) {
+      var value = this.target[this.targetProp];
+      this.source.set(this.sourceProp, value);
+    }
   },
 
-  invalidate: function() {
-    this.flag = 1;
-    if (this.sync) {
-      this.exec();
-    } else {
+  invalidate: function(key) {
+    if (this.keys.indexOf(key) >= 0) {
       this.scopes[0].invalidate(FLAG_CHANGED);
+      this.flag = 1;
     }
   }
 });

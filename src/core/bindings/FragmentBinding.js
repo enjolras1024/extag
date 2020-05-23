@@ -51,11 +51,9 @@ defineClass({
     this.property = property;
 
     var cache = this.cache = new Cache(scopes[0]);
-    // cache.owner = scopes[0];
 
     for (i = 0, n = pattern.length; i < n; ++i) {
       piece = pattern[i];
-
       if (piece instanceof Expression) {
         piece.compile(i, cache, scopes);
       } else {
@@ -85,7 +83,6 @@ defineClass({
       value = value.join('');
     }
 
-    // Binding.assign(this.target, this.property, value, this);
     this.target.set(this.property, value);
 
     DirtyMarker.clean(cache);

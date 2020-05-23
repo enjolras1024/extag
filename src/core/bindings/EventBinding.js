@@ -25,7 +25,6 @@ defineClass({
 
     if (handler) {
       var func = scopes[0][handler];
-
       
       if (!func) {
         // eslint-disable-next-line no-undef
@@ -35,18 +34,6 @@ defineClass({
         return;
       }
 
-      // var keys = type.split('.');
-      // if (keys.length > 2) {
-      //   type = keys.slice(0, 2).concat(keys.slice(2).sort()).join('.')
-      // }
-      
-      //if (!func.__bound__to__) { // TODO: __exact__bound__
-      //  func = func.bind(context);
-      //  defineProp(func, '__bound__to__', {
-      //    value: context, writable: false, enumerable: false, configurable: true
-      //  });
-      //  context[handler] = func;
-      //}
       if (!modifiers || !modifiers.length) {
         target.on(type, func);
       } else if (modifiers[0] === 'bind' && modifiers.length === 1) {
@@ -105,21 +92,3 @@ function processModifiers(modifiers, event) {
     }
   }
 }
-
-// function process(event, type, target, wrapper, modifiers) {
-//   if (event && modifiers && modifiers.length) {
-//     for (var i = 0, n = modifiers.length; i < n; ++i) {
-//       switch (modifiers[i]) {
-//         // case 'once':
-//         //   target.off(type, wrapper);
-//         //   break;
-//         case 'prev':
-//           event.preventDefault && event.preventDefault();
-//           break;
-//         case 'stop':
-//           event.stopPropagation && event.stopPropagation();
-//           break;
-//       }
-//     }
-//   }
-// }
