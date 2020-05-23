@@ -318,9 +318,14 @@ function parseAttributes(htmx, from, node, prototype) {
   }
 }
 
+var BLANK_LINES_REGEXP = /^\s*\n\s*$/;
+
 function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
   var children = parent.children || [], result;
   var text = htmx.slice(start, stop);
+  if (BLANK_LINES_REGEXP.test(text)) {
+    return;
+  }
   if (FragmentBindingParser.like(text)) {
     try {
       result = FragmentBindingParser.parse(text, prototype, identifiers);

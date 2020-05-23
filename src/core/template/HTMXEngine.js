@@ -2,13 +2,14 @@
 
 import DirtyMarker from 'src/base/DirtyMarker'
 import Validator from 'src/base/Validator'
+import Accessor from 'src/base/Accessor'
 import Cache from 'src/core/models/Cache'
 import Text from 'src/core/shells/Text'
 import Shell from 'src/core/shells/Shell'
 import Block from 'src/core/shells/Block'
 import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
-// import Component from 'src/core/shells/Component'
+import Component from 'src/core/shells/Component'
 import Expression from 'src/core/template/Expression'
 import { WHITE_SPACES_REGEXP } from 'src/share/constants'
 import { defineProp, assign } from 'src/share/functions'
@@ -44,16 +45,38 @@ function toClasses(classList) {
   }
 }
 
+// function driveProps(target, props, scopes) {
+//   if (props) {
+//     var key, value;
+//     for (key in props) {
+//       value = props[key];
+//       if (typeof value === 'object' && value instanceof Expression) {
+//         value.compile(key, target, scopes);
+//       } else {
+//         target.set(key, value);
+//       }
+//     }
+//   }
+// }
+
 function driveProps(target, props, scopes) {
   if (props) {
-    var key, value;
+    var key, desc, value;
     for (key in props) {
       value = props[key];
-      if (typeof value === 'object' && value instanceof Expression) {
-        value.compile(key, target, scopes);
-      } else {
-        target.set(key, value);
+      if (typeof value === 'object') {
+        if (value instanceof Expression) {
+          value.compile(key, target, scopes);
+          continue;
+        }
+      } else if (value === '' && (target instanceof Component)) {
+        desc = Accessor.getAttrDesc(target, key);
+        if (desc && desc.type === 'boolean') {
+          target.set(key, true);
+          continue;
+        }
       }
+      target.set(key, value);
     }
   }
 }

@@ -98,7 +98,7 @@ function updatePropsAndEvents(node, target, scope) {
     if (target instanceof Component) {
       for (name in oldProps) {
         if (!newProps || !(name in newProps)) {
-          desc = Accessor.getAttrDesc(name);
+          desc = Accessor.getAttrDesc(target, name);
           if (desc) {
             target.set(name, Accessor.getAttributeDefaultValue(desc));
           } else {
