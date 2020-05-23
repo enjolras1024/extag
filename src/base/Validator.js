@@ -94,9 +94,9 @@ function validatePattern(target, key, value, pattern) {
 function troubleShoot(target, key, value, warn) {
   var desc = Accessor.getAttrDesc(target, key);//target.__extag_descriptors__[key];
 
-  if (!desc || !desc.type && !desc.validator) { return; }
+  if (!desc || !desc.type && !desc.test) { return; }
 
-  var trouble, validator, type;
+  var trouble, test, type;
 
   type = desc.type;
   //required = desc.required;
@@ -112,18 +112,14 @@ function troubleShoot(target, key, value, warn) {
     return trouble;
   }
 
-  validator = desc.validator;
-  if (validator) {
-    if (typeof validator === 'function') {
-      trouble = validator.call(target, value, key);
+  test = desc.test; // TODO: desc.test
+  if (test) {
+    if (typeof test === 'function') {
+      trouble = test.call(target, value, key);
     } else {
-      trouble = validatePattern(target, key, value, validator);
+      trouble = validatePattern(target, key, value, test);
     }
   }
-
-  // if (validated && target.on && target.send) {
-  //   target.send('validated.' + key, trouble);
-  // }
 
   if (trouble) {
     // eslint-disable-next-line no-undef
@@ -146,11 +142,11 @@ function troubleShoot(target, key, value, warn) {
  *      type: [Date, 'number', 'string']
  *    },
  *    phone: {
- *      validator: /\d{13}/
+ *      test: /\d{13}/
  *    },
  *    price: {
  *      type: 'number',
- *      validator: function() {...} // returns error or not
+ *      test: function() {...} // returns error or not
  *    }
  *  }
  *
