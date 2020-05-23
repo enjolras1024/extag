@@ -54,9 +54,8 @@ try {
 } catch (e) {}
 
 var tag2events = {};
-
-// var MUST_USE_PROPERTY = 0x1;
-// var HAS_BOOLEAN_VALUE = 0x2;
+var FLAG_CHANGED_CHILDREN = 4;
+var FLAG_CHANGED_COMMANDS = 8;
 
 // Refer to React (https://facebook.github.io/react/)
 var DOM_PROPERTY_DESCRIPTORS = {
@@ -302,175 +301,17 @@ var DOM_PROPERTY_DESCRIPTORS = {
   unselectable: null
 }
 
-// var DOM_PROPERTIES = {
-//   /**
-//    * Standard Properties
-//    */
-//   accept: 0,
-//   acceptCharset: 4, // => accept-charset
-//   accessKey: 0,
-//   action: 0,
-//   allowFullscreen: HAS_BOOLEAN_VALUE,
-//   allowTransparency: 0,
-//   alt: 0,
-//   async: HAS_BOOLEAN_VALUE,
-//   autocomplete: 0,
-//   autofocus: HAS_BOOLEAN_VALUE,
-//   autoplay: HAS_BOOLEAN_VALUE,
-//   capture: HAS_BOOLEAN_VALUE,
-//   cellPadding: 0,
-//   cellSpacing: 0,
-//   charset: 0,
-//   challenge: 0,
-//   checked: MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
-//   cite: 0,
-//   classid: 0,
-//   className: 0, // => class
-//   cols: 0,//HAS_POSITIVE_NUMERIC_VALUE,
-//   colSpan: 0,
-//   content: 0,
-//   contentEditable: 0,
-//   contextMenu: 0,
-//   controls: HAS_BOOLEAN_VALUE,
-//   coords: 0,
-//   crossOrigin: 0,
-//   data: MUST_USE_PROPERTY, // For `<object />` acts as `src`, and TextNode.
-//   dateTime: 0,
-//   'default': HAS_BOOLEAN_VALUE,
-//   defer: HAS_BOOLEAN_VALUE,
-//   dir: 0,
-//   disabled: HAS_BOOLEAN_VALUE,
-//   download: 0,//HAS_OVERLOADED_BOOLEAN_VALUE,
-//   draggable: 0,
-//   enctype: 0,
-//   form: 0,
-//   formAction: 0,
-//   formEncType: 0,
-//   formMethod: 0,
-//   formNoValidate: HAS_BOOLEAN_VALUE,
-//   formTarget: 0,
-//   frameBorder: 0,
-//   headers: 0,
-//   height: 0,
-//   hidden: HAS_BOOLEAN_VALUE,
-//   high: 0,
-//   href: 0,
-//   hreflang: 0,
-//   htmlFor: 4, // => for
-//   httpEquiv: 0,
-//   icon: 0,
-//   id: 0,
-//   // innerHTML
-//   innerHTML: MUST_USE_PROPERTY,
-//   inputMode: 0, // ? no support for now
-//   integrity: 0,
-//   is: 0,
-//   keyparams: 0,
-//   keytype: 0,
-//   kind: 0,
-//   label: 0,
-//   lang: 0,
-//   list: 0,
-//   loop: HAS_BOOLEAN_VALUE,
-//   low: 0,
-//   manifest: 0,
-//   marginHeight: 0,
-//   marginWidth: 0,
-//   max: 0,
-//   maxLength: 0,
-//   media: 0,
-//   mediaGroup: 0,
-//   method: 0,
-//   min: 0,
-//   minLength: 0,
-//   multiple: MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
-//   muted: MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
-//   name: 0,
-//   nonce: 0,
-//   noValidate: HAS_BOOLEAN_VALUE,
-//   open: HAS_BOOLEAN_VALUE,
-//   optimum: 0,
-//   pattern: 0,
-//   placeholder: 0,
-//   poster: 0,
-//   preload: 0,
-//   profile: 0,
-//   radiogroup: 0,
-//   readOnly: HAS_BOOLEAN_VALUE,
-//   referrerPolicy: 0,
-//   rel: 0,
-//   required: HAS_BOOLEAN_VALUE,
-//   reversed: HAS_BOOLEAN_VALUE,
-//   role: 0,
-//   rows: 0,//HAS_POSITIVE_NUMERIC_VALUE,
-//   rowSpan: 0,//HAS_NUMERIC_VALUE,
-//   sandbox: 0,
-//   scope: 0,
-//   scoped: HAS_BOOLEAN_VALUE,
-//   scrolling: 0,
-//   seamless: HAS_BOOLEAN_VALUE,
-//   selected: MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
-//   shape: 0,
-//   size: 0,//HAS_POSITIVE_NUMERIC_VALUE,
-//   sizes: 0,
-//   span: 0,//HAS_POSITIVE_NUMERIC_VALUE,
-//   spellcheck: 0,
-//   src: 0,
-//   srcdoc: 0,
-//   srclang: 0,
-//   srcset: 0,
-//   start: 0,//HAS_NUMERIC_VALUE,
-//   step: 0,
-//   style: 0,
-//   summary: 0,
-//   tabIndex: 0,
-//   target: 0,
-//   title: 0,
-//   type: 0,
-//   useMap: 0,
-//   value: MUST_USE_PROPERTY,
-//   width: 0,
-//   wmode: 0,
-//   wrap: 0,
-
-//   /**
-//    * RDFa Properties
-//    */
-//   about: 0,
-//   datatype: 0,
-//   inlist: 0,
-//   prefix: 0,
-//   property: 0,
-//   resource: 0,
-//   'typeof': 0,
-//   vocab: 0,
-
-//   /**
-//    * Non-standard Properties
-//    */
-//   autocapitalize: 0,
-//   autocorrect: 0,
-//   autosave: 0,
-//   color: 0,
-//   itemprop: 0,
-//   itemscope: HAS_BOOLEAN_VALUE,
-//   itemtype: 0,
-//   itemid: 0,
-//   itemref: 0,
-//   results: 0,
-//   security: 0,
-//   unselectable: 0
-// };
-
 var JS_TO_HTML = (function(map) {
   var key, desc, cache = {};
   for (key in map) {
     desc = map[key];
-    if (desc && desc.attributeName) {
-      cache[key] = desc.attributeName;
-    } else {
-      cache[key] = key.toLowerCase();
+    if (!desc) {
+      desc = map[key] = {};
     }
+    if (!desc.attributeName) {
+      desc.attributeName = key.toLowerCase();
+    }
+    cache[key] = desc.attributeName;
   }
   return cache;
 })(DOM_PROPERTY_DESCRIPTORS);
@@ -515,6 +356,7 @@ var REPLACER_2 = function(match, char) {
   return '-' + char.toLowerCase();
 }
 
+var camelCache = {};
 function toCamelCase(key) {
   if (key in HTML_TO_JS) {
     return HTML_TO_JS[key];
@@ -522,34 +364,31 @@ function toCamelCase(key) {
   if (key.indexOf('-') < 0) {
     return key;
   }
-  return key.replace(REGEXP_1, REPLACER_1);
+  if (key in camelCache) {
+    return camelCache[key];
+  }
+  var name = key.replace(REGEXP_1, REPLACER_1);
+  camelCache[key] = name;
+  return name;
 }
 
+var kebabCache = {};
 function toKebabCase(key) {
   if (key in JS_TO_HTML) {
     return JS_TO_HTML[key];
   }
-  return REGEXP_2.test(key) ? key.replace(REGEXP_2, REPLACER_2) : key;
+  if (key in kebabCache) {
+    return kebabCache[key];
+  }
+  var name = REGEXP_2.test(key) ? key.replace(REGEXP_2, REPLACER_2) : key;
+  kebabCache[key] = name;
+  return name;
 }
 
 function isBoolProp(key) {
   var desc = DOM_PROPERTY_DESCRIPTORS[key];
   return desc && desc.isBoolProperty;
 }
-
-// function flatten(children, array) {
-//   var i, n = children.size(), child;
-//   array = array || [];
-//   for (i = 0; i < n; ++i) {
-//     child = children.get(i);
-//     if (child.type === 0) {
-//       flatten(child.children, array);
-//     } else {
-//       array.push(child);
-//     }
-//   }
-//   return array;
-// }
 
 function flatten(children, array) {
   var i, n = children.length, child;
@@ -581,7 +420,6 @@ function mergeProps(outerProps, innerProps) {
       }
     }
     return props;
-    // assign({}, innerProps, outerProps);
   }
   return outerProps;
 }
@@ -640,8 +478,8 @@ assign(ExtagDom, {
     return $doc.createTextNode(data);
   },
 
-  createElement: function createElement(ns, tag/*, type*/) {
-    return !ns /*|| !$doc.createElementNS*/ ? $doc.createElement(tag) : $doc.createElementNS(namespaceURIs[ns], tag);
+  createElement: function createElement(ns, tag) {
+    return !ns ? $doc.createElement(tag) : $doc.createElementNS(namespaceURIs[ns], tag);
   },
 
   createFragment: function createFragment() {
@@ -649,7 +487,7 @@ assign(ExtagDom, {
   },
 
   getTagName: function getTagName($skin) {
-    var tagName = $skin.tagName; // ExtagDom.getProp(skin, 'tagName');
+    var tagName = $skin.tagName;
     return tagName ? tagName.toLowerCase() : '';
   },
 
@@ -679,39 +517,6 @@ assign(ExtagDom, {
       return 'xlink';
     }
     return null;
-  },
-
-  toTemplate: function toTemplate($skin/*, $parent*/) {
-    if (!ExtagDom.isElement($skin)) {
-      return null;
-    }
-
-    var template = {};
-    template.ns = ExtagDom.getNameSpace($skin);// || ($parent && $parent.ns);
-    template.tagName = ExtagDom.getTagName($skin);
-
-    var $attrs = ExtagDom.getAttrs($skin);
-    if ($attrs) {
-      template.attributes = $attrs; 
-    }
-
-    var $children = ExtagDom.getChildren($skin);
-    if ($children.length) {
-      var i , n , $child;
-      template.children = [];
-      for (i = 0, n = $children.length; i < n; ++i) {
-        $child = $children[i];
-        if (ExtagDom.isText($child)) {
-          template.children.push(ExtagDom.getProp($child, 'data'));
-        } else if (ExtagDom.isElement($child)) {
-          template.children.push(ExtagDom.toTemplate($child, $skin));
-        } else if (ExtagDom.isComment($child)) {
-          template.children.push({ns: '', tagName: '!', comment: ExtagDom.getProp($child, 'data')});
-        }
-      }
-    }
-
-    return template;
   },
 
   toOuterHTML: function($skin) {
@@ -795,12 +600,7 @@ assign(ExtagDom, {
    */
   setShell: function($skin, shell) {
     if (shell) {
-      Object.defineProperty($skin, '__extag_shell__', { // __extag_shell__
-        value: shell,
-        writable: true,
-        enumerable: false,
-        configurable: true
-      });
+      $skin.__extag_shell__ = shell;
     } else {
       delete $skin.__extag_shell__;
     }
@@ -808,6 +608,7 @@ assign(ExtagDom, {
 
   /**
    * attach a shell to the $skin
+   * @required
    */
   attachShell: function attachShell($skin, shell) {
     var _shell = ExtagDom.getShell($skin);
@@ -833,6 +634,7 @@ assign(ExtagDom, {
 
   /**
    * detach a shell from the $skin
+   * @required
    */
   detachShell: function detachShell($skin, shell) {
     var _shell = ExtagDom.getShell($skin);
@@ -866,21 +668,20 @@ assign(ExtagDom, {
     if (type in events) {
       return events[type];
     }
+    events[type] = false;
     tag2events[tagName] = events
 
     var eventHook = 'on' + type, value;
     if (eventHook in $skin) {
-      if (typeof $skin[eventHook] === 'function') {
-        return true;
-      }
+      // if (typeof $skin[eventHook] === 'function') {
+      //   return true;
+      // }
       value = $skin.getAttribute(eventHook);
       try {
-        $skin.setAttribute(eventHook, 'return;');
+        $skin.setAttribute(eventHook, 'void 0');
         if (typeof $skin[eventHook] === 'function') {
           $skin[eventHook] = null;
           events[type] = true;
-        } else {
-          events[type] = false;
         }
       } catch (e) {
         events[type] = false;
@@ -890,34 +691,25 @@ assign(ExtagDom, {
       } else {
         $skin.removeAttribute(eventHook);
       }
-    } else {
-      events[type] = false;
     }
     return events[type];
   },
-
-  // /**
-  //  * @required
-  //  */
-  // getFixedEvent: function getFixedEvent(event) {
-  //   if (event.key) {
-  //     event.name = event.key[0].toLowerCase() + event.key.slice(1);
-  //   } else if (event.button) {
-  //     event.name = ['left', 'middle', 'right'][event.button]; // for left-hand
-  //   }
-
-  //   return event;
-  // },
 
   /**
    * @required
    */
   addEventListener: function addEventListener($skin, type, func, opts) {
-    // $skin.addEventListener(type, listener, useCapture);
-    if (opts) {
-      $skin.addEventListener(type, func, supportsPassiveOption ? opts : !!opts.capture);
+    // if (opts) {
+    //   $skin.addEventListener(type, func, supportsPassiveOption ? opts : !!opts.capture);
+    // } else {
+    //   $skin.addEventListener(type, func, false);
+    // }
+    if (!opts) {
+      $skin.addEventListener(type, func);
+    } else if (!opts.passive) {
+      $skin.addEventListener(type, func, !!opts.capture);
     } else {
-      $skin.addEventListener(type, func, false);
+      $skin.addEventListener(type, func, supportsPassiveOption ? opts : !!opts.capture);
     }
   },
 
@@ -925,10 +717,12 @@ assign(ExtagDom, {
    * @required
    */
   removeEventListener: function removeEventListener($skin, type, func, opts) {
-    // $skin.removeEventListener(type, listener, useCapture);
     $skin.removeEventListener(type, func, opts ? !!opts.capture : false);
   },
 
+  /**
+   * @required
+   */
   renderShell: function($skin, shell) {
     if (ExtagDom.getShell($skin) !== shell) { 
       throw new Error('the shell is not attached to this $skin');
@@ -955,16 +749,6 @@ assign(ExtagDom, {
       var children = shell._children;
 
       if (shell.$type === 1) {
-        // if (attrs && attrs._dirty) {
-        //   ExtagDom.renderAttrs($skin, attrs._props, attrs._dirty);
-        // }
-        // if (style && style._dirty) {
-        //   ExtagDom.renderStyle($skin, style._props, style._dirty);
-        // }
-        // if (classes && classes._dirty) {
-        //   ExtagDom.renderClasses($skin, classes._props, classes._dirty);
-        // }
-
         if (attrs) {
           props = attrs._props;
           dirty = attrs._dirty;
@@ -1011,45 +795,30 @@ assign(ExtagDom, {
         }
       }          
       
-      if (children && (shell.$flag & 2)) {
-        // if (__ENV__ === 'development') {
-        //   if (props.hasOwnProperty('innerHTML')) {
-        //     console.error("You'd better not use innerHTML and children together for ", this); // TODO: check when parsing
-        //   }
-        //   for (i = 0; i < children.length; ++i) {
-        //     if (shell.guid > children[i].guid) {
-        //       console.error('You should create parent shell before creating its children, in order to rendering from parent to children.');
-        //     }
-        //   }
-        // }
-        
-        var $removed;
+      if (children && (shell.$flag & FLAG_CHANGED_CHILDREN)) {
+        // var $removed;
 
         if (!shadowMode || !$skin.attachShadow) {
-          $removed = ExtagDom.renderChildren($skin, shell, flatten(children));
+          ExtagDom.renderChildren($skin, shell, flatten(children));
         } else {
           if ($skin.shadowRoot == null) {
             $skin.attachShadow({mode: shadowMode});
           }
-          $removed = ExtagDom.renderChildren($skin.shadowRoot, shell, flatten(children));
+          ExtagDom.renderChildren($skin.shadowRoot, shell, flatten(children));
         }
 
-        if ($removed && $removed.length) {
-          for (var i = 0, n = $removed.length; i < n; ++i) {
-            var $parent = ExtagDom.getParent($removed[i]);
-            var _shell = ExtagDom.getShell($removed[i]);
-            if (!$parent && _shell) { // TODO: && !shell._secrets.reuse
-              // delete _shell.__num__;
-              _shell.detach();
-              // if (_shell.__config__.autoDestroy) {
-              //   _shell.destroy();
-              // }
-            }
-          }
-        }
+        // if ($removed && $removed.length) {
+        //   for (var i = 0, n = $removed.length; i < n; ++i) {
+        //     var $parent = ExtagDom.getParent($removed[i]);
+        //     var _shell = ExtagDom.getShell($removed[i]);
+        //     if (!$parent && _shell) {
+        //       _shell.detach();
+        //     }
+        //   }
+        // }
       }
 
-      if (shell._commands) {
+      if (shell._commands && (shell.$flag & FLAG_CHANGED_COMMANDS)) {
         ExtagDom.invokeCommands($skin, shell._commands)
       }
     }
@@ -1103,9 +872,9 @@ assign(ExtagDom, {
         if (desc.mustUseProperty) {
           $skin[key] = value;
         } else if (value != null) {
-          $skin.setAttribute(JS_TO_HTML[key], value);
+          $skin.setAttribute(desc.attributeName, value);
         } else {
-          $skin.removeAttribute(JS_TO_HTML[key]);
+          $skin.removeAttribute(desc.attributeName);
         }
       } else if (value != null) {
         $skin.setAttribute(toKebabCase(key), value);
@@ -1114,36 +883,6 @@ assign(ExtagDom, {
       }
     }
   },
-  // renderProps: function renderProps($skin, props, dirty) {
-  //   var key, value, index;
-  //   //if (!dirty) { return; }
-  //   for (key in dirty) {
-  //     if (!dirty.hasOwnProperty(key)) { continue; }
-
-  //     index = key.indexOf(':');
-  //     value = props[key];
-      
-  //     if (index < 0) {
-  //       if (DOM_PROPERTIES[key]) { // MUST_USE_PROPERTY or HAS_BOOLEAN_VALUE
-  //         $skin[key] = value;
-  //       } else if (value != null) {
-  //         $skin.setAttribute(key, value);
-  //       } else {
-  //         $skin.removeAttribute(key);
-  //       }
-  //     } else {
-  //       var nsURI = namespaceURIs[key.slice(0, index)];
-  //       key = key.slice(index + 1);
-  //       if (nsURI && key) {
-  //         if (value != null) {
-  //           $skin.setAttributeNS(nsURI, key, value);
-  //         } else {
-  //           $skin.removeAttributeNS(nsURI, key)
-  //         }
-  //       }
-  //     }
-  //   }
-  // },
 
   /**
    * @required
@@ -1190,13 +929,11 @@ assign(ExtagDom, {
       }
     } else {
       var names = [];
-
       for (key in classes) {
         if (hasOwnProp.call(classes, key) && classes[key]) {
           names.push(key);
         }
       }
-
       $skin.setAttribute('class', names.join(' '));
     }
   },
@@ -1204,8 +941,9 @@ assign(ExtagDom, {
   invokeCommands: function invokeCommands($skin, commands) {
     for (var i = 0, n = commands.length; i < n; ++i) {
       var command = commands[i];
-      // console.log(command.name, command.args)
-      ExtagDom.invoke($skin, command.name, command.args);
+      if (command && command.name) {
+        ExtagDom.invoke($skin, command.name, command.args);
+      }
     }
   },
 
@@ -1213,56 +951,80 @@ assign(ExtagDom, {
    * @required
    */
   renderChildren: function renderChildren($skin, shell, children) {
-    // console.log('renderChildren', shell.toString(), children.length, shell.children.length)
     if (shell.$type === 0) { return; }
 
-    var i, n, m, child, $existed, $newChild, $oldChild, $removed, $children = $skin.childNodes;
+    var i, n, m;// child, $existed;
+    var newChild, oldChild;
+    var $newChild, $oldChild, $parent;
+    var $removed = [], $children = $skin.childNodes;
 
     n = children.length;
+    m = $children.length;
+
+    if (m) {
+      for (i = m - 1; i >= 0; --i) {
+        $oldChild = $children[i];
+        oldChild = ExtagDom.getShell($oldChild);
+        if (oldChild && !oldChild.getParent()) {
+          $skin.removeChild($oldChild);
+          $removed.push($oldChild);
+        }
+      }
+      for (i = $removed.length - 1; i >= 0;  --i) {
+        $parent = ExtagDom.getParent($removed[i]);
+        oldChild = ExtagDom.getShell($removed[i]);
+        if (!$parent && oldChild) { 
+          oldChild.detach();
+        }
+      }
+    }
 
     if (n) {
       for (i = 0; i < n; ++i) {
-        child = children[i];
-        $newChild = child.$skin;
+        newChild = children[i];
+        $newChild = newChild.$skin;
+        if ($newChild) {
+          $newChild.__extag_index__ = i;
+        }
+      }
+      for (i = 0; i < n; ++i) {
+        newChild = children[i];
+        $newChild = newChild.$skin;
         $oldChild = $children[i];
         if (!$newChild) {
-          var ns = child.ns, tag = child.tag, type = child.$type, _child;
+          var ns = newChild.ns, tag = newChild.tag, type = newChild.$type;
           if (!$oldChild || tag !== ExtagDom.getTagName($oldChild) || ns !== ExtagDom.getNameSpace($oldChild)
-            || ((_child = $oldChild ? ExtagDom.getShell($oldChild) : null) && _child !== child)) {
-            $newChild = type === 1 ? ExtagDom.createElement(ns, tag, child._props && child._props.type) : ExtagDom.createText('');
-                          // (type === 3 ? ExtagDom.createText('') : ExtagDom.createFragment());
+            || ((oldChild = $oldChild ? ExtagDom.getShell($oldChild) : null) && oldChild !== newChild)) {
+            $newChild = type === 1 ? ExtagDom.createElement(ns, tag) : ExtagDom.createText('');
           } else {
             $newChild = $oldChild;
           }
-          child.attach($newChild);
-          
-          // if (child.type !== 0) {
-            // child.render();
-          // }
+          newChild.attach($newChild);
         }
 
         if (!$oldChild) {
           $skin.appendChild($newChild);
         } else if ($newChild !== $oldChild) {
           $skin.insertBefore($newChild, $oldChild);
+          if ($oldChild.__extag_index__) {
+            $skin.insertBefore($oldChild, $children[$oldChild.__extag_index__] || null)
+          }
         }
-
-        // child.__num__ = (shell.__num__ || '') + '.' + i;
       }
     }
 
-    m = $children.length;
+    // m = $children.length;
 
-    if (n < m) {
-      $removed = [];
-      for (i = m - 1; i >= n; --i) {
-        $existed = $children[i];
-        $removed.push($existed);
-        $skin.removeChild($existed);
-      }
-    }
+    // if (n < m) {
+    //   $removed = [];
+    //   for (i = m - 1; i >= n; --i) {
+    //     $existed = $children[i];
+    //     $removed.push($existed);
+    //     $skin.removeChild($existed);
+    //   }
+    // }
 
-    return $removed;
+    // return $removed;
   }
 });
 

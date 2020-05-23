@@ -1,5 +1,5 @@
 // src/core/shells/Text.js
-
+import Parent from 'src/base/Parent'
 import Schedule from 'src/core/Schedule'
 import Shell from 'src/core/shells/Shell'
 import DirtyMarker from 'src/base/DirtyMarker'
@@ -8,6 +8,7 @@ import {
   FLAG_NORMAL,
   FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
+
 
 export default function Text(data) {
   Text.initialize(this, data);
@@ -81,6 +82,8 @@ defineClass({
 
     return true;
   },
+
+  getParent: Parent.prototype.getParent,
 
   /**
    * return text content snapshot and its guid.

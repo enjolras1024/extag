@@ -5,87 +5,103 @@ import { setImmediate } from 'src/share/functions'
 import logger from 'src/share/logger';
 
 var updateQueue = []; 
-  var renderQueue = [];
-  var callbackQueue = [];
-  var updateQueueCursor = 0;
-  var renderQueueCursor = 0;
-  var turn = 0;
-  // var 
-  var waiting = false;
-  var updating = false;
-  var rendering = false;
+var renderQueue = [];
+var callbackQueue = [];
+var updateQueueCursor = 0;
+var renderQueueCursor = 0;
+var turn = 0;
+// var 
+var waiting = false;
+var updating = false;
+var rendering = false;
 
-  function flushQueues() {
-    if (updating || !waiting) {
-      return;
+function flushQueues() {
+  if (updating || !waiting) {
+    return;
+  }
+  try {
+    turn++;
+    updating = true;
+    updateQueueCursor = 0;
+
+    var shell, i, n;
+  
+    // quene may be lengthen if the method `invalidate` is called when updating
+    while (updateQueueCursor < updateQueue.length) {
+      // if (updateQueueCursor > 999) {
+      //   throw new Error('too much things to update');
+      // }
+      shell = updateQueue[updateQueueCursor];
+      // try {
+        shell.update();
+      // } catch (e) { 
+      //   logger.error(e);
+      // }
+      ++updateQueueCursor;
     }
-    try {
-      turn++;
-      updating = true;
-      updateQueueCursor = 0;
+  
+    
+    updateQueue.length = 0;
+    updateQueueCursor = 0;
+    updating = false;
+    waiting = false;
+  
+    rendering = true;
+    renderQueueCursor = 0;
+    while (renderQueueCursor < renderQueue.length) {
+      // if (updateQueueCursor > 999) {
+      //   throw new Error('too much things to update');
+      // }
+      shell = renderQueue[renderQueueCursor];
+      // try {
+        shell.render();
+      // } catch (e) {
+      //   logger.error(e);
+      // }
+      ++renderQueueCursor;
+    }
+  
+    renderQueue.length = 0;
+    renderQueueCursor = 0;
+    rendering = false;
+  
+    for (i = callbackQueue.length - 1; i >= 0; --i) {
+      // try {
+        callbackQueue[i]();
+      // } catch (e) {
+      //   logger.error(e);
+      // }
+    }
 
-      var shell, i, n;
-    
-      // quene may be lengthen if the method `invalidate` is called when updating
-      while (updateQueueCursor < updateQueue.length) {
-        // if (updateQueueCursor > 999) {
-        //   throw new Error('too much things to update');
-        // }
-        shell = updateQueue[updateQueueCursor];
-        // try {
-          shell.update();
-        // } catch (e) { 
-        //   logger.error(e);
-        // }
-        ++updateQueueCursor;
-      }
-    
-      
-      updateQueue.length = 0;
-      updateQueueCursor = 0;
-      updating = false;
-      waiting = false;
-    
-      rendering = true;
-      renderQueueCursor = 0;
-      while (renderQueueCursor < renderQueue.length) {
-        // if (updateQueueCursor > 999) {
-        //   throw new Error('too much things to update');
-        // }
-        shell = renderQueue[renderQueueCursor];
-        // try {
-          shell.render();
-        // } catch (e) {
-        //   logger.error(e);
-        // }
-        ++renderQueueCursor;
-      }
-    
-      renderQueue.length = 0;
-      renderQueueCursor = 0;
-      rendering = false;
-    
-      for (i = callbackQueue.length - 1; i >= 0; --i) {
-        // try {
-          callbackQueue[i]();
-        // } catch (e) {
-        //   logger.error(e);
-        // }
-      }
+    callbackQueue.length = 0;
+  } catch (e) {
+    updateQueueCursor = 0;
+    renderQueueCursor = 0;
+    updateQueue.length = 0;
+    renderQueue.length = 0;
+    callbackQueue.length = 0;
+    rendering = false;
+    updating = false;
+    waiting = false;
+    throw e;
+  }
+}
 
-      callbackQueue.length = 0;
-    } catch (e) {
-      updateQueueCursor = 0;
-      renderQueueCursor = 0;
-      updateQueue.length = 0;
-      renderQueue.length = 0;
-      callbackQueue.length = 0;
-      rendering = false;
-      updating = false;
-      waiting = false;
-      throw e;
+function binarySearch(id) {
+  var i = 0, j = updateQueue.length - 1;
+  while (i <= j) {
+    var m = (i + j) >> 1;
+    var guid = updateQueue[m].$guid;
+    if (id > guid) {
+      i = m + 1;
+    } else if (id < guid) {
+      j = m - 1;
+    } else {
+      return i;
     }
   }
+  return -i-1;
+}
 
 /**
  * Insert a shell into the updateQueue for updating accoring to its guid.
@@ -99,12 +115,22 @@ var updateQueue = [];
 function insertUpdateQueue(shell) {
   var i, n = updateQueue.length, id = shell.$guid;
 
-  // if (!updating) {
-    i = n - 1;
-    while (i > updateQueueCursor && id < updateQueue[i].$guid) {
-      --i;
+  if (n > updateQueueCursor && id > updateQueue[n-1].$guid) {
+    i = n;
+  } else {
+    var index = binarySearch(id);
+    if (index < 0) {
+      i = - index - 1;
+    } else {
+      return;
     }
-    ++i;
+  }
+  // if (!updating) {
+    // i = n - 1;
+    // while (i > updateQueueCursor && id < updateQueue[i].$guid) {
+    //   --i;
+    // }
+    // ++i;
   // } else { // the method `invalidate` maybe called when updating
   //   i = updateQueueCursor + 1;
   //   // if (id < updateQueue[updateQueueCursor].$guid) {
