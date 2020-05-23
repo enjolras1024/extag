@@ -1,6 +1,6 @@
 // src/core/bindings/Binding.js
 
-import  { defineProp, defineClass } from 'src/share/functions'
+import  { defineClass } from 'src/share/functions'
 import { FLAG_CHANGED } from 'src/share/constants'
 import Dependency from 'src/core/Dependency'
 
@@ -52,9 +52,10 @@ defineClass({
       if (_bindings) {
         _bindings.push(binding);
       } else {
-        defineProp(target, '_bindings', {
-          value: [binding], writable: false, enumerable: false, configurable: true
-        });
+        target._bindings = [binding];
+        // defineProp(target, '_bindings', {
+        //   value: [binding], writable: false, enumerable: false, configurable: true
+        // });
       }
     },
 

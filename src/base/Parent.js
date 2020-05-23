@@ -1,10 +1,10 @@
 // src/base/Parent.js
 
-import { defineProp, defineClass, throwError } from 'src/share/functions'
+import { defineClass, throwError } from 'src/share/functions'
 import { FLAG_CHANGED_CHILDREN } from 'src/share/constants'
 
 /**
- * Construct a parent like array.
+ * Parent is in charge of its children.
  * @class
  * @constructor
  */
@@ -49,12 +49,12 @@ defineClass({
       }
     },
 
-    invalidate: function invalidate(parent) {
-      if (parent._children) {
-        parent._children.isInvalidated = true;
-        parent.invalidate(FLAG_CHANGED_CHILDREN);
-      }
-    },
+    // invalidate: function invalidate(parent) {
+    //   if (parent._children) {
+    //     parent._children.isInvalidated = true;
+    //     parent.invalidate(FLAG_CHANGED_CHILDREN);
+    //   }
+    // },
 
     findParent: findParent,
     flattenChildren: flattenChildren
@@ -126,9 +126,10 @@ defineClass({
 
     if (!children) {
       children = [];
-      defineProp(this, '_children', {
-        value: children, writable: false, enumerable: false, configurable: true
-      });
+      this._children = children;
+      // defineProp(this, '_children', {
+      //   value: children, writable: false, enumerable: false, configurable: true
+      // });
     }
 
     n = children.length;
@@ -182,7 +183,6 @@ defineClass({
     child._parent = this;
 
     this.invalidate(FLAG_CHANGED_CHILDREN);
-    // Parent.invalidate(this, 'length');
 
     return this;
   },
@@ -222,7 +222,6 @@ defineClass({
 
     child._parent = null;
     this.invalidate(FLAG_CHANGED_CHILDREN);
-    // Parent.invalidate(this, 'length');
 
     return this;
   },
@@ -276,7 +275,6 @@ defineClass({
     child._parent = this;
     children[i] = child;
 
-    // Parent.invalidate(this);
     this.invalidate(FLAG_CHANGED_CHILDREN);
 
     return this;

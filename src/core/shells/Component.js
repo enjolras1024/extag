@@ -22,6 +22,8 @@ import config from 'src/share/config'
 import logger from 'src/share/logger'
 import { defineProp, defineClass } from 'src/share/functions'
 import {
+  TYPE_FRAG,
+  TYPE_ELEM,
   FLAG_NORMAL,
   FLAG_CHANGED,
   FLAG_CHANGED_CACHE,
@@ -117,9 +119,10 @@ defineClass({
 
       // 2. initialize the attribute default values
       var defaults = Accessor.getAttributeDefaultValues(component);
-      defineProp(component, '_props', {
-        value: defaults, writable: false, enumerable: false, configurable: true
-      });
+      // defineProp(component, '_props', {
+      //   value: defaults, writable: false, enumerable: false, configurable: true
+      // });
+      component._props = defaults;
 
       // 3. compile the template once and only once.
       if (!_template) {
@@ -133,17 +136,17 @@ defineClass({
         }
 
         if (_template) {
-          // constructor._template = _template;
-          defineProp(constructor, '__extag_template__', {
-            value: _template, writable: false, enumerable: false, configurable: true
-          })
+          constructor.__extag_template__ = _template;
+          // defineProp(constructor, '__extag_template__', {
+          //   value: _template, writable: false, enumerable: false, configurable: true
+          // })
         } else {
           throw new TypeError('The template must be legal HTML string or DOM element');
         }
       }
 
       // 4. initialize the component as normal element
-      Shell.initialize(component, _template.tag !== 'x:frag' ? 1 : 0, _template.tag, _template.ns || '');
+      Shell.initialize(component, _template.tag !== 'x:frag' ? TYPE_ELEM : TYPE_FRAG, _template.tag, _template.ns || '');
 
       Element.defineMembers(component);
 
@@ -163,7 +166,12 @@ defineClass({
           throw new TypeError('setup() should return object, not ' + (typeof model));
         }
         for (var key in model) {
-          defineProp(component, key, Object.getOwnPropertyDescriptor(model, key));
+          var desc = Object.getOwnPropertyDescriptor(model, key);
+          if (desc.get) {
+            defineProp(component, key, desc);
+          } else {
+            component[key] = desc.value;
+          }
         }
       }
 
@@ -171,7 +179,7 @@ defineClass({
 
       HTMXEngine.driveComponent(component, _template, scopes, template, props);
 
-      // 8. initialized
+      // 8. created
       component.emit('created');
       // if (component.onInited) {
       //   component.onInited();
@@ -357,7 +365,8 @@ defineClass({
     this.emit('updating', this.$flag);
     // this.emit('update', this.$flag);
 
-    if (this.$type !== 0) {
+    var type = this.$meta.type;
+    if (type !== 0) {
       if ((this.$flag & FLAG_CHANGED_CACHE)) {
         config.HTMXEngine.transferProperties(this);
       }
@@ -368,7 +377,7 @@ defineClass({
     if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
       // If this type is 0, we should ask its parent to render parent's children,
       // since its children are belong to its parent actually.
-      if (this.$type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+      if (type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
         // this._parent.invalidate(2); 
         var parent = this.getParent(true);
         parent.$flag |= FLAG_CHANGED_CHILDREN;
@@ -394,7 +403,7 @@ defineClass({
     if (this.$flag === FLAG_NORMAL) {
       return false;
     }
-    if (this.$type !== 0) {
+    if (this.$meta.type !== 0) {
       elementPropto.render.call(this);
     } else {
       fragmentProto.render.call(this);

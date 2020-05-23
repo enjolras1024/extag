@@ -1,46 +1,11 @@
-//######################################################################################################################
 // src/view/ExtagDom.js
-//######################################################################################################################
-//#es6 import Extag from "extag"
-//#cjs var Extag = require("extag")
-
-var hasOwnProp = Object.prototype.hasOwnProperty;
-
-function assign(target/*,..sources*/) { // Object.assign
-  if (target == null) {
-    throw  new TypeError('Cannot convert undefined or null to object');
-  }
-
-  //if (!(target instanceof Object)) {
-  //  var type = typeof target;
-  //
-  //  if (type === 'number') {
-  //    target = new Number(target);
-  //  } else if (type === 'string') {
-  //    target = new String(target);
-  //  } else if (type === 'boolean') {
-  //    target = new Boolean(target);
-  //  }
-  //}
-
-  var source, key, i, n = arguments.length;
-
-  for (i = 1; i < n; ++i) {
-    source = arguments[i];
-
-    if (!(source instanceof Object)) {
-      continue;
-    }
-
-    for (key in source) {
-      if (hasOwnProp.call(source, key)) {
-        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
-      }
-    }
-  }
-
-  return target;
-}
+import { 
+  TYPE_ELEM,
+  TYPE_FRAG,
+  FLAG_CHANGED_CHILDREN,
+  FLAG_CHANGED_COMMANDS
+} from 'src/share/constants'
+import { assign, hasOwnProp } from 'src/share/functions'
 
 var supportsPassiveOption = false;
 try {
@@ -54,8 +19,6 @@ try {
 } catch (e) {}
 
 var tag2events = {};
-var FLAG_CHANGED_CHILDREN = 4;
-var FLAG_CHANGED_COMMANDS = 8;
 
 // Refer to React (https://facebook.github.io/react/)
 var DOM_PROPERTY_DESCRIPTORS = {
@@ -395,15 +358,11 @@ function flatten(children, array) {
   array = array || [];
   for (i = 0; i < n; ++i) {
     child = children[i];
-    if (child.$type === 0) {
+    if (child.$meta.type === TYPE_FRAG) {
       if (child._children) {
         flatten(child._children, array);
       }
-    } /*else if (child.$type === 13) {
-      if (child._content) {
-        flatten([child._content], array);
-      }
-    }*/ else {
+    } else {
       array.push(child);
     }
   }
@@ -621,11 +580,13 @@ assign(ExtagDom, {
       }
     }
 
-    if (shell.$type === 1 && shell.tag !== ExtagDom.getTagName($skin)) {
+    var meta = shell.$meta;
+
+    if (meta.type === TYPE_ELEM && meta.tag !== ExtagDom.getTagName($skin)) {
       throw new Error('a shell can not attach a $skin that has a different tag');
     }
 
-    if (shell.ns !== ExtagDom.getNameSpace($skin)) {
+    if (meta.ns !== ExtagDom.getNameSpace($skin)) {
       throw new Error('a shell can not attach a $skin that has a different namespace');
     }
 
@@ -740,7 +701,8 @@ assign(ExtagDom, {
       ExtagDom.renderProps($skin, props, dirty);
     }
 
-    if (shell.tag) {
+    var meta = shell.$meta;
+    if (meta.tag) {
       var shadowMode = props.shadowMode;
 
       var attrs = shell._attrs;
@@ -748,7 +710,7 @@ assign(ExtagDom, {
       var classes = shell._classes;
       var children = shell._children;
 
-      if (shell.$type === 1) {
+      if (meta.type === TYPE_ELEM) {
         if (attrs) {
           props = attrs._props;
           dirty = attrs._dirty;
@@ -992,10 +954,15 @@ assign(ExtagDom, {
         $newChild = newChild.$skin;
         $oldChild = $children[i];
         if (!$newChild) {
-          var ns = newChild.ns, tag = newChild.tag, type = newChild.$type;
-          if (!$oldChild || tag !== ExtagDom.getTagName($oldChild) || ns !== ExtagDom.getNameSpace($oldChild)
-            || ((oldChild = $oldChild ? ExtagDom.getShell($oldChild) : null) && oldChild !== newChild)) {
-            $newChild = type === 1 ? ExtagDom.createElement(ns, tag) : ExtagDom.createText('');
+          var meta = newChild.$meta;
+          // var ns = newChild.ns, tag = newChild.tag, type = newChild.$type;
+          if (!$oldChild || 
+              meta.tag !== ExtagDom.getTagName($oldChild) || 
+              meta.ns !== ExtagDom.getNameSpace($oldChild) || 
+              ((oldChild = $oldChild ? ExtagDom.getShell($oldChild) : null) && oldChild !== newChild)) {
+            $newChild = meta.type === TYPE_ELEM ? 
+                        ExtagDom.createElement(meta.ns, meta.tag) : 
+                        ExtagDom.createText('');
           } else {
             $newChild = $oldChild;
           }

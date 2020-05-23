@@ -1,5 +1,10 @@
 // src/share/constants.js 
 
+// shell type
+var TYPE_FRAG = 0;
+var TYPE_ELEM = 1;
+var TYPE_TEXT = 3;
+
 // event flags
 var FLAG_NONE = 0;
 var FLAG_ONCE = 4;
@@ -49,6 +54,10 @@ var PROP_EXPR_REGEXP = /^\s*[$_a-zA-Z0-9]+\s*$/;
 
 
 export {
+  TYPE_FRAG,
+  TYPE_ELEM,
+  TYPE_TEXT,
+
   FLAG_NONE,
   FLAG_ONCE,
   FLAG_CAPTURE,

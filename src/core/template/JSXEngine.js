@@ -8,7 +8,7 @@ import Slot from 'src/core/shells/Slot'
 // import HTMXEngine from 'src/core/node/HTMXEngine'
 // import HTMXnode from 'src/core/node/HTMXnode'
 import { EMPTY_OBJECT, EMPTY_ARRAY } from 'src/share/constants'
-import { defineProp, flatten } from 'src/share/functions'
+import { flatten } from 'src/share/functions'
 import config from 'src/share/config'
 
 // function slot(name, children) {
@@ -28,12 +28,13 @@ import config from 'src/share/config'
  * @param {Object} newChild - node
  */
 function matchesChild(oldChild, newChild) {
-  if (!oldChild.tag && !newChild.__extag_node__) {
+  var meta = oldChild.$meta;
+  if (!meta.tag && !newChild.__extag_node__) {
     return true;
   }
-  return oldChild.xkey === newChild.xkey && 
+  return oldChild.__extag_key__ === newChild.xkey && 
           (newChild.type ? oldChild.constructor === newChild.type : 
-            (oldChild.tag === newChild.tag && oldChild.ns === newChild.ns));
+            (meta.tag === newChild.tag && meta.ns === newChild.ns));
 }
 
 /**
@@ -69,16 +70,17 @@ function createChild(node, target, scope) {
     // console.log('x:name=' + node.name);
     // scope[node.xName] = child; // TODO: addNamedPart
     scope.addNamedPart(node.name, child);
-    defineProp(child, '$owner', {
-      configurable: true,
-      enumarable: false,
-      writable: false,
-      value: scope
-    });
+    // defineProp(child, '$owner', {
+    //   configurable: true,
+    //   enumarable: false,
+    //   writable: false,
+    //   value: scope
+    // });
+    child.$owner = scope;
   }
 
   if (node.xkey) {
-    child.__key__ = node.xkey;
+    child.__extag_key__ = node.xkey;
   }
 
   return child;
@@ -132,14 +134,6 @@ function updatePropsAndEvents(node, target, scope) {
     // add new event handlers
     target.on(newEvents);
   }
-  
-  // if (target._vnode) {
-  //   target._vnode = node;
-  // } else {
-  //   defineProp(target, '_vnode', {
-  //     value: node, writable: true, enumerable: false, attrsurable: true
-  //   });
-  // }
 }
 
 // refer to Vue (https://vuejs.org/)

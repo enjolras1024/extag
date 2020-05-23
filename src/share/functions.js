@@ -61,39 +61,19 @@ function help(target) {
   return new Helper(target);
 }
 
-var assign = Object.assign || function assign(target/*,..sources*/) {
-  if (target == null) {
-    throw  new TypeError('Cannot convert undefined or null to object');
-  }
-
-  if (!(target instanceof Object)) {
-   var type = typeof target;
-  
-   if (type === 'number') {
-     target = new Number(target);
-   } else if (type === 'string') {
-     target = new String(target);
-   } else if (type === 'boolean') {
-     target = new Boolean(target);
-   }
-  }
-
+var assign = function assign(target/*,..sources*/) {
   var source, key, i, n = arguments.length;
-
   for (i = 1; i < n; ++i) {
     source = arguments[i];
-
     if (!(source instanceof Object)) {
       continue;
     }
-
     for (key in source) {
       if (hasOwnProp.call(source, key)) {
-        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        target[key] = source[key];
       }
     }
   }
-
   return target;
 }
 

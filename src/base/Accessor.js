@@ -32,10 +32,10 @@ function makeSetter(key) {
 var EMPTY_DESC = {};
 var SHARED_GET = function(key, props) { return props[key]; }
 
-function defineGetterSetter(prototype, key) {
+function defineGetterSetter(target, key) {
   descriptorShared.get = makeGetter(key);
   descriptorShared.set = makeSetter(key);
-  defineProp(prototype, key, descriptorShared);
+  defineProp(target, key, descriptorShared);
 }
 
 function getAttributeDefaultValue(desc) {
@@ -76,8 +76,8 @@ function getAttributeDefaultValues(target) {
   return defaultValues;
 }
 
-function applyAttributeDescriptors(prototype, descriptors, override) {
-  if (hasOwnProp.call(prototype, '__extag_descriptors__')) {
+function applyAttributeDescriptors(target, descriptors, override) {
+  if (hasOwnProp.call(target, '__extag_descriptors__')) {
     return;
   }
   if (Array.isArray(descriptors)) {
@@ -89,16 +89,16 @@ function applyAttributeDescriptors(prototype, descriptors, override) {
     }
   }
   // merge descriptors
-  descriptors = assign({}, prototype.__extag_descriptors__, descriptors);
+  descriptors = assign({}, target.__extag_descriptors__, descriptors);
 
   var key, desc;
 
   for (key in descriptors) { // define getter/setter for each key
-    if (hasOwnProp.call(descriptors, key) /*&& !prototype.hasOwnProperty(key)*/) {
-      if ((key in prototype) && !override) {
+    if (hasOwnProp.call(descriptors, key) /*&& !target.hasOwnProperty(key)*/) {
+      if ((key in target) && !override) {
         // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
-          logger.warn('`' + key + '` is already defined in the prototype of ' + prototype.constructor);
+          logger.warn('`' + key + '` is already defined in the target of ' + target.constructor);
         }
         continue;
       }
@@ -121,15 +121,20 @@ function applyAttributeDescriptors(prototype, descriptors, override) {
       }
       desc = descriptors[key];
       if (!('bindable' in  desc)) {
-        desc.bindable = true; // can dispatch `changed.${key}` event, default true
+        desc.bindable = true; // will dispatch `changed` event, default true
       }
       if (desc.bindable) {
-        defineGetterSetter(prototype, key);
+        defineGetterSetter(target, key);
       }
     }
   }
 
-  defineProp(prototype, '__extag_descriptors__', {value: descriptors});
+  defineProp(target, '__extag_descriptors__', {
+    value: descriptors,
+    configurable: true,
+    enumerable: false,
+    writable: false
+  });
 }
 
 /**
@@ -172,6 +177,5 @@ defineClass({
         this.set(key, props[key]);
       }
     }
-    // return this;
   }
 });

@@ -7,6 +7,7 @@ import Cache from 'src/core/models/Cache'
 import DirtyMarker from 'src/base/DirtyMarker'
 import { defineProp, defineClass } from 'src/share/functions'
 import {
+  TYPE_ELEM,
   FLAG_NORMAL,
   FLAG_CHANGED_CACHE,
   FLAG_CHANGED_CHILDREN,
@@ -52,7 +53,7 @@ defineClass({
         }
       }
 
-      Shell.initialize(element, 1, tag, ns);
+      Shell.initialize(element, TYPE_ELEM, tag, ns);
 
       Element.defineMembers(element);
 
@@ -129,11 +130,12 @@ defineClass({
       if (!('classes' in prototype)) {
         defineProp(prototype, 'attrs', {
           get: function() {
-            if (!this._attrs/* && this.tag*/) {
-              defineProp(this, '_attrs', {
-                value: new Cache(this), 
-                configurable: true
-              });
+            if (!this._attrs) {
+              this._attrs = new Cache(this);
+              // defineProp(this, '_attrs', {
+              //   value: new Cache(this), 
+              //   configurable: true
+              // });
             }
             return this._attrs;
           }//,
@@ -143,11 +145,12 @@ defineClass({
         });
         defineProp(prototype, 'style', {
           get: function() {
-            if (!this._style/* && this.tag*/) {
-              defineProp(this, '_style', {
-                value: new Cache(this), 
-                configurable: true
-              });
+            if (!this._style) {
+              this._style = new Cache(this);
+              // defineProp(this, '_style', {
+              //   value: new Cache(this), 
+              //   configurable: true
+              // });
             }
             return this._style;
           }//,
@@ -157,11 +160,12 @@ defineClass({
         });
         defineProp(prototype, 'classes', {
           get: function() {
-            if (!this._classes/* && this.tag*/) {
-              defineProp(this, '_classes', {
-                value: new Cache(this), 
-                configurable: true
-              });
+            if (!this._classes) {
+              this._classes = new Cache(this);
+              // defineProp(this, '_classes', {
+              //   value: new Cache(this), 
+              //   configurable: true
+              // });
             }
             return this._classes;
           }//,

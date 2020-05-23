@@ -5,6 +5,7 @@ import Shell from 'src/core/shells/Shell'
 import DirtyMarker from 'src/base/DirtyMarker'
 import { defineClass } from 'src/share/functions'
 import {
+  TYPE_TEXT,
   FLAG_NORMAL,
   FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
@@ -38,7 +39,7 @@ defineClass({
           throw new TypeError('Text is final class and can not be extended');
         }
       }
-      Shell.initialize(text, 3, '', '');
+      Shell.initialize(text, TYPE_TEXT, '', '');
       text.set('data', data || '');
     }
   },

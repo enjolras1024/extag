@@ -91,7 +91,7 @@ function binarySearch(id) {
   var i = 0, j = updateQueue.length - 1;
   while (i <= j) {
     var m = (i + j) >> 1;
-    var guid = updateQueue[m].$guid;
+    var guid = updateQueue[m].$meta.guid;
     if (id > guid) {
       i = m + 1;
     } else if (id < guid) {
@@ -113,9 +113,9 @@ function binarySearch(id) {
  * @param {Shell} shell
  */
 function insertUpdateQueue(shell) {
-  var i, n = updateQueue.length, id = shell.$guid;
+  var i, n = updateQueue.length, id = shell.$meta.guid;
 
-  if (n > updateQueueCursor && id > updateQueue[n-1].$guid) {
+  if (n > updateQueueCursor && id > updateQueue[n-1].$meta.guid) {
     i = n;
   } else {
     var index = binarySearch(id);
@@ -162,17 +162,17 @@ function insertUpdateQueue(shell) {
    * @param {Shell} shell 
    */
   function insertRenderQueue(shell) {
-    var i, n = renderQueue.length, id = shell.$guid;
+    var i, n = renderQueue.length, id = shell.$meta.guid;
 
     if (!rendering) {
       i = n - 1;
-      while (i >= 0 && id < renderQueue[i].$guid) {
+      while (i >= 0 && id < renderQueue[i].$meta.guid) {
         --i;
       }
       ++i;
     } else {
       i = renderQueueCursor + 1;
-      while (i < n && id >= renderQueue[i].$guid) {
+      while (i < n && id >= renderQueue[i].$meta.guid) {
         ++i;
       }
     }

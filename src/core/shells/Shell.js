@@ -7,7 +7,7 @@ import Schedule from 'src/core/Schedule'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
 import { VIEW_ENGINE } from 'src/share/constants'
-import { slice, hasOwnProp, defineProp, defineClass } from 'src/share/functions'
+import { slice, hasOwnProp, defineClass } from 'src/share/functions'
 import {
   FLAG_CAPTURE, 
   FLAG_PASSIVE,
@@ -82,7 +82,7 @@ defineClass({
    * @param {HTMLElement} $skin
    */
   attach: function attach($skin) {
-    if (this.$type === 0) {
+    if (this.$meta.type === 0) {
       return false;
     }
     
@@ -95,12 +95,13 @@ defineClass({
     }
     viewEngine.attachShell($skin, this);
 
-    defineProp(this, '$skin', {
-      value: $skin,
-      writable: true,
-      enumerable: false,
-      configurable: true
-    });
+    // defineProp(this, '$skin', {
+    //   value: $skin,
+    //   writable: true,
+    //   enumerable: false,
+    //   configurable: true
+    // });
+    this.$skin = $skin;
 
     if (this._actions) {
       var type, action, actions = this._actions;
@@ -145,6 +146,10 @@ defineClass({
       return;
     }
 
+    if (this.$owner) {
+      this.$owner = null;
+    }
+
     this.constructor.destroy(this);
 
     return true;
@@ -163,8 +168,9 @@ defineClass({
    * @override
    */
   toString: function toString() {
-    var constructor = this.constructor;
-    return (constructor.fullName || constructor.name) + '<' + this.tag + '>(' + this.$guid + ')';
+    var meta = this.$meta;
+    var ctor = this.constructor;
+    return (ctor.fullName || ctor.name) + '<' + meta.tag + '>(' + meta.guid + ')';
   },
 
   /**
@@ -218,34 +224,45 @@ defineClass({
      */
     initialize: function initialize(shell, type, tag, ns) {
       if (!hasOwnProp.call(shell, '_props')) {
-        defineProp(shell, '_props', {
-          value: {}, writable: false, enumerable: false, configurable: true
-        });
+        // defineProp(shell, '_props', {
+        //   value: {}, writable: false, enumerable: false, configurable: true
+        // });
+        shell._props = {};
       }
 
-      defineProp(shell, '$flag', {
-        value: FLAG_NORMAL, writable: true, enumerable: false, configurable: true
-      });
+      // defineProp(shell, '$flag', {
+      //   value: FLAG_NORMAL, writable: true, enumerable: false, configurable: true
+      // });
+      shell.$flag = FLAG_NORMAL;
+      
+      shell.$meta = {
+        guid: shellGuid++,
+        type: type,
+        tag: tag,
+        ns: ns
+      }
+      // eslint-disable-next-line no-undef
+      if (__ENV__ === 'development') {
+        if (Object.freeze) {
+          shell.$meta = Object.freeze(shell.$meta);
+        }
+      }
 
-      // defineProp(shell, '$symb', {
-      //   value: '', writable: true, enumerable: false, configurable: true
+      // defineProp(shell, '$guid', {
+      //   value: shellGuid++, writable: false, enumerable: false, configurable: true
+      // }); // should be less than Number.MAX_SAFE_INTEGER
+
+      // defineProp(shell, '$type', {
+      //   value: type, writable: false, enumerable: false, configurable: true
       // });
 
-      defineProp(shell, '$guid', {
-        value: shellGuid++, writable: false, enumerable: false, configurable: true
-      }); // should be less than Number.MAX_SAFE_INTEGER
+      // defineProp(shell, 'tag', {
+      //   value: tag, writable: false, enumerable: false, configurable: true
+      // });
 
-      defineProp(shell, '$type', {
-        value: type, writable: false, enumerable: false, configurable: true
-      });
-
-      defineProp(shell, 'tag', {
-        value: tag, writable: false, enumerable: false, configurable: true
-      });
-
-      defineProp(shell, 'ns', {
-        value: ns, writable: true, enumerable: false, configurable: true
-      });
+      // defineProp(shell, 'ns', {
+      //   value: ns, writable: true, enumerable: false, configurable: true
+      // });
 
       // defineMembersOf(shell);
     },
@@ -299,11 +316,12 @@ defineClass({
     },
 
     getViewEngine: function(shell) {
+      var ns = shell.$meta.ns;
       if (defaultViewEngine == null) {
         defaultViewEngine = config.get(VIEW_ENGINE);
       }
-      if (shell.ns && !defaultViewEngine.hasNameSpace(shell.ns)) {
-        return config.get(shell.ns + ':' + VIEW_ENGINE);
+      if (ns && !defaultViewEngine.hasNameSpace(ns)) {
+        return config.get(ns + ':' + VIEW_ENGINE);
       }
       return defaultViewEngine;
     },

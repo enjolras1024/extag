@@ -12,7 +12,7 @@ import Fragment from 'src/core/shells/Fragment'
 import Component from 'src/core/shells/Component'
 import Expression from 'src/core/template/Expression'
 import { WHITE_SPACES_REGEXP } from 'src/share/constants'
-import { defineProp, assign } from 'src/share/functions'
+import { assign } from 'src/share/functions'
 import config from 'src/share/config'
 
 function toStyle(cssText, viewEngine) {
@@ -126,7 +126,7 @@ function makeContent(node, scopes) {
 
   if (typeof node === 'string') {
     content = new Text(node);
-  } else if (node instanceof Expression) { // like "hello, @{ $.name }..."
+  } else if (node instanceof Expression) { // like "hello, @{name}..."
     content = new Fragment(null, scopes, node);
     // node.compile('contents', content, scopes);
   } else if (node.xif || node.xfor) {
@@ -135,7 +135,7 @@ function makeContent(node, scopes) {
     type = node.type;
     if (type) {
       content = new type(null, scopes, node);
-    } else if (node.tag !== '!') {
+    } else {
       // if (node.ns == null) {
       //   node.ns = node.ns;
       // }
@@ -162,12 +162,13 @@ function makeContent(node, scopes) {
 
     if (content && node.name) {
       scopes[0].addNamedPart(node.name, content); // TODO: removeNamedPart
-      defineProp(content, '$owner', {
-        configurable: true,
-        enumarable: false,
-        writable: false,
-        value: scopes[0]
-      });
+      // defineProp(content, '$owner', {
+      //   configurable: true,
+      //   enumarable: false,
+      //   writable: false,
+      //   value: scopes[0]
+      // });
+      content.$owner = scopes[0];
     }
   }
 
@@ -216,31 +217,35 @@ function driveComponent(target, _template, scopes, template, props) {
     driveEvents(target, _template.events, _scopes);
   }
   if (_template.props) {
-    defineProp(target, '__props', {
-      value: new Cache(target), 
-      configurable: true
-    });
+    target.__props = new Cache(target);
+    // defineProp(target, '__props', {
+    //   value: new Cache(target), 
+    //   configurable: true
+    // });
     driveProps(target.__props, _template.props, _scopes);
   }
   if (_template.attrs) {
-    defineProp(target, '__attrs', {
-      value: new Cache(target), 
-      configurable: true
-    });
+    target.__attrs = new Cache(target);
+    // defineProp(target, '__attrs', {
+    //   value: new Cache(target), 
+    //   configurable: true
+    // });
     driveProps(target.__attrs, _template.attrs, _scopes);
   }
   if (_template.style) {
-    defineProp(target, '__style', {
-      value: new Cache(target), 
-      configurable: true
-    });
+    target.__style = new Cache(target);
+    // defineProp(target, '__style', {
+    //   value: new Cache(target), 
+    //   configurable: true
+    // });
     driveProps(target.__style, _template.style, _scopes);
   }
   if (_template.classes) {
-    defineProp(target, '__classes', {
-      value: new Cache(target), 
-      configurable: true
-    });
+    target.__classes = new Cache(target);
+    // defineProp(target, '__classes', {
+    //   value: new Cache(target), 
+    //   configurable: true
+    // });
     driveProps(target.__classes, _template.classes, _scopes);
   }
   if (_template.children) {
@@ -249,7 +254,7 @@ function driveComponent(target, _template, scopes, template, props) {
 }
 
 function transferProperties(shell) {
-  if (!shell.tag) {
+  if (!shell.$meta.tag) {
     return;
   }
 
@@ -288,10 +293,11 @@ function transferProperties(shell) {
     var __style = shell.__style;
     if (!__style) {
       __style = new Cache(shell);
-      defineProp(shell, '__style', {
-        value: __style, 
-        configurable: true
-      });
+      shell.__style = __style;
+      // defineProp(shell, '__style', {
+      //   value: __style, 
+      //   configurable: true
+      // });
     }
     DirtyMarker.clean(__props, 'style');
     style = __props.get('style');
@@ -309,10 +315,11 @@ function transferProperties(shell) {
     var __classes = shell.__classes;
     if (!__classes) {
       __classes = new Cache(shell);
-      defineProp(shell, '__classes', {
-        value: __classes, 
-        configurable: true
-      });
+      shell.__classes = __classes;
+      // defineProp(shell, '__classes', {
+      //   value: __classes, 
+      //   configurable: true
+      // });
     }
     DirtyMarker.clean(__props, 'classes');
     classes = __props.get('classes');
