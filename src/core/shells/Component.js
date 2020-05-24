@@ -20,7 +20,11 @@ import Binding from 'src/core/bindings/Binding'
 // import Dep from 'src/core/Dep'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
-import { defineProp, defineClass } from 'src/share/functions'
+import { 
+  defineProp, 
+  defineClass, 
+  getOwnPropDesc 
+} from 'src/share/functions'
 import {
   TYPE_FRAG,
   TYPE_ELEM,
@@ -166,7 +170,7 @@ defineClass({
           throw new TypeError('setup() should return object, not ' + (typeof model));
         }
         for (var key in model) {
-          var desc = Object.getOwnPropertyDescriptor(model, key);
+          var desc = getOwnPropDesc(model, key);
           if (desc.get) {
             defineProp(component, key, desc);
           } else {
@@ -214,7 +218,7 @@ defineClass({
       if (Dependency.binding()) {
         Dependency.add(this, key);
       }
-      return !desc.get ? this._props[key] : desc.get.call(this, key, this._props);
+      return !desc.get ? this._props[key] : desc.get.call(this, this._props);
     }
     return this[key];
     // return value;
@@ -271,9 +275,9 @@ defineClass({
         this.emit('changed', key, val);
       }
     } else if (desc.set) { // else, `get`, `set` and `get` again, then check if the property value is changed.
-      old = desc.get.call(this, key, props);
+      old = desc.get.call(this, props);
       desc.set.call(this, val, props);
-      val = desc.get.call(this, key, props);
+      val = desc.get.call(this, props);
       if (old !== val) {
         this.invalidate(FLAG_CHANGED);
         this.emit('changed', key, val);

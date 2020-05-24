@@ -1,13 +1,9 @@
 // src/share/functions.js 
 
-import config from 'src/share/config'
-
-var Array$slice = Array.prototype.slice;
-function slice(array, start, stop) {
-  return Array$slice.call(array, start, stop);
-}
-
+var slice = Array.prototype.slice;
+var defineProp = Object.defineProperty;
 var hasOwnProp = Object.prototype.hasOwnProperty;
+var getOwnPropDesc = Object.getOwnPropertyDescriptor;
 
 function copy(source) {
   if (Array.isArray(source)) {
@@ -172,26 +168,13 @@ var setImmediate = (function(Promise, setImmediate, MutationObserver, requestAni
   typeof requestAnimationFrame !== 'undefined' && isNativeFunc(requestAnimationFrame) ? requestAnimationFrame : null
 );
 
-var defineProp;
-// check if Object.defineProperty is supported
-try {
-  config['JS_ENV'] = '>=ES5'; // not use config.env
-  defineProp = Object.defineProperty;
-  defineProp({}, 'x', {get: function() {}})
-} catch (e) {
-  config['JS_ENV'] = '<ES5'; // not use config.env
-  defineProp = function defineProp(target, property, descriptor) {
-    target[property] = descriptor.value;
-  };
-}
-
 function defineProps(target, sources) {
   var i, n, source;
   for (i = 0, n = sources.length; i < n; ++i) {
     source = sources[i];
     for (var key in source) {
       if (hasOwnProp.call(source, key)) {
-        defineProp(target, key, Object.getOwnPropertyDescriptor(source, key));
+        defineProp(target, key, getOwnPropDesc(source, key));
       }
     }
   }
@@ -378,5 +361,6 @@ export {
   hasOwnProp,
   defineProp, 
   defineClass, 
-  setImmediate
+  setImmediate,
+  getOwnPropDesc
 };

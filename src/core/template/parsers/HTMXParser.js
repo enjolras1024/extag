@@ -14,8 +14,9 @@ import {
   throwError } from 'src/share/functions'
 import logger from 'src/share/logger'
 import Path from 'src/base/Path'
-import View from 'src/core/shells/View'
+// import View from 'src/core/shells/View'
 import Slot from 'src/core/shells/Slot'
+import Output from 'src/core/shells/Output'
 // import Block from 'src/core/shells/Block'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
@@ -33,6 +34,7 @@ var FOR_LOOP_REGEXP = /^([_$\w]+)\s+of\s+(.+)$/;
 var LETTER_REGEXP = /[a-zA-Z]/;
 var TAGNAME_STOP = /[\s/>]/;
 var ATTRNAME_SPLITTER = /[\s\/]+/;
+var X_TAG_REGEXP = /^x:/;
 
 var viewEngine = null;
 
@@ -97,6 +99,17 @@ function parseDirective(name, expr, node, prototype, identifiers) {
   } else if (name === 'x:style') {
     node.style = ClassStyleParser.parse(expr, prototype, identifiers, viewEngine, true);
   } else if (name === 'x:type') {
+    if (node.tag === 'x:output') {
+      // <x:output x:type="Buuton"/> just like <input type="button">
+      parseAttribute('xtype@', expr, node, prototype, identifiers);
+      return;
+    } else if (node.tag === 'x:slot') {
+      throwError('Unexpected x:type on <x:slot>', {
+        code: 1001,
+        expr: expr,
+        desc: 'Do not use x:type on <x:slot>'
+      });
+    }
     var ctor = Path.search(expr, prototype.constructor.resources);
     if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
       // if (__ENV__ === 'development') {
@@ -293,7 +306,8 @@ function parseAttributes(htmx, from, node, prototype) {
         while(attrNames.length > 0) {
           attrName = attrNames.shift();
           if (attrName && node) {
-            getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
+            parseAttribute(attrName, '', node, prototype, node.identifiers);
+            // getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
           }
         }
       }
@@ -305,7 +319,8 @@ function parseAttributes(htmx, from, node, prototype) {
         while(attrNames.length > 1) {
           attrName = attrNames.shift();
           if (attrName && node) {
-            getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
+            parseAttribute(attrName, '', node, prototype, node.identifiers);
+            // getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
           }
         }
         attrName = attrNames.shift();
@@ -397,9 +412,6 @@ function parseHTMX(htmx, prototype) {
         }
         
         node.identifiers = parent.identifiers;
-        
-
-        // console.log('start tag: ' + tagName)
 
         if ('>' !== htmx[stop]) {
           start = stop = stop + 1;
@@ -413,6 +425,27 @@ function parseHTMX(htmx, prototype) {
             node.ns = parent.ns;
           }
         }
+
+        if (node.type == null && X_TAG_REGEXP.test(tagName)) {
+          switch (tagName) {
+            case 'x:slot':
+              node.type = Slot;
+              break;
+            // case 'x:view':
+            //   node.type = View;
+            //   break;
+            case 'x:frag':
+              node.type = Fragment;
+              break;
+            // case 'x:block':
+            //   node.type = Block;
+            //   break;
+            case 'x:ouput':
+              node.type = Output;
+              break;
+          }
+        }
+
         if (node.type == null && CAPITAL_REGEXP.test(tagName)) {
           var ctor = Path.search(tagName, prototype.constructor.resources);
           if (typeof ctor === 'function' && ctor.__extag_component_class__) {
@@ -422,23 +455,7 @@ function parseHTMX(htmx, prototype) {
             logger.warn('`' + node.tag + '` maybe component but not found.');
           }
         }
-        if (node.type == null) {
-          switch (tagName) {
-            case 'x:slot':
-              node.type = Slot;
-              break;
-            case 'x:view':
-              node.type = View;
-              break;
-            case 'x:frag':
-              node.type = Fragment;
-              break;
-            // case 'x:block':
-            //   node.type = Block;
-            //   break;
-          }
-        }
-        
+
         if (parent) {
           parent.children = parent.children || [];
           parent.children.push(node);
@@ -465,7 +482,7 @@ function parseHTMX(htmx, prototype) {
         start = idx + 2;
         stop = getStopOf(TAGNAME_STOP, htmx, start);
         tagName = htmx.slice(start, stop);
-        // console.log('end tag: ' + htmx.slice(start, stop))
+
         if (tagName !== parent.tag) {
           // eslint-disable-next-line no-undef
           if (__ENV__ === 'development') {

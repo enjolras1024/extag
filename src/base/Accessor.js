@@ -4,6 +4,8 @@ import { assign, hasOwnProp, defineProp, defineClass } from 'src/share/functions
 import Generator from 'src/base/Generator'
 import logger from 'src/share/logger'
 
+var EMPTY_DESC = {};
+
 var descriptorShared = {
   configurable: true,
   enumerable: true
@@ -29,8 +31,11 @@ function makeSetter(key) {
   return setters[key];
 }
 
-var EMPTY_DESC = {};
-var SHARED_GET = function(key, props) { return props[key]; }
+function getDefaultGetter(key) {
+  return function(props) {
+    return props[key];
+  }
+}
 
 function defineGetterSetter(target, key) {
   descriptorShared.get = makeGetter(key);
@@ -112,7 +117,7 @@ function applyAttributeDescriptors(target, descriptors, override) {
           if (desc.get && !desc.set) {
             // desc.set = EMPTY_FUNC; // readonly
           } else if (desc.set && !desc.get) {
-            desc.get = SHARED_GET;
+            desc.get = getDefaultGetter(key);
           }
           descriptors[key] = desc;
         } else {
@@ -139,11 +144,11 @@ function applyAttributeDescriptors(target, descriptors, override) {
 
 /**
  * Get the descriptor of the attribute.
- * @param {Object} object 
+ * @param {Object} target 
  * @param {string} attrName 
  */
-function getAttrDesc(object, attrName) {
-  return object.__extag_descriptors__ ? object.__extag_descriptors__[attrName] : null;
+function getAttrDesc(target, attrName) {
+  return target.__extag_descriptors__ ? target.__extag_descriptors__[attrName] : null;
 }
 
 export default function Accessor() {
@@ -154,6 +159,13 @@ defineClass({
   constructor: Accessor,
 
   statics: { // TODO: move to functions.js
+    assign: function assign(target, props) {
+      for (var key in props) {
+        if (hasOwnProp.call(props, key)) {
+          target.set(key, props[key]);
+        }
+      }
+    },
     getAttrDesc: getAttrDesc,
     defineGetterSetter: defineGetterSetter,
     getAttributeDefaultValue: getAttributeDefaultValue,
@@ -169,13 +181,5 @@ defineClass({
   // eslint-disable-next-line no-unused-vars
   set: function set(key, value) {
     throw new Error('Method `set` must be implemented by sub-class');
-  },
-
-  assign: function assign(props) {
-    for (var key in props) {
-      if (hasOwnProp.call(props, key)) {
-        this.set(key, props[key]);
-      }
-    }
   }
 });

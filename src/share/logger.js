@@ -3,7 +3,7 @@
 import { slice } from 'src/share/functions'
 
 function log(fn, args, prefix) {
-  args = slice(args, 0);
+  args = slice.call(args, 0);
   // args.unshift(prefix);
   args[0] = prefix + ' ' + args[0];
   fn.apply(console, args);

@@ -48,7 +48,7 @@ defineClass({
       }
     }
     if (props) {
-      this.assign(props);
+      Accessor.assign(this, props);
     }
   }
 });

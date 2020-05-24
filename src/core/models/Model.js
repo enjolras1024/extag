@@ -1,43 +1,63 @@
-// src/core/models/Store.js
+// src/core/models/Model.js
 
 import Watcher from 'src/base/Watcher'
 import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
 import Dependency from 'src/core/Dependency'
-import { defineProp, defineClass } from 'src/share/functions'
+import { 
+  hasOwnProp, 
+  defineProp, 
+  defineClass, 
+  getOwnPropDesc 
+} from 'src/share/functions'
 
-// var storeGuid = -1;
+function getPropDescriptors(props) {
+  var descriptors = {};
+  for (var key in props) {
+    if (hasOwnProp.call(props, key)) {
+      descriptors[key] = getOwnPropDesc(props, key);
+    }
+  }
+  return descriptors;
+}
 
 /**
- * Store for storing data an sending property-changed event with declaration.
+ * Model for storing data an sending property-changed event with declaration.
  * It is like Component, but there is nothing to do with view, just the model.
  * @class
  * @constructor
  * @param {Object} props 
  */
-export default function Store(props) {
-  Store.initialize(this, props);
+export default function Model(props, watcher) {
+  Model.initialize(this, props, watcher);
 }
 
 defineClass({
-  constructor: Store,
+  constructor: Model,
 
-  mixins: [Accessor.prototype, Watcher.prototype],
+  mixins: [Accessor.prototype],
 
   statics: {
-    create: function create(props) {
-      return new Store(props);
+    create: function create(props, watcher) {
+      return new Model(props, watcher);
     },
 
-    initialize: function initialize(store, props) {
-      var constructor = store.constructor;
-      if (constructor === Store) {
-        defineProp(store, '_props', {
+    initialize: function initialize(model, props, watcher) {
+      if (!watcher) {
+        watcher = new Watcher();
+      }
+      defineProp(model, '_watcher', {
+        value : watcher, writable: false, enumerable: false, configurable: true
+      })
+      var constructor = model.constructor;
+      if (constructor === Model) {
+        defineProp(model, '_props', {
           value: {}, writable: false, enumerable: false, configurable: true
         });
         if (props) {
-          Accessor.applyAttributeDescriptors(store, Object.keys(props), false);
-          store.assign(props);
+          var descriptors = getPropDescriptors(props);
+          Accessor.applyAttributeDescriptors(model, descriptors, false);
+          Accessor.assign(model, props);
         }
       } else {
         Accessor.applyAttributeDescriptors(
@@ -45,39 +65,35 @@ defineClass({
           constructor.attributes, 
           true
         ); 
-        var defaults = Accessor.getAttributeDefaultValues(store);
+        var defaults = Accessor.getAttributeDefaultValues(model);
 
-        defineProp(store, '_props', {
+        defineProp(model, '_props', {
           value: defaults, writable: false, enumerable: false, configurable: true
         });
-
-        // defineProp(store, '$guid', {
-        //   value: storeGuid--, writable: false, enumerable: false, configurable: true
-        // });
         // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
-          Validator.validate0(store, props);
+          Validator.validate0(model, props);
         }
         if (props) {
-          store.assign(props);
+          Accessor.assign(model, props);
         }
       }
     }
   },
 
   /**
-   * Get property stored in _props.
+   * Get property in _props.
    * @param {string} key
    */
   get: function get(key) {
     var desc = Accessor.getAttrDesc(this, key);
     if (desc && desc.bindable) {
       if (Dependency.binding()) {
-        Dependency.add(this, key);
+        Dependency.add(this._watcher, key);
       }
       return !desc.get ? 
                 this._props[key] : 
-                  desc.get.call(this, this._props, key);
+                  desc.get.call(this, this._props);
     }
     return this[key];
   },
@@ -104,21 +120,21 @@ defineClass({
       this[key] = val;
       return;
     }
-    // Custom attribute, stored in _props
+    // Custom attribute in _props
     var props = this._props, old;
 
     if (!desc.get) { // usually, no custom `get` and `set`, checking if the property value is changed firstly.
       old = props[key];
       if (old !== val) {
         props[key] = val;
-        this.emit('changed', key, val);
+        this._watcher.emit('changed', key, val);
       }
     } else if (desc.set) { // else, `get`, `set` and `get` again, then check if the property value is changed.
-      old = desc.get.call(this, props, key);
+      old = desc.get.call(this, props);
       desc.set.call(this, val, props);
-      val = desc.get.call(this, props, key);
+      val = desc.get.call(this, props);
       if (old !== val) {
-        this.emit('changed', key, val);
+        this._watcher.emit('changed', key, val);
       }
     }
 

@@ -77,7 +77,7 @@ defineClass({
 
     if (!cache.hasDirty()) { return; }
 
-    var value = slice(cache._props, 0);
+    var value = slice.call(cache._props, 0);
 
     if (this.pattern.asStr) {
       value = value.join('');

@@ -10,23 +10,21 @@ var Dependency = {
   },
   begin: function begin(binding) {
     _binding = binding;
-    _binding.execTimes = _binding.execTimes ? _binding.execTimes + 1 : 1;
     _binding.depsCountNew = 0;
     _binding.depsCountOld = 0;
-    // if (!_binding.deps) {
-    //   _binding.deps = [];
-    // }
+    _binding.executeTimes = _binding.executeTimes ? _binding.executeTimes + 1 : 1;
     _bindingStack.push(binding);
   },
   end: function end() {
     if (_binding == null) { return; }
+    // remove old dep
     if (_binding.depsCountOld < _binding.depsCount) {
       var i, dep, deps = _binding.deps;
       for (i = deps.length - 1; i >= 0; --i) {
         dep = deps[i];
-        if (dep.times !== _binding.execTimes) {
-          deps.splice(i, 1);
+        if (dep.times !== _binding.executeTimes) {
           dep.src.off('changed', _binding.invalidate);
+          deps.splice(i, 1);
         }
       }
     }
@@ -39,6 +37,7 @@ var Dependency = {
   },
   add: function(src, key) {
     if (_binding == null) { return; }
+    // collect keys
     var keys = _binding.keys;
     if (keys) {
       if (keys.indexOf(key) < 0) {
@@ -47,45 +46,38 @@ var Dependency = {
     } else {
       _binding.keys = [key];
     }
-    
-    var i, dep, oldDep;
-    var deps = _binding.deps;
+    // collect or update deps
+    var i, dep, deps = _binding.deps;
     if (deps) {
       for (i = 0; i < deps.length; ++i) {
         dep = deps[i];
-        if (//dep.key === key &&
-            dep.src === src) {
-          oldDep = dep;
-          break;
+        if (dep.src === src) {
+          if (dep.times < _binding.executeTimes) {
+            dep.times = _binding.executeTimes;
+            _binding.depsCountOld++;
+          }
+          return;
         }
       }
     } else {
       deps = _binding.deps = [];
     }
-    if (oldDep) {
-      if (oldDep.times < _binding.execTimes) {
-        oldDep.times = _binding.execTimes;
-        _binding.depsCountOld++;
-      }
-    } else {
-      _binding.depsCountNew++;
-      src.on('changed', _binding.invalidate);
-      deps.push({
-        src: src,
-        // key: key,
-        times: _binding.execTimes
-      })
-    }
+    // add new dep
+    _binding.depsCountNew++;
+    src.on('changed', _binding.invalidate);
+    deps.push({
+      src: src,
+      times: _binding.executeTimes
+    })
   },
   clean: function(binding) {
     var deps = binding.deps;
     if (!deps) { return; }
-    var i, dep;
-    for (i = 0; i < deps.length; ++i) {
-      dep = deps[i];
-      dep.src.off('changed', binding.invalidate);
+    for (var i = 0; i < deps.length; ++i) {
+      deps[i].src.off('changed', binding.invalidate);
     }
-    binding.deps.length = 0;
+    binding.deps = null;
+    binding.keys = null;
   }
 };
 

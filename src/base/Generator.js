@@ -25,7 +25,7 @@ defineClass({
      * @param {Class} ctor
      */
     anew: function(ctor) {
-      return new Generator(ctor, slice(arguments, 1));
+      return new Generator(ctor, slice.call(arguments, 1));
     },
     /**
      * Get an instance

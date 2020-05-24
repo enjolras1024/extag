@@ -10,12 +10,13 @@ import DirtyMarker from 'src/base/DirtyMarker'
 
 import Schedule from 'src/core/Schedule'
 
-import Store from 'src/core/models/Store'
+import Model from 'src/core/models/Model'
 import Cache from 'src/core/models/Cache'
 
 import Text from 'src/core/shells/Text'
 import Slot from 'src/core/shells/Slot'
 import Shell from 'src/core/shells/Shell'
+import Output from 'src/core/shells/Output'
 import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
 import Component from 'src/core/shells/Component'
@@ -63,7 +64,7 @@ if (typeof window !== 'undefined' && window.ExtagDom) {
 //   Watcher, 
 
 //   Cache,
-//   Store, 
+//   Model, 
 
 //   Slot,
 //   Text,
@@ -75,6 +76,7 @@ if (typeof window !== 'undefined' && window.ExtagDom) {
 export default {
   anew: Generator.anew,
   inst: Generator.inst,
+  make: HTMXEngine.makeContent,
 
   conf: function(key, val) {
     if (arguments.length === 1) {
@@ -82,64 +84,63 @@ export default {
     }
     config.set(key, val);
   },
-  //#test config: config,
+  //@test config: config,
 
   // functions
   help: help,
-  //#test assign: assign, 
-  //#test defineProp: defineProp, 
+  //@test assign: assign, 
+  //@test defineProp: defineProp, 
   defineClass: defineClass, 
-  //#test setImmediate: setImmediate,
-  //#test slice: slice,
-  //#test flatten: flatten,
-  //#test toClasses: toClasses,
-  //#test encodeHTML: encodeHTML,
-  //#test decodeHTML: decodeHTML,
+  //@test setImmediate: setImmediate,
+  //@test slice: slice,
+  //@test flatten: flatten,
+  //@test toClasses: toClasses,
+  //@test encodeHTML: encodeHTML,
+  //@test decodeHTML: decodeHTML,
 
   // base
-  //#test Accessor: Accessor,
-  //#test Expression: Expression,
-  //#test Generator: Generator,
-  //#test Parent: Parent,
-  //#test Path: Path,
-  //#test Schedule: Schedule,
-  //#test DirtyMarker: DirtyMarker,
+  //@test Accessor: Accessor,
+  //@test Expression: Expression,
+  //@test Generator: Generator,
+  //@test Parent: Parent,
+  //@test Path: Path,
+  //@test Schedule: Schedule,
+  //@test DirtyMarker: DirtyMarker,
   Validator: Validator,
   Watcher: Watcher, 
   
 
   // models
-  // List: List,
-  Store: Store,
-  Cache: Cache,
-  // Collection: Collection, 
+  Model: Model,
+  //@test Cache: Cache,
   
   // shells
-  //#test Shell: Shell,
-  //#test
-  Slot: Slot,
+  //@test Shell: Shell,
+  //@test
   Text: Text, 
+  Slot: Slot,
+  Output: Output,
   Element: Element, 
   Fragment: Fragment,
   Component: Component,
 
   // bindings
-  //#test Binding: Binding,
-  //#test DataBinding: DataBinding,
-  //#test EventBinding: EventBinding,
+  //@test Binding: Binding,
+  //@test DataBinding: DataBinding,
+  //@test EventBinding: EventBinding,
 
   // parsers
-  //#test HTMXParser: HTMXParser,
-  //#test EvaluatorParser: EvaluatorParser,
-  //#test DataBindingParser: DataBindingParser,
-  //#test EventBindingParser: EventBindingParser,
+  //@test HTMXParser: HTMXParser,
+  //@test EvaluatorParser: EvaluatorParser,
+  //@test DataBindingParser: DataBindingParser,
+  //@test EventBindingParser: EventBindingParser,
 
   // template
   
-  //#test Evaluator: Evaluator,
+  //@test Evaluator: Evaluator,
 
   // JSXEngine: JSXEngine,
-  //#test HTMXEngine: HTMXEngine,
+  //@test HTMXEngine: HTMXEngine,
   node: JSXParser.node,
   expr: JSXParser.expr,
 

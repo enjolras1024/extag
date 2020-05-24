@@ -209,7 +209,7 @@ defineClass({
     }
     this._commands.push({
       name: method,
-      args: slice(arguments, 1)
+      args: slice.call(arguments, 1)
     });
     this.invalidate(FLAG_CHANGED_COMMANDS);
   },

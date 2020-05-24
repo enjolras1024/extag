@@ -2,7 +2,7 @@
 
 // import Event from 'src/base/Event'
 import { FLAG_NONE, FLAG_ONCE, FLAG_CAPTURE, FLAG_PASSIVE } from 'src/share/constants'
-import { slice, hasOwnProp, defineProp, defineClass } from 'src/share/functions'
+import { slice, hasOwnProp, defineClass } from 'src/share/functions'
 
 export default function Watcher() {
   // this._actions = null;
@@ -87,10 +87,10 @@ function addEventHandler(watcher, type, func, opts) {
 
   if (!actions) {
     actions = {};
-    // watcher._actions = actions;
-    defineProp(watcher, '_actions', {
-      value: actions, writable: false, enumerable: false, configurable: true
-    });
+    watcher._actions = actions;
+    // defineProp(watcher, '_actions', {
+    //   value: actions, writable: false, enumerable: false, configurable: true
+    // });
   }
 
   var action = actions[type];
@@ -274,7 +274,7 @@ defineClass({
       handler = action.head;
       while (handler) {
         if (equalCapture(flag, handler.flag)) {
-          handler.func.apply(null, slice(arguments, 1));
+          handler.func.apply(null, slice.call(arguments, 1));
           if (handler.flag & FLAG_ONCE) {
             handlers = handlers || [];
             handlers.push(handler);
