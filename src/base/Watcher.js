@@ -2,7 +2,7 @@
 
 // import Event from 'src/base/Event'
 import { FLAG_NONE, FLAG_ONCE, FLAG_CAPTURE, FLAG_PASSIVE } from 'src/share/constants'
-import { slice, hasOwnProp, defineClass } from 'src/share/functions'
+import { slice, hasOwnProp, defineProp, defineClass } from 'src/share/functions'
 
 export default function Watcher() {
   // this._actions = null;
@@ -87,10 +87,10 @@ function addEventHandler(watcher, type, func, opts) {
 
   if (!actions) {
     actions = {};
-    watcher._actions = actions;
-    // defineProp(watcher, '_actions', {
-    //   value: actions, writable: false, enumerable: false, configurable: true
-    // });
+    // watcher._actions = actions;
+    defineProp(watcher, '_actions', {
+      value: actions, writable: false, enumerable: false, configurable: true
+    });
   }
 
   var action = actions[type];
@@ -195,7 +195,6 @@ defineClass({
    * @param {string|Object} type
    * @param {Function} func
    * @param {Object} opts - like {once: true, capture: true, passive: true}
-   * @returns {this}
    */
   on: function on(type, func, opts) {
     if (typeof type === 'object') {
@@ -222,7 +221,6 @@ defineClass({
    * @param {string} type
    * @param {Function} func
    * @param {Object} opts - like {capture: true}
-   * @returns {this}
    */
   off: function off(type, func, opts) {
     var actions = this._actions;
@@ -261,8 +259,7 @@ defineClass({
    * Dispatch custom event, handlers accept rest arguments.
    *
    * @example #emit('ok', a, b) may trigger function(a, b) {}
-   * @param {Event|Object|string} type
-   * @returns {self}
+   * @param {string} type
    */
   emit: function emit(type/*, ...rest*/) {
     var actions = this._actions;

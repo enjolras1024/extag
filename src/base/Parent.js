@@ -1,7 +1,7 @@
 // src/base/Parent.js
 
 import { defineClass, throwError } from 'src/share/functions'
-import { FLAG_CHANGED_CHILDREN } from 'src/share/constants'
+import { TYPE_FRAG, FLAG_CHANGED_CHILDREN } from 'src/share/constants'
 
 /**
  * Parent is in charge of its children.
@@ -14,7 +14,7 @@ export default function Parent() {
 
 function findParent(shell) {
   var temp = shell._parent;
-  while (temp && temp.$type === 0) {
+  while (temp && temp.$meta.type === TYPE_FRAG) {
     temp = temp._parent;
   }
   return temp;
@@ -26,7 +26,7 @@ function flattenChildren(shell, array) {
   array = array || [];
   for (i = 0; i < n; ++i) {
     child = children[i];
-    if (child.$type === 0) {
+    if (child.$meta.type === TYPE_FRAG) {
       flattenChildren(child, array);
     } else {
       array.push(child);

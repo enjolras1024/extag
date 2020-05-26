@@ -81,7 +81,7 @@ function getAttributeDefaultValues(target) {
   return defaultValues;
 }
 
-function applyAttributeDescriptors(target, descriptors, override) {
+function applyAttributeDescriptors(target, descriptors) {
   if (hasOwnProp.call(target, '__extag_descriptors__')) {
     return;
   }
@@ -94,13 +94,13 @@ function applyAttributeDescriptors(target, descriptors, override) {
     }
   }
   // merge descriptors
-  descriptors = assign({}, target.__extag_descriptors__, descriptors);
+  var _descriptors = assign({}, target.__extag_descriptors__, descriptors);
 
   var key, desc;
 
   for (key in descriptors) { // define getter/setter for each key
-    if (hasOwnProp.call(descriptors, key) /*&& !target.hasOwnProperty(key)*/) {
-      if ((key in target) && !override) {
+    if (hasOwnProp.call(descriptors, key)) {
+      if (key in target) {
         // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
           logger.warn('`' + key + '` is already defined in the target of ' + target.constructor);
@@ -109,9 +109,9 @@ function applyAttributeDescriptors(target, descriptors, override) {
       }
       desc = descriptors[key];
       if (typeof desc !== 'object') {
-        descriptors[key] = {value: desc};
+        _descriptors[key] = {value: desc};
       } else if (desc instanceof Generator) {
-        descriptors[key] = {value: desc};
+        _descriptors[key] = {value: desc};
       } else {
         if (desc) {
           if (desc.get && !desc.set) {
@@ -119,23 +119,23 @@ function applyAttributeDescriptors(target, descriptors, override) {
           } else if (desc.set && !desc.get) {
             desc.get = getDefaultGetter(key);
           }
-          descriptors[key] = desc;
+          _descriptors[key] = desc;
         } else {
-          descriptors[key] = EMPTY_DESC;
+          _descriptors[key] = EMPTY_DESC;
         }
       }
-      desc = descriptors[key];
-      if (!('bindable' in  desc)) {
-        desc.bindable = true; // will dispatch `changed` event, default true
-      }
-      if (desc.bindable) {
+      // desc = _descriptors[key];
+      // if (!('bindable' in  desc)) {
+      //   desc.bindable = true; // will dispatch `changed` event, default true
+      // }
+      // if (desc.bindable) {
         defineGetterSetter(target, key);
-      }
+      // }
     }
   }
 
   defineProp(target, '__extag_descriptors__', {
-    value: descriptors,
+    value: _descriptors,
     configurable: true,
     enumerable: false,
     writable: false
@@ -158,14 +158,7 @@ export default function Accessor() {
 defineClass({
   constructor: Accessor,
 
-  statics: { // TODO: move to functions.js
-    assign: function assign(target, props) {
-      for (var key in props) {
-        if (hasOwnProp.call(props, key)) {
-          target.set(key, props[key]);
-        }
-      }
-    },
+  statics: {
     getAttrDesc: getAttrDesc,
     defineGetterSetter: defineGetterSetter,
     getAttributeDefaultValue: getAttributeDefaultValue,
@@ -181,5 +174,13 @@ defineClass({
   // eslint-disable-next-line no-unused-vars
   set: function set(key, value) {
     throw new Error('Method `set` must be implemented by sub-class');
+  },
+
+  assign: function assign(props) {
+    for (var key in props) {
+      if (hasOwnProp.call(props, key)) {
+        this.set(key, props[key]);
+      }
+    }
   }
 });

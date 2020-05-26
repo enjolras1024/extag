@@ -5,9 +5,9 @@ var _binding;
 var _bindingStack = [];
 
 var Dependency = {
-  binding: function() {
-    return _binding != null;
-  },
+  // binding: function() {
+  //   return _binding != null;
+  // },
   begin: function begin(binding) {
     _binding = binding;
     _binding.depsCountNew = 0;

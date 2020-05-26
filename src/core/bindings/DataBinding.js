@@ -15,10 +15,10 @@ function applyConverters(converters, scopes, value) {
   return value;
 }
 
-function isBindable(src, prop) {
-  var desc = Accessor.getAttrDesc(src, prop);
-  return desc && desc.bindable;
-}
+// function isBindable(src, prop) {
+//   var desc = Accessor.getAttrDesc(src, prop);
+//   return desc && desc.bindable;
+// }
 
 function DataBinding(pattern) {
   this.mode = pattern.mode;
@@ -46,7 +46,7 @@ defineClass({
       var scopes = binding.scopes;
 
       if (binding.mode === MODES.TWO_WAY)  {
-        if (isBindable(binding.target, binding.targetProp)) {
+        if (Accessor.getAttrDesc(binding.target, binding.targetProp)) {
           binding.target.off('changed', binding.back);
         }
       }
@@ -86,7 +86,7 @@ defineClass({
         this.source = Path.search(path.slice(1, path.length - 1), scopes[0].constructor.resources, true);
       }
       
-      if (isBindable(this.target, this.targetProp)) {
+      if (Accessor.getAttrDesc(this.target, this.targetProp)) {
         this.target.on('changed', this.back);
       }
     }

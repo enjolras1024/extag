@@ -1,7 +1,6 @@
 // src/core/shells/Element.js
 
 import Parent from 'src/base/Parent'
-import Accessor from 'src/base/Accessor'
 import Schedule from 'src/core/Schedule'
 import Shell from 'src/core/shells/Shell'
 import Cache from 'src/core/models/Cache'
@@ -69,7 +68,7 @@ defineClass({
         // }
         // HTMXEngine.initOthers(template, scopes, element);
       } else if (props) {
-        Accessor.assign(element, props);
+        element.assign(props);
       }
     },
     /**

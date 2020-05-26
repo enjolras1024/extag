@@ -118,7 +118,7 @@ function updatePropsAndEvents(node, target, scope) {
   }
   if (newProps) {
     // assign new property values.
-    Accessor.assign(target, newProps);
+    target.assign(newProps);
   }
 
   // update events

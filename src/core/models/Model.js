@@ -11,11 +11,12 @@ import {
   getOwnPropDesc 
 } from 'src/share/functions'
 
-function getPropDescriptors(props) {
-  var descriptors = {};
+function getMorePropDescriptors(model, props) {
+  var descriptors = [];
   for (var key in props) {
-    if (hasOwnProp.call(props, key)) {
-      descriptors[key] = getOwnPropDesc(props, key);
+    if (!Accessor.getAttrDesc(model, key)
+        && hasOwnProp.call(props, key)) {
+          descriptors.push(key);
     }
   }
   return descriptors;
@@ -28,45 +29,40 @@ function getPropDescriptors(props) {
  * @constructor
  * @param {Object} props 
  */
-export default function Model(props, watcher) {
-  Model.initialize(this, props, watcher);
+export default function Model(props) {
+  Model.initialize(this, props);
 }
 
 defineClass({
   constructor: Model,
 
-  mixins: [Accessor.prototype],
+  mixins: [Accessor.prototype, Watcher.prototype],
 
   statics: {
-    create: function create(props, watcher) {
-      return new Model(props, watcher);
-    },
+    // create: function create(props) {
+    //   return new Model(props);
+    // },
 
-    initialize: function initialize(model, props, watcher) {
-      if (!watcher) {
-        watcher = new Watcher();
-      }
-      defineProp(model, '_watcher', {
-        value : watcher, writable: false, enumerable: false, configurable: true
-      })
+    initialize: function initialize(model, props) {
       var constructor = model.constructor;
-      if (constructor === Model) {
-        defineProp(model, '_props', {
-          value: {}, writable: false, enumerable: false, configurable: true
-        });
-        if (props) {
-          var descriptors = getPropDescriptors(props);
-          Accessor.applyAttributeDescriptors(model, descriptors, false);
-          Accessor.assign(model, props);
+      // if (constructor === Model) {
+      //   // defineProp(model, '_props', {
+      //   //   value: {}, writable: false, enumerable: false, configurable: true
+      //   // });
+      //   watcher._props = {};
+      //   if (props) {
+      //     var descriptors = getMorePropDescriptors(props);
+      //     Accessor.applyAttributeDescriptors(model, descriptors, false);
+      //     model.assign(props);
+      //   }
+      // } else {
+        if (constructor !== Model && constructor.attributes) {
+          Accessor.applyAttributeDescriptors(
+            constructor.prototype, 
+            constructor.attributes
+          ); 
         }
-      } else {
-        Accessor.applyAttributeDescriptors(
-          constructor.prototype, 
-          constructor.attributes, 
-          true
-        ); 
         var defaults = Accessor.getAttributeDefaultValues(model);
-
         defineProp(model, '_props', {
           value: defaults, writable: false, enumerable: false, configurable: true
         });
@@ -75,9 +71,13 @@ defineClass({
           Validator.validate0(model, props);
         }
         if (props) {
-          Accessor.assign(model, props);
+          var descriptors = getMorePropDescriptors(model, props);
+          if (descriptors.length) {
+            Accessor.applyAttributeDescriptors(model, descriptors);
+          }
+          model.assign(props);
         }
-      }
+      // }
     }
   },
 
@@ -87,10 +87,10 @@ defineClass({
    */
   get: function get(key) {
     var desc = Accessor.getAttrDesc(this, key);
-    if (desc && desc.bindable) {
-      if (Dependency.binding()) {
-        Dependency.add(this._watcher, key);
-      }
+    if (desc/* && desc.bindable*/) {
+      // if (Dependency.binding()) {
+        Dependency.add(this, key);
+      // }
       return !desc.get ? 
                 this._props[key] : 
                   desc.get.call(this, this._props);
@@ -115,29 +115,26 @@ defineClass({
     if (__ENV__ === 'development') {
       Validator.validate(this, key, val, true);
     }
-    // Unbindable custom prpoerty
-    if (!desc.bindable) {
-      this[key] = val;
-      return;
-    }
+    // // Unbindable custom prpoerty
+    // if (!desc.bindable) {
+    //   this[key] = val;
+    //   return;
+    // }
     // Custom attribute in _props
     var props = this._props, old;
-
     if (!desc.get) { // usually, no custom `get` and `set`, checking if the property value is changed firstly.
       old = props[key];
       if (old !== val) {
         props[key] = val;
-        this._watcher.emit('changed', key, val);
+        this.emit('changed', key, val);
       }
     } else if (desc.set) { // else, `get`, `set` and `get` again, then check if the property value is changed.
       old = desc.get.call(this, props);
       desc.set.call(this, val, props);
       val = desc.get.call(this, props);
       if (old !== val) {
-        this._watcher.emit('changed', key, val);
+        this.emit('changed', key, val);
       }
     }
-
-    return;
   }
 });

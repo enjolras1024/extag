@@ -5,19 +5,10 @@ import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
 import Schedule from 'src/core/Schedule'
 import Dependency from 'src/core/Dependency'
-// import Cache from 'src/core/models/Cache'
 import Shell from 'src/core/shells/Shell'
 import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
-// import Evaluator from 'src/core/template/Evaluator'
 import Binding from 'src/core/bindings/Binding'
-// import DataBinding from 'src/core/bindings/DataBinding'
-// import JSXEngine from 'src/core/template/JSXEngine.3'
-// import HTMXEngine from 'src/core/template/HTMXEngine'
-// import HTMXTemplate from 'src/core/template/HTMXTemplate'
-// import HTMXParser from 'src/core/template/parsers/HTMXParser'
-
-// import Dep from 'src/core/Dep'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
 import { 
@@ -35,13 +26,13 @@ import {
   FLAG_CHANGED_CHILDREN,
   FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
-
+import captureError from 'src/core/captureError'
 
 var shellProto = Shell.prototype;
 var elementPropto = Element.prototype;
 var fragmentProto = Fragment.prototype;
 // var emptyDesc = {};
-var KEYS_PRESERVED = ['ns', 'tag', '$type', '$guid', '$flag'];
+var KEYS_PRESERVED = ['$meta', '$flag'];
 var METHODS_PRESERVED = [
   'on', 'off', 'emit',
   'appendChild', 'insertChild', 'removeChild', 'replaceChild', 
@@ -118,7 +109,7 @@ defineClass({
           // TODO: check attributes
       // 1. initialize attribute descriptors once and only once.
       // if (!prototype.hasOwnProperty('__extag_descriptors__')) {
-        Accessor.applyAttributeDescriptors(prototype, attributes, true); //
+        Accessor.applyAttributeDescriptors(prototype, attributes); //
       // }
 
       // 2. initialize the attribute default values
@@ -184,26 +175,14 @@ defineClass({
       HTMXEngine.driveComponent(component, _template, scopes, template, props);
 
       // 8. created
-      component.emit('created');
-      // if (component.onInited) {
-      //   component.onInited();
-      // }
+      try {
+        component.emit('created');
+      } catch (e) {
+        captureError(e, component, 'created');
+      }
     }
 
   },
-
-  // $res: function(name) {
-  //   var resources = this.constructor.resources;
-  //   if (resources && (name in resources)) {
-  //     return resources[name];
-  //   }
-  //   if (typeof window !== 'undefined') {
-  //     return window[name];
-  //   }
-  //   if (typeof global !== 'undefined') {
-  //     return global[name];
-  //   }
-  // },
 
   /**
    * Get property stored in _props or _props.
@@ -214,13 +193,15 @@ defineClass({
     if (!desc) {
       return this._props[key]
     }
-    if (desc.bindable) {
-      if (Dependency.binding()) {
+    // if (desc.bindable) {
+      // if (Dependency.binding()) {
         Dependency.add(this, key);
-      }
-      return !desc.get ? this._props[key] : desc.get.call(this, this._props);
-    }
-    return this[key];
+      // }
+      return !desc.get ? 
+              this._props[key] : 
+                desc.get.call(this, this._props);
+    // }
+    // return this[key];
     // return value;
     // return (desc && desc.get) ? desc.get.call(this, key, this._props) : this._props[key];
     // if (desc) {
@@ -251,19 +232,18 @@ defineClass({
     var desc = Accessor.getAttrDesc(this, key);//this.__extag_descriptors__[key];
     // DOM property, stored in _props
     if (!desc) {
-      shellProto.set.call(this, key, val);
-      return;
+      return shellProto.set.call(this, key, val);
     }
     // validation in development 
     // eslint-disable-next-line no-undef
     if (__ENV__ === 'development') {
       Validator.validate(this, key, val, true);
     }
-    // Unbindable custom prpoerty
-    if (!desc.bindable) {
-      this[key] = val;
-      return;
-    }
+    // // Unbindable custom prpoerty
+    // if (!desc.bindable) {
+    //   this[key] = val;
+    //   return;
+    // }
     // Custom attribute, stored in _props
     var props = this._props, old;
 
@@ -322,7 +302,11 @@ defineClass({
    */
   attach: function attach($skin) {
     if (shellProto.attach.call(this, $skin)) {
-      this.emit('attached', $skin);
+      try {
+        this.emit('attached', $skin);
+      } catch (e) {
+        captureError(e, this, 'attached');
+      }
       // if (this.onAttached) {
       //   this.onAttached($skin);
       // }
@@ -340,15 +324,17 @@ defineClass({
     var $skin = this.getSkin();
     if (Shell.prototype.detach.call(this, force)) {
       if ($skin) {
-        this.emit('detached', $skin);
+        try {
+          this.emit('detached', $skin);
+        } catch (e) {
+          captureError(e, this, 'detached');
+        }
       }
-      this.emit('destroyed');
-      // if (this.onDetached && $skin) {
-      //   this.onDetached($skin);
-      // }
-      // if (this.onDestroyed) {
-      //   this.onDestroyed();
-      // }
+      try {
+        this.emit('destroyed');
+      } catch (e) {
+        captureError(e, this, 'destroyed');
+      }
       return true;
     }
     return false;
@@ -362,12 +348,11 @@ defineClass({
       return false;
     }
 
-    // if (this.onUpdating) {
-    //   this.onUpdating();
-    // }
-
-    this.emit('updating', this.$flag);
-    // this.emit('update', this.$flag);
+    try {
+      this.emit('updating');
+    } catch (e) {
+      captureError(e, this, 'updating');
+    }
 
     var type = this.$meta.type;
     if (type !== 0) {
@@ -415,7 +400,11 @@ defineClass({
     var actions = this._actions;
     if (actions && actions.rendered && this.$skin) {
       Schedule.pushCallbackQueue((function() {
-        this.emit('rendered', this.$skin);
+        try {
+          this.emit('rendered', this.$skin);
+        } catch (e) {
+          captureError(e, this, 'rendered');
+        }
       }).bind(this));
     }
     // if (this.onRendered && this.$skin) {
