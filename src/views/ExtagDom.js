@@ -1,4 +1,4 @@
-// src/view/ExtagDom.js
+// src/view/ExtagDOM.js
 import { 
   TYPE_ELEM,
   TYPE_FRAG,
@@ -262,7 +262,25 @@ var DOM_PROPERTY_DESCRIPTORS = {
   results: null,
   security: null,
   unselectable: null
-}
+};
+
+(function() {
+  var key, desc, map = {};
+  for (key in DOM_PROPERTY_DESCRIPTORS) {
+    desc = DOM_PROPERTY_DESCRIPTORS[key];
+    if (!desc) {
+      desc = DOM_PROPERTY_DESCRIPTORS[key] = {};
+    }
+    desc.propertyName = key;
+    if (!desc.attributeName) {
+      desc.attributeName = key.toLocaleLowerCase();
+    }
+    if (desc.attributeName !== key) {
+      map[desc.attributeName] = desc;
+    }
+  }
+  assign(DOM_PROPERTY_DESCRIPTORS, map);
+})()
 
 var JS_TO_HTML = (function(map) {
   var key, desc, cache = {};
@@ -307,6 +325,8 @@ function checkCSSVendorPrefix($style, keyCapitalized) {
     }
   }
 }
+
+var IMPORTANT_REGEXP = /\s*!important$/;
 
 var $doc = window.document;
 
@@ -392,7 +412,7 @@ function mergeDirty(outerDirty, innerDirty) {
 
 var Array$slice = Array.prototype.slice;
 
-function ExtagDom() {
+function ExtagDOM() {
   var $skin = this, fn = arguments[0];
 
   if (fn && $skin[fn]) {
@@ -401,7 +421,7 @@ function ExtagDom() {
   //throw new Error('');
 }
 
-assign(ExtagDom, {
+assign(ExtagDOM, {
   // eslint-disable-next-line no-undef
   version: __VERSION__,
   /**
@@ -451,9 +471,9 @@ assign(ExtagDom, {
   },
 
   getNameSpace: function getNameSpace($skin) {
-    if (ExtagDom.isElement($skin)) {
+    if (ExtagDOM.isElement($skin)) {
       var xmlns = $skin.namespaceURI || $skin.getAttribute('xmlns');
-      return ExtagDom.toNameSpace(xmlns);
+      return ExtagDOM.toNameSpace(xmlns);
     }
     return '';
   },
@@ -483,13 +503,13 @@ assign(ExtagDom, {
   },
 
   getAttrs: function getAttrs($skin) {
-    if (ExtagDom.isElement($skin) && $skin.hasAttributes()) {
+    if (ExtagDOM.isElement($skin) && $skin.hasAttributes()) {
       var attrs = {}, $attrs = $skin.attributes, $attr, name, desc;
 
       for (var i = 0, n = $attrs.length; i < n; ++i) {
         $attr = $attrs[i];
        
-        name = $attr.namespaceURI ? (ExtagDom.toNameSpace($attr.namespaceURI) + ':' + $attr.name) : $attr.name;
+        name = $attr.namespaceURI ? (ExtagDOM.toNameSpace($attr.namespaceURI) + ':' + $attr.name) : $attr.name;
         
         if (hasOwnProp.call(HTML_TO_JS, name)) {
           desc = DOM_PROPERTY_DESCRIPTORS[HTML_TO_JS[name]];
@@ -528,7 +548,7 @@ assign(ExtagDom, {
   //},
 
   getChildren: function getChildren($skin) { // include texts and comments, getChildrenCopy, getContents
-    var $copy = [], $children = $skin.childNodes;// ExtagDom.getProp($skin, 'childNodes');
+    var $copy = [], $children = $skin.childNodes;// ExtagDOM.getProp($skin, 'childNodes');
 
     if ($children && $children.length) {
       $copy.push.apply($copy, $children);
@@ -570,7 +590,7 @@ assign(ExtagDom, {
    * @required
    */
   attachShell: function attachShell($skin, shell) {
-    var _shell = ExtagDom.getShell($skin);
+    var _shell = ExtagDOM.getShell($skin);
 
     if (_shell) {
       if (_shell === shell) {
@@ -582,15 +602,15 @@ assign(ExtagDom, {
 
     var meta = shell.$meta;
 
-    if (meta.type === TYPE_ELEM && meta.tag !== ExtagDom.getTagName($skin)) {
+    if (meta.type === TYPE_ELEM && meta.tag !== ExtagDOM.getTagName($skin)) {
       throw new Error('a shell can not attach a $skin that has a different tag');
     }
 
-    if (meta.ns !== ExtagDom.getNameSpace($skin)) {
+    if (meta.ns !== ExtagDOM.getNameSpace($skin)) {
       throw new Error('a shell can not attach a $skin that has a different namespace');
     }
 
-    ExtagDom.setShell($skin, shell);
+    ExtagDOM.setShell($skin, shell);
   },
 
   /**
@@ -598,9 +618,9 @@ assign(ExtagDom, {
    * @required
    */
   detachShell: function detachShell($skin, shell) {
-    var _shell = ExtagDom.getShell($skin);
+    var _shell = ExtagDOM.getShell($skin);
     if (_shell === shell) {
-      ExtagDom.setShell($skin, null);
+      ExtagDOM.setShell($skin, null);
     }
   },
 
@@ -685,7 +705,7 @@ assign(ExtagDom, {
    * @required
    */
   renderShell: function($skin, shell) {
-    if (ExtagDom.getShell($skin) !== shell) { 
+    if (ExtagDOM.getShell($skin) !== shell) { 
       throw new Error('the shell is not attached to this $skin');
     }
 
@@ -698,7 +718,7 @@ assign(ExtagDom, {
       dirty = mergeDirty(dirty, shell.__props._dirty);
     }
     if (props && dirty) {
-      ExtagDom.renderProps($skin, props, dirty);
+      ExtagDOM.renderProps($skin, props, dirty);
     }
 
     var meta = shell.$meta;
@@ -723,7 +743,7 @@ assign(ExtagDom, {
           dirty = mergeDirty(dirty, shell.__attrs && shell.__attrs._dirty);
         }
         if (props && dirty) {
-          ExtagDom.renderAttrs($skin, props, dirty);
+          ExtagDOM.renderAttrs($skin, props, dirty);
         }
         
         if (style) {
@@ -738,7 +758,7 @@ assign(ExtagDom, {
           dirty = mergeDirty(dirty, shell.__style._dirty);
         }
         if (props && dirty) {
-          ExtagDom.renderStyle($skin, props, dirty);
+          ExtagDOM.renderStyle($skin, props, dirty);
         }
 
         if (classes) {
@@ -753,7 +773,7 @@ assign(ExtagDom, {
           dirty = mergeDirty(dirty, shell.__classes._dirty);
         }
         if (props && dirty) {
-          ExtagDom.renderClasses($skin, props, dirty);
+          ExtagDOM.renderClasses($skin, props, dirty);
         }
       }          
       
@@ -761,18 +781,18 @@ assign(ExtagDom, {
         // var $removed;
 
         if (!shadowMode || !$skin.attachShadow) {
-          ExtagDom.renderChildren($skin, shell, flatten(children));
+          ExtagDOM.renderChildren($skin, shell, flatten(children));
         } else {
           if ($skin.shadowRoot == null) {
             $skin.attachShadow({mode: shadowMode});
           }
-          ExtagDom.renderChildren($skin.shadowRoot, shell, flatten(children));
+          ExtagDOM.renderChildren($skin.shadowRoot, shell, flatten(children));
         }
 
         // if ($removed && $removed.length) {
         //   for (var i = 0, n = $removed.length; i < n; ++i) {
-        //     var $parent = ExtagDom.getParent($removed[i]);
-        //     var _shell = ExtagDom.getShell($removed[i]);
+        //     var $parent = ExtagDOM.getParent($removed[i]);
+        //     var _shell = ExtagDOM.getShell($removed[i]);
         //     if (!$parent && _shell) {
         //       _shell.detach();
         //     }
@@ -781,7 +801,7 @@ assign(ExtagDom, {
       }
 
       if (shell._commands && (shell.$flag & FLAG_CHANGED_COMMANDS)) {
-        ExtagDom.invokeCommands($skin, shell._commands)
+        ExtagDOM.invokeCommands($skin, shell._commands)
       }
     }
   },
@@ -832,7 +852,7 @@ assign(ExtagDom, {
       value = props[key];
       if (desc) {
         if (desc.mustUseProperty) {
-          $skin[key] = value;
+          $skin[desc.propertyName] = value;
         } else if (value != null) {
           $skin.setAttribute(desc.attributeName, value);
         } else {
@@ -850,7 +870,7 @@ assign(ExtagDom, {
    * @required
    */
   renderStyle: function renderStyle($skin, style, dirty) {
-    var key, $style = $skin.style;
+    var key, value, $style = $skin.style;
     //if (!dirty) { return; }
     for (key in dirty) {
       if (!hasOwnProp.call(dirty, key)) { continue; }
@@ -860,14 +880,17 @@ assign(ExtagDom, {
       } else if (key.slice(0, 2) === '--') { // css var
         $style.setProperty(key, style[key]);
       } else {
-        var keyCapitalized = key.charAt(0).toUpperCase() + key.slice(1);
-
-        if (!CSSVendorPrefix) {
-          CSSVendorPrefix = checkCSSVendorPrefix($style, keyCapitalized);
-        }
-
-        if (CSSVendorPrefix) {
-          $style[CSSVendorPrefix + keyCapitalized] = style[key];
+        value = style[key];
+        if (IMPORTANT_REGEXP.test(value)) {
+          $style.setProperty(toKebabCase(key), value.replace(IMPORTANT_REGEXP, ''), 'important')
+        } else {
+          var keyCapitalized = key.charAt(0).toUpperCase() + key.slice(1);
+          if (!CSSVendorPrefix) {
+            CSSVendorPrefix = checkCSSVendorPrefix($style, keyCapitalized);
+          }
+          if (CSSVendorPrefix) {
+            $style[CSSVendorPrefix + keyCapitalized] = value;
+          }
         }
       }
     }
@@ -904,7 +927,7 @@ assign(ExtagDom, {
     for (var i = 0, n = commands.length; i < n; ++i) {
       var command = commands[i];
       if (command && command.name) {
-        ExtagDom.invoke($skin, command.name, command.args);
+        ExtagDOM.invoke($skin, command.name, command.args);
       }
     }
   },
@@ -926,15 +949,15 @@ assign(ExtagDom, {
     if (m) {
       for (i = m - 1; i >= 0; --i) {
         $oldChild = $children[i];
-        oldChild = ExtagDom.getShell($oldChild);
+        oldChild = ExtagDOM.getShell($oldChild);
         if (oldChild && !oldChild.getParent()) {
           $skin.removeChild($oldChild);
           $removed.push($oldChild);
         }
       }
       for (i = $removed.length - 1; i >= 0;  --i) {
-        $parent = ExtagDom.getParent($removed[i]);
-        oldChild = ExtagDom.getShell($removed[i]);
+        $parent = ExtagDOM.getParent($removed[i]);
+        oldChild = ExtagDOM.getShell($removed[i]);
         if (!$parent && oldChild) { 
           oldChild.detach();
         }
@@ -957,12 +980,12 @@ assign(ExtagDom, {
           var meta = newChild.$meta;
           // var ns = newChild.ns, tag = newChild.tag, type = newChild.$type;
           if (!$oldChild || 
-              meta.tag !== ExtagDom.getTagName($oldChild) || 
-              meta.ns !== ExtagDom.getNameSpace($oldChild) || 
-              ((oldChild = $oldChild ? ExtagDom.getShell($oldChild) : null) && oldChild !== newChild)) {
+              meta.tag !== ExtagDOM.getTagName($oldChild) || 
+              meta.ns !== ExtagDOM.getNameSpace($oldChild) || 
+              ((oldChild = $oldChild ? ExtagDOM.getShell($oldChild) : null) && oldChild !== newChild)) {
             $newChild = meta.type === TYPE_ELEM ? 
-                        ExtagDom.createElement(meta.ns, meta.tag) : 
-                        ExtagDom.createText('');
+                        ExtagDOM.createElement(meta.ns, meta.tag) : 
+                        ExtagDOM.createText('');
           } else {
             $newChild = $oldChild;
           }
@@ -997,7 +1020,7 @@ assign(ExtagDom, {
 
 if (typeof Extag !== 'undefined') {
   // eslint-disable-next-line no-undef
-  Extag.conf('view-engine', ExtagDom);
+  Extag.conf('view-engine', ExtagDOM);
 }
 
-export default ExtagDom
+export default ExtagDOM

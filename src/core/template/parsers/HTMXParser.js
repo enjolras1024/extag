@@ -11,13 +11,13 @@ import {
 import { 
   hasOwnProp,
   decodeHTML, 
-  throwError } from 'src/share/functions'
+  throwError,
+  toCamelCase
+} from 'src/share/functions'
 import logger from 'src/share/logger'
 import Path from 'src/base/Path'
-// import View from 'src/core/shells/View'
 import Slot from 'src/core/shells/Slot'
 import Output from 'src/core/shells/Output'
-// import Block from 'src/core/shells/Block'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
@@ -36,7 +36,27 @@ var TAGNAME_STOP = /[\s/>]/;
 var ATTRNAME_SPLITTER = /[\s\/]+/;
 var X_TAG_REGEXP = /^x:/;
 
-var viewEngine = null;
+// var viewEngine = null;
+
+var namespaceURIs = {
+  html: 'http://www.w3.org/1999/xhtml',
+  math: 'http://www.w3.org/1998/Math/MathML',
+  svg: 'http://www.w3.org/2000/svg',
+  xlink: 'http://www.w3.org/1999/xlink'
+};
+
+function toNameSpace(xmlns) {
+  if (!xmlns || xmlns === namespaceURIs.html) {
+    return '';
+  } else if (xmlns === namespaceURIs.svg) {
+    return 'svg';
+  } else if (xmlns === namespaceURIs.math) {
+    return 'math';
+  } else if (xmlns === namespaceURIs.xlink) {
+    return 'xlink';
+  }
+  return null;
+}
 
 var SELF_CLOSING_TAGS = {
   '!': true,
@@ -80,7 +100,7 @@ function getGroup(node, name) {
 }
 
 function getPropName(attrName) {
-  return attrName !== 'class' ? viewEngine.toCamelCase(attrName) : 'classes';
+  return attrName !== 'class' ? toCamelCase(attrName) : 'classes';
 }
 
 function isDirective(name) {
@@ -95,9 +115,9 @@ function isSelfClosingTag(tagName) {
 function parseDirective(name, expr, node, prototype, identifiers) {
   var result;
   if (name === 'x:class') {
-    node.classes = ClassStyleParser.parse(expr, prototype, identifiers, viewEngine, false);
+    node.classes = ClassStyleParser.parse(expr, prototype, identifiers, false);
   } else if (name === 'x:style') {
-    node.style = ClassStyleParser.parse(expr, prototype, identifiers, viewEngine, true);
+    node.style = ClassStyleParser.parse(expr, prototype, identifiers, true);
   } else if (name === 'x:type') {
     if (node.tag === 'x:output') {
       // <x:output x:type="Buuton"/> just like <input type="button">
@@ -171,9 +191,18 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
   var result, group, key;
   var index;
 
+  if (attrValue == null) {
+    if (attrName.indexOf(':') < 0) {
+      key = toCamelCase(attrName);
+      getGroup(node, 'props')[key] = true;
+      return;
+    }
+    attrValue = '';
+  }
+
   if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
     group = getGroup(node, 'events');
-    key = viewEngine.toCamelCase(attrName.slice(0, -1));
+    key = toCamelCase(attrName.slice(0, -1));
     result = EventBindingParser.parse(attrValue, prototype, identifiers);
     group[key] = new Expression(EventBinding, result);
   } else {
@@ -222,7 +251,8 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         break;
       default:
         key = index < 0 ? getPropName(attrName) : attrName;
-        group[key] = viewEngine.isBoolProp(key) || attrValue;
+        // group[key] = viewEngine.isBoolProp(key) || attrValue;
+        group[key] = attrValue;
     }
   }
 }
@@ -306,7 +336,7 @@ function parseAttributes(htmx, from, node, prototype) {
         while(attrNames.length > 0) {
           attrName = attrNames.shift();
           if (attrName && node) {
-            parseAttribute(attrName, '', node, prototype, node.identifiers);
+            parseAttribute(attrName, null, node, prototype, node.identifiers);
             // getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
           }
         }
@@ -319,7 +349,7 @@ function parseAttributes(htmx, from, node, prototype) {
         while(attrNames.length > 1) {
           attrName = attrNames.shift();
           if (attrName && node) {
-            parseAttribute(attrName, '', node, prototype, node.identifiers);
+            parseAttribute(attrName, null, node, prototype, node.identifiers);
             // getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
           }
         }
@@ -373,14 +403,9 @@ function parseHTMX(htmx, prototype) {
 
   var cc, nc;
   var node, tagName;
-  // var range = [0, 0];
   var start = 0, stop = 0;
   var parent, parents = [];
   var idx = 0, end = htmx.length;
-
-  // if (htmx[0] !== '<' || htmx[end-1] !== '>' || !LETTER_REGEXP.test(htmx[1])) {
-  //   throw new Error('');
-  // }
 
   parent = {
     tag: '[]',
@@ -397,7 +422,7 @@ function parseHTMX(htmx, prototype) {
         if (start < idx) {
           parseTextNode(htmx, start, idx, parent, prototype, parent.identifiers);
         }
-
+        // tag starts
         start = idx + 1;
         stop = getStopOf(TAGNAME_STOP, htmx, start);
         tagName = htmx.slice(start, stop);
@@ -420,7 +445,7 @@ function parseHTMX(htmx, prototype) {
 
         if (!node.ns) {
           if (node.props && node.props.xmlns) {
-            node.ns = viewEngine.toNameSpace(node.props.xmlns);
+            node.ns = toNameSpace(node.props.xmlns);
           } else if (parent.ns) {
             node.ns = parent.ns;
           }
@@ -501,12 +526,13 @@ function parseHTMX(htmx, prototype) {
 
         // start = stop = stop + 1;
 
+        // tag closed
         if (parents.length > 1) {
           parents.pop();
         } else {
-          if (stop < end) {
-            throw new Error('');
-          }
+          // if (stop < end) {
+          //   throw new Error('');
+          // }
           return parents[0];
         }
 
@@ -518,12 +544,11 @@ function parseHTMX(htmx, prototype) {
         start = stop = idx;
         continue;
       } else if ('!' === nc && '<!--' === htmx.slice(idx, idx + 4)) {
+        // comment
         if (start < idx) {
           parseTextNode(htmx, start, idx, parent, prototype, parent.identifiers);
         }
         start = idx + 4;
-        // stop = idx + 4;
-        // node = parseComment(htmx, range);
         stop = htmx.indexOf('-->', start);
         stop = stop > 0 ? stop : htmx.length;
         node =  {
@@ -545,16 +570,12 @@ function parseHTMX(htmx, prototype) {
     parseTextNode(htmx, start, end, parent, prototype, parent.identifiers);
   }
 
-  // if (parent) {
-  //   throw new Error('Unclosed tag ' + parent.tagName);
-  // }
-
   return parents;
 }
 
 var HTMXParser = {
   parse: function(htmx, prototype) {
-    viewEngine = viewEngine || config.get(VIEW_ENGINE);
+    // viewEngine = viewEngine || config.get(VIEW_ENGINE);
 
     var constructor = prototype.constructor;
     var nodes = parseHTMX(htmx, prototype);

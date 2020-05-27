@@ -2,11 +2,7 @@
 
 import Path from 'src/base/Path'
 import { hasOwnProp, throwError } from 'src/share/functions'
-import { 
-  EMPTY_OBJECT,
-  // PROP_EXPR_REGEXP,
-  WHITE_SPACE_REGEXP
- } from 'src/share/constants'
+import { WHITE_SPACE_REGEXP } from 'src/share/constants'
 import Evaluator from 'src/core/template/Evaluator'
 
 var DIVISION_REGEXP = /[\w).+\-_$\]]/;
@@ -20,19 +16,6 @@ var JS_KEYWORD_MAP = {};
     JS_KEYWORD_MAP[keywords[i]] = true;
   }
 })();
-
-// function skipWhiteSpace(expr, index) {
-//   var cc, length = expr.length;
-//   while (index < length) {
-//     cc = expr.charCodeAt(index);
-//     //    \             \f\n\r\t\v
-//     if (!(cc === 32 || (cc >=9 && cc <= 13))) {
-//       break;
-//     }
-//     ++index;
-//   }
-//   return index;
-// }
 
 function notPropertyName(expr, index) {
   var cc, length = expr.length;
@@ -98,7 +81,7 @@ function isLegalVarStartCharCode(cc) {
   return  (cc >= 97 && cc <= 122) || (cc >= 65 && cc <= 90) || cc === 95 || cc === 36;
 }
 
-function getIdentifierIndices(expr) {
+function getPropChainIndices(expr) {
   var indices = [];
   var b0, b1, b2, cb, cc;
   var n = expr.length, i = 0, j;
@@ -150,6 +133,7 @@ function getIdentifierIndices(expr) {
 
 export default {
   /**
+   * Parse an evaluator from string
    * @param {string} expr - e.g. "a + b" in @{a + b} or value@="a + b".
    * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
    * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
@@ -159,17 +143,10 @@ export default {
     var args = identifiers.slice(1);
     var expanded = 0, piece, path;
     var lines = [], i, j;
-    // if (PROP_EXPR_REGEXP.test(expr)) {
-    //   evaluator = new PropEvaluator(expr.trim());
-    //   if (prototype && identifiers) {
-    //     evaluator.connect(prototype, identifiers);
-    //   }
-    //   return evaluator;
-    // }
+    // get start-index and stop-index of all prop chains, like `a` or `a.b.c`
+    var indices = getPropChainIndices(expr);
 
-    var indices = getIdentifierIndices(expr);
-
-    var resources = prototype.constructor.resources || EMPTY_OBJECT;
+    var resources = prototype.constructor.resources;
 
     for (j = 0; j < indices.length; j += 2) {
       if (indices[j+1] < 0) { continue; }
@@ -180,13 +157,15 @@ export default {
       }
       i = identifiers.indexOf(path[0]);
       if (i < 0) {
-        if (path[0] in resources) {
+        if (resources && hasOwnProp.call(resources, path[0])) {
           lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
         } else {
           expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
           expanded += 5;
         }
-      } 
+      } else {
+        //
+      }
     }
 
     lines.push('return ' + expr);

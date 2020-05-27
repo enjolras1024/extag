@@ -4,6 +4,7 @@ import Path from 'src/base/Path'
 import { throwError } from 'src/share/functions'
 import { BINDING_OPERATORS } from 'src/share/constants'
 import DataBinding from 'src/core/bindings/DataBinding'
+import Evaluator from 'src/core/template/Evaluator'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 
 var DATA_BINDING_MODES = DataBinding.MODES;
@@ -18,14 +19,14 @@ function newIdentifier(expr, identifiers) {
 
 export default {
   /**
-   * parse data-binding expression
+   * Parse data-binding expression
    * @param {string} expr - e.g. "text |=upper" in @{text |=upper} or value@="text |=upper".
    * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
-   * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
+   * @param {Array} identifiers - like ['this', 'item'], 'item' is an iterator from x:for expression.
    * @returns {*}
    */
   parse: function parse(expr, prototype, identifiers) {
-    var mode = -1, paths = [], n = expr.length, i;
+    var mode = -1, n = expr.length, i;
 
     if (expr[0] === BINDING_OPERATORS.TWO_WAY) {              // <text-box model@="@text"/>
       mode = DATA_BINDING_MODES.TWO_WAY;
@@ -39,7 +40,7 @@ export default {
     } else if (expr[n-1] === BINDING_OPERATORS.ONE_TIME) {    // <div x:type="Panel" x:if="showPanel ?"></div>
       mode = DATA_BINDING_MODES.ONE_TIME;
       expr = expr.slice(0, n-1);
-    } else {                                                        // <h1 title@="title">@{title}</h1>
+    } else {                                                  // <h1 title@="title">@{title}</h1>
       mode = DATA_BINDING_MODES.ONE_WAY;
     }
 
@@ -79,6 +80,17 @@ export default {
           if (index > 0) {
             piece = piece.slice(0, index + 1) + identifier + ',' + piece.slice(index + 1);
           } else {
+            if (piece.indexOf('.') < 0 && identifiers.indexOf(piece) < 0) {
+              var resources = prototype.constructor.resources;
+              if (resources) {
+                var func = Path.search(piece, resources);
+                if (typeof func === 'function') {
+                  converters = converters || [];
+                  converters.push(new Evaluator(func, piece));
+                  continue;
+                } 
+              }
+            }
             piece = piece + '(' + identifier + ')';
           }
 
@@ -89,14 +101,19 @@ export default {
       }
     }
 
-    return {
+    var pattern = {
       mode: mode,
-      path: path,
-      paths: paths,
-      evaluator: evaluator,
-      converters: converters,
-      identifiers: identifiers
+      evaluator: evaluator
+    };
+
+    if (mode === DATA_BINDING_MODES.TWO_WAY) {
+      pattern.identifiers = identifiers;
+      pattern.path = path;
+    } else if (converters && converters.length) {
+      pattern.converters = converters;
     }
+
+    return pattern;
   }
 };
   

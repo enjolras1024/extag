@@ -6,7 +6,10 @@ import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
 import FragmentBinding from 'src/core/bindings/FragmentBinding'
 import DataBinding from 'src/core/bindings/DataBinding'
 import Expression from 'src/core/template/Expression'
-import { throwError } from 'src/share/functions'
+import { 
+  throwError,
+  toCamelCase
+} from 'src/share/functions'
 import { 
   BINDING_FORMAT,
   BINDING_BRACKETS,
@@ -30,7 +33,7 @@ export default {
    * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
    * @param {boolean} camelCase  - using camel case for x:style="...", not for x:calss="..."
    */
-  parse: function parse(expr, prototype, identifiers, viewEngine, camelCase) {
+  parse: function parse(expr, prototype, identifiers, camelCase) {
     var group = {};
     var pieces = expr.split(STYLE_DELIMITER); 
     var result, piece, name, names, n, i, j, k;
@@ -53,8 +56,7 @@ export default {
   
       name = piece.slice(0, k).trim();
       expr = piece.slice(k + 1).trim();
-  
-      // if (!/[\_\-a-z0-9]/i.test(name)) {
+
       if (!name || !CSS_NAME_REGEXP.test(name)) {
         throwError('Illegal ' + (camelCase ? 'x:style' : 'x:class') + ' expression.', {
           code: 1001,
@@ -62,7 +64,7 @@ export default {
         });
       }
       if (camelCase) {
-        name = viewEngine.toCamelCase(name);
+        name = toCamelCase(name);
       }
 
       try {

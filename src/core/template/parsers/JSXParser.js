@@ -1,52 +1,60 @@
 import Path from 'src/base/Path'
-import View from 'src/core/shells/View'
 import Slot from 'src/core/shells/Slot'
-// import Block from 'src/core/shells/Block'
+import Output from 'src/core/shells/Output'
 import Fragment from 'src/core/shells/Fragment'
+import Evaluator from 'src/core/template/Evaluator'
 import Expression from 'src/core/template/Expression'
+// import EvaluatorParser from "src/core/template/parsers/EvaluatorParser";
+import DataBindingParser from "src/core/template/parsers/DataBindingParser";
+import EventBindingParser from "src/core/template/parsers/EventBindingParser";
 import DataBinding from 'src/core/bindings/DataBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import FragmentBinding  from 'src/core/bindings/FragmentBinding'
-import { hasOwnProp } from 'src/share/functions'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
-
 import { 
-  // CONTEXT_SYMBOL,
-  CONTEXT_REGEXP,
-  HANDLER_REGEXP,
   CAPITAL_REGEXP,
-  // PROP_EXPR_REGEXP
  } from 'src/share/constants'
-import { slice, flatten, throwError } from 'src/share/functions'
+import { 
+  slice, 
+  flatten, 
+  throwError,
+  hasOwnProp
+ } from 'src/share/functions'
 
-// import FuncEvaluator from 'src/core/template/evaluators/FuncEvaluator';
-// import PropEvaluator from 'src/core/template/evaluators/PropEvaluator';
-// import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
+ function getExprArgs(value) {
+  var type = typeof value;
+  if (type === 'object' && value.__extag_expr__) {
+    return value.args;
+  } else if (type === 'string' || type === 'function') {
+    return [value];
+  } else if (Array.isArray(value)) {
+    return value;
+  }
+}
 
 function parseJsxNode(node, prototype) {
-  var props = node.props, value, key, ctor;
+  var props = node.props, value, key, ctor, args;
   if (node.xif) {
-    node.xif.connect(prototype, node.identifiers);
+    args = getExprArgs(node.xif);
+    node.xif = parseJsxDataExpr(args, node, prototype);
   }
   if (node.xfor) {
-    // if (Array.isArray(ctrls.xfor))
-    node.xfor[1].connect(prototype, node.identifiers);
+    args = getExprArgs(node.xfor[1]);
+    node.xfor[1] = parseJsxDataExpr(args, node, prototype);
     node.identifiers = node.identifiers.concat([node.xfor[0]]);
   }
   if (node.xkey) {
-    node.xkey.connect(prototype, node.identifiers);
+    args = getExprArgs(node.xkey);
+    node.xkey = parseJsxDataExpr(args, node, prototype);
   }
   if (props) {
-    // style, attrs, classes, actions
+    // parse expression, and extract style, attrs, classes
     for (key in props) {
       value = props[key];
-      if (typeof value === 'object' && value instanceof Expression) {
-        value.connect(prototype, node.identifiers);
-      }
       if (typeof value === 'object') {
-        if (value instanceof Expression) {
-          value.connect(prototype, node.identifiers);
+        if (value.__extag_expr__) {
+          props[key] = parseJsxDataExpr(value.args, node, prototype);
         } else if (key === 'classes' || key === 'style' || key === 'attrs') {
           node[key] = value;
           delete props[key];
@@ -59,11 +67,11 @@ function parseJsxNode(node, prototype) {
     if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
-        logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in static resources.');
+        logger.warn('Can not find such component type `' + expr + '`. ' + 
+                    'Make sure it extends Component and please register `' + expr  + '` in static resources.');
       }
       throwError('Can not find such component type `' + expr + '`');
     }
-    // _directs.xType = ctor;
     node.type = ctor;
   }
   if (node.type == null && CAPITAL_REGEXP.test(node.tag)) {
@@ -72,7 +80,7 @@ function parseJsxNode(node, prototype) {
       node.type = ctor;
     // eslint-disable-next-line no-undef
     } else if (__ENV__ === 'development') {
-      logger.warn('`' + node.tag + '` maybe component but not found.');
+      logger.warn('`' + node.tag + '` maybe component type but not found.');
     }
   }
   if (node.type == null) {
@@ -80,15 +88,18 @@ function parseJsxNode(node, prototype) {
       case 'x:slot':
         node.type = Slot;
         break;
-      case 'x:view':
-        node.type = View;
-        break;
+      // case 'x:view':
+      //   node.type = View;
+      //   break;
       case 'x:frag':
         node.type = Fragment;
         break;
       // case 'x:block':
       //   node.type = Block;
       //   break;
+      case 'x:output':
+        node.type = Output;
+        break;
     }
   }
   if (node.events) {
@@ -96,23 +107,107 @@ function parseJsxNode(node, prototype) {
   }
 }
 
+function parseEvaluater(evaluator, prototype, identifiers) {
+  var type = typeof evaluator;
+  if (type === 'string') {
+    return EventBindingParser.parse(evaluator, prototype, identifiers);
+  } else if (type === 'function') {
+    return new Evaluator(evaluator);
+  } else {
+    throwError('evaluator must be string or function');
+  }
+}
+
+function parseConverters(converters, prototype, identifiers) {
+  for (var i = 0; i < converters.length; ++i) {
+    converters[i] = parseEvaluater(converters[i, prototype, identifiers]);
+  }
+}
+
+function parseJsxDataExpr(args, node, prototype) {
+  var pattern, type = typeof args[0];
+  if (args.length === 1) {
+    if (Array.isArray(args[0])) {
+      pattern = args[0];
+      for (var i = 0; i < pattern.length; ++i) {
+        if (typeof pattern[i] === 'object' && pattern[i].__extag_expr__) {
+          pattern[i] = parseJsxDataExpr(pattern[i].args, node, prototype);
+          if (pattern[i] && pattern[i].binding === FragmentBinding) {
+            throwError('FragmentBinding expression are not allowed in child nodes.');
+          }
+        }
+      }
+      return new Expression(FragmentBinding, pattern);
+    } else if (type === 'string') {
+      return new Expression(DataBinding, 
+        DataBindingParser.parse(args[0], prototype, node.identifiers));
+    } else if (type === 'function') {
+      return new Expression(DataBinding, {
+        mode: 1,
+        evaluator: parseEvaluater(args[0], prototype, node.identifiers)
+      })
+    } else {
+      return args[0]
+    }
+    
+  } else {
+    if (args[0] === '@') {
+      return new Expression(DataBinding, {
+        mode: 2,
+        path: args[1],
+        evaluator: parseEvaluater(args[2]),
+        identifiers: node.identifiers
+      })
+    } else {
+      var mode = 1;
+      switch (args[args.length - 1]) {
+        case '?':
+          args = args.slice(0, -1);
+          mode = 0;
+          break;
+        case '!':
+          args = args.slice(0, -1);
+          mode = -1;
+          break;
+        case '^':
+          args = args.slice(0, -1);
+          mode = 3;
+          break;
+      }
+      return new Expression(DataBinding, {
+        mode: mode,
+        evaluator: parseEvaluater(args[1], prototype, node.identifiers),
+        converters: args.length === 2 ? null : 
+                    parseConverters(args.slice(2), prototype, node.identifiers)
+      })
+    }
+  }
+}
+
+function parseJsxEventExpr(args, node, prototype) {
+  var pattern,  type = typeof args[0];
+  if (type === 'string' && args.length === 1) {
+    pattern = EventBindingParser.parse(args[0], prototype, node.identifiers);
+  } else if (type === 'function') {
+    pattern = {
+      evaluator: new Evaluator(args[0]),
+      modifiers: args.length > 1 ? args.slice(1) : null
+    };
+  } else {
+    pattern = null;
+  }
+  return pattern ? new Expression(EventBinding, pattern) : null;
+}
+
 function parseJsxEvents(node, prototype) {
-  var events = node.events;
-  var value, evt;
+  var evt, expr, args, value, events = node.events;
   for (evt in events) {
     value = events[evt];
-    if (typeof value === 'object' && value instanceof Expression) {
-      value.connect(prototype, node.identifiers);
-      // actions[evt] = value;
-    } else {
-      value = expr('+', value);
-      if (typeof value === 'object' && value instanceof Expression) {
-        events[evt] = value;
-      } else {
-        delete events[evt];
-      }
+    args = getExprArgs(value);
+    expr = parseJsxEventExpr(args, prototype, node.identifiers);
+    if (expr) {
+      events[evt] = expr;
     }
-      
   }
 }
 
@@ -121,74 +216,52 @@ function parseJsxChildren(node, prototype) {
   if (!children || !children.length) {
     return;
   }
-  var i, j = -1, child;
-  var hasExpr;
+  var i, j = -1, args, child, hasExpr;
   for (i = children.length - 1; i >= 0; --i) {
     child = children[i];
     if (typeof child === 'object') {
       if (child.__extag_node__) {
-        // TODO: slice(i, j);   splice(i, j, expr('#'))
         if (hasExpr) {
-          children.splice(i + 1, j + 1, new Expression(FragmentBinding, children.slice(i + 1, j + 1)));
+          // combine strings and expressions to an fragment-bingding expression
+          hasExpr = false;
+          args = [children.slice(i + 1, j + 1)];
+          children.splice(i + 1, j - i, parseJsxDataExpr(args, node, prototype))
         }
-        hasExpr = false;
         j = -1;
-
         child.identifiers = node.identifiers;
         parseJsxNode(child, prototype);
         parseJsxChildren(child, prototype);
         continue;
       }
-      if (child instanceof Expression) {
-        child.connect(prototype, node.identifiers);
+      if (child.__extag_expr__) {
         hasExpr = true;
       }
     }
-    // if (hasExpr && i === 0) {
-      
-    // }
     if (j < 0) { 
       j = i;
     }
   }
-
   if (hasExpr && j > -1) {
-    children.splice(0, j + 1, new Expression(FragmentBinding, children.slice(0, j + 1)));
+    args = [children.slice(0, j + 1)];
+    children.splice(0, j + 1, parseJsxDataExpr(args, node, prototype));
   }
-
-  // node.children = children.filter(function(child) {
-  //   return !!child;
-  // });
 }
 
 var RESERVED_PARAMS = {
-  // ns: null,
-  // on: null,
-  // tag: null,
-  xns: null,
-  xif: null,
-  xfor: null,
-  xkey: null,
-  xname: null,
-  xtype: null,
-  props: null,
-  // attrs: null,
-  // style: null,
-  // 'class': null,
-  // classes: null,
-  // className: null,
-  
-  events: null,
-  // directs: null,
-  children: null,
-  contents: null
+  xns: true,
+  xif: true,
+  xfor: true,
+  xkey: true,
+  xname: true,
+  xtype: true,
+  events: true
 };
 
 /**
- *
- * @param {string|Function} tagOrType
- * @param {Object} options
- * @param {string|Array|Object} children
+ * Create virtual node
+ * @param {string|Function} type  element tag or component type
+ * @param {Object} options  some props, and expressions maybe
+ * @param {string|Array|Object} children  child nodes
  * @returns {Object}
  */
 function node(type, options, children) {
@@ -203,26 +276,37 @@ function node(type, options, children) {
       node.ns = '';
       node.tag = type;
     } else {
-      node.ns = type.slice(0, i);
-      node.tag = type.slice(i + 1);
+      if (type.slice(0, i) === 'x') {
+        switch(type) {
+          case 'x:slot':
+            node.tag = type;
+            node.type = Slot;
+            break;
+          case 'x:frag':
+            node.tag = type;
+            node.type = Fragment;
+            break;
+          case 'x:output':
+            node.tag = type;
+            node.type = Output;
+            break;
+        }
+      } 
+      if (!node.type) {
+        node.ns = type.slice(0, i);
+        node.tag = type.slice(i + 1);
+      }
     }
-  } else if (t === 'function') {
+  } else if (t === 'function' && type.__extag_component_class__) {
     node.type = type;
   } else {
-    throwError('First argument must be class, string or constructor.');
+    throwError('The first argument must be string, component class or constructor.');
   }
 
-  // if (arguments.length === 2 && (Array.isArray(attrs) || typeof attrs !== 'object')) {
-  //   children = attrs;
-  //   attrs = null;
-  // }
-
   if (options != null) {
-
     if (options.xns) {
       node.ns = options.xns;
     }
-    
     if (options.xif) {
       node.xif = options.xif;
     }
@@ -235,28 +319,29 @@ function node(type, options, children) {
     if (options.xname) {
       node.name = options.xname;
     }
-    if (options.xtype && !node.type) {
-      node.type = options.xtype;
+    if (options.xtype) {
+      if (!node.type) {
+        node.type = options.xtype;
+      } else if (node.type === Output) {
+        node.props = {
+          xtype: options.xtype
+        }
+      }
     }
-    // if (attrs.style) {
-    //   node.style = attrs.style;
-    // }
-    // if (attrs.xattrs) {
-    //   node.attrs = attrs.xattrs;
-    // }
-    // if (attrs.xclass) { // TODO: className
-    //   node.classes = attrs.xclass;
-    // }
+
     if (options.events) {
       node.events = options.events;
     }
 
-    // node.directs = attrs.directs;
-
-    var props = node.props = {};
+    var props;
+     if (node.props) {
+      props = node.props;
+    } else {
+      props = node.props = {};
+    }
 
     for (var key in options) {
-      if (hasOwnProp.call(options, key) && !(key in RESERVED_PARAMS)) {
+      if (!RESERVED_PARAMS[key] && hasOwnProp.call(options, key)) {
         props[key] = options[key];
       }
     }
@@ -264,118 +349,44 @@ function node(type, options, children) {
 
   if (children) {
     if (arguments.length > 3) {
-      children = slice(arguments, 2);
+      children = slice.call(arguments, 2);
     }
     if (Array.isArray(children)) {
       children = flatten(children);
     } else {
       children = [children];
     }
-    // if (node.type) {
-    //   node.contents = children;
-    // } else {
-      node.children = children;
-    // }
+    node.children = children;
   }
 
   return node;
 }
 
-// function createEvaluator(expr) {
-//   var type = typeof expr;
-//   if (type === 'string') {
-//     if (PROP_EXPR_REGEXP.test(expr)) {
-//       return new PropEvaluator(expr.trim());
-//     }
-//     return EvaluatorParser.parse(expr);
-//   } else if (type === 'function') {
-//     return new FuncEvaluator(expr);
-//   }
-// }
-
-// function createConverters(more) {
-//   var converters = [], type, expr, j, i;
-//   for (j = 0; j < more.length; ++j) {
-//     expr = more[j];
-//     type = typeof expr;
-//     if (type === 'string') {
-//       i = expr.indexOf('(');
-//       if (i > 0) {
-//         expr = expr.slice(0, i + 1) + 'arguments[arguments.length-1],' + expr.slice(i + 1);
-//       } else {
-//         expr = expr + '(arguments[arguments.length-1])';
-//       }
-//       converters.push(EvaluatorParser.parse(expr));
-//     } else if (type === 'function') {
-//       converters.push(new FuncEvaluator(expr));
-//     }
-//   }
-//   return converters;
-// }
-
 /**
- * 
- * @param {string} type - binding type, one of '@', '+', '#', '@!', '@?', '@@'
- * @param {string|Function} base - base expression string or function
- * @param {Array} more - converters, every item just be like the param `base`. 
- *                       Or some expressions for type '#'. Or modifiers for type '+'.
+ * Create virtual expression.
+ * e.g.
+ * just a string: expr('a > b')
+ * just a function: expr(function() {return this.a > this.b;})
+ * just a function with iterator: expr(function(item) {return this.key === item.key})
+ * just a string with converters(modifiers): expr('titile |=upper ?'), expr('onClick::bind')
+ * a function followed by more functions as converters: expr(function(){return this.title}, upper, '?')
+ * a event handler function followed by more strings as modifiers: expr(function(){return this.title}, 'once')
  */
-function expr(type, base/*, ...more*/) {
-  var more = arguments.length > 2 ? slice(arguments, 2) : null;
-  var mode;
-  // if (typeof base === 'string') {
-  //   base = base.trim();
-  // }
-  if (type[0] === '@') {
-    switch (type) {
-      case '@':
-        mode = 1;
-        break;
-      case '@@':
-        mode = 2;
-        // TODO: check expr
-        break;
-      case '@!':
-        mode = -1;
-        break;
-      case '@?':
-        mode = 0;
-        break;
-      default:
-        return;
-    }
-    return new Expression(DataBinding, {
-      mode: mode,
-      path: mode === 2 ? base.trim().replace(CONTEXT_REGEXP, '') : null,
-      evaluator: base, //createEvaluator(base),
-      converters: more //more ? createConverters(more) : null
-      // TODO: identifiers
-    }, true);
-  } else if (type === '+') {
-    if (typeof base === 'string' && HANDLER_REGEXP.test(base.trim())) {
-      return new Expression(EventBinding, {
-        handler: base.trim().replace(CONTEXT_REGEXP, ''),
-        modifiers: more
-      });
-    } else {
-      return new Expression(EventBinding, {
-        evaluator: base, //createEvaluator(base),
-        modifiers: more
-      }, true);
-    }
-  } else if (type === '#') {
-    if (more) {
-      more.unshift(base);
-    } else {
-      more = [base];
-    }
-    return new Expression(FragmentBinding, more);
-  }
+function expr() {
+  return {
+    args: slice.call(arguments, 0),
+    __extag_expr__: true
+  };
 }
 
 var JSXParser = {
   node: node,
   expr: expr,
+  /**
+   * Parse the template created by node(), connect to prototype
+   * @param {Object} template 
+   * @param {Object} prototype 
+   */
   parse: function(template, prototype) {
     var _node = template(node, expr);
     _node.identifiers = ['this'];
@@ -391,7 +402,7 @@ var JSXParser = {
         throwError('component can not be used as root tag of another component template.')
       }
     } else if (_node.xif || _node.xfor || _node.xkey) {
-      throwError('`xif`, `xfor`, `xkey` can not be used on component template root tag.')
+      throwError('`xif`, `xfor`, `xkey` can not be used on root tag of component template.')
     }
 
     return _node;

@@ -340,6 +340,23 @@ function toClasses(classList) {
   }
 }
 
+var KEBAB_CASE_REGEXP = /-([a-z])?/g;
+var KEBAB_CASE_REPLACER = function(match, char) {
+  return char ? char.toUpperCase() : '';
+}
+var camelCache = {};
+function toCamelCase(key) {
+  if (key.indexOf('-') < 0) {
+    return key;
+  }
+  if (key in camelCache) {
+    return camelCache[key];
+  }
+  var name = key.replace(KEBAB_CASE_REGEXP, KEBAB_CASE_REPLACER);
+  camelCache[key] = name;
+  return name;
+}
+
 function throwError(err, opts) {
   var error = err instanceof Error ? err : new Error(err);
   if (opts) {
@@ -361,6 +378,7 @@ export {
   hasOwnProp,
   defineProp, 
   defineClass, 
+  toCamelCase,
   setImmediate,
   getOwnPropDesc
 };
