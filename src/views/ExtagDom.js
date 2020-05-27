@@ -938,7 +938,7 @@ assign(ExtagDOM, {
   renderChildren: function renderChildren($skin, shell, children) {
     if (shell.$type === 0) { return; }
 
-    var i, n, m;// child, $existed;
+    var i, n, m;
     var newChild, oldChild;
     var $newChild, $oldChild, $parent;
     var $removed = [], $children = $skin.childNodes;
@@ -978,7 +978,6 @@ assign(ExtagDOM, {
         $oldChild = $children[i];
         if (!$newChild) {
           var meta = newChild.$meta;
-          // var ns = newChild.ns, tag = newChild.tag, type = newChild.$type;
           if (!$oldChild || 
               meta.tag !== ExtagDOM.getTagName($oldChild) || 
               meta.ns !== ExtagDOM.getNameSpace($oldChild) || 
@@ -1002,25 +1001,11 @@ assign(ExtagDOM, {
         }
       }
     }
-
-    // m = $children.length;
-
-    // if (n < m) {
-    //   $removed = [];
-    //   for (i = m - 1; i >= n; --i) {
-    //     $existed = $children[i];
-    //     $removed.push($existed);
-    //     $skin.removeChild($existed);
-    //   }
-    // }
-
-    // return $removed;
   }
 });
 
-if (typeof Extag !== 'undefined') {
-  // eslint-disable-next-line no-undef
-  Extag.conf('view-engine', ExtagDOM);
+if (window.Extag) {
+  window.Extag.conf('view-engine', ExtagDOM);
 }
 
 export default ExtagDOM

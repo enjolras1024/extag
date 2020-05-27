@@ -133,6 +133,7 @@ function updatePropsAndEvents(node, target, scope) {
   if (newEvents) {
     // add new event handlers
     target.on(newEvents);
+    target._events = newEvents;
   }
 }
 

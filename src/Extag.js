@@ -52,8 +52,9 @@ import {
   decodeHTML } from 'src/share/functions'
 
 
-if (typeof window !== 'undefined' && window.ExtagDom) {
-  config.set('view-engine', window.ExtagDom);
+if (typeof ExtagDOM !== 'undefined') {
+  // eslint-disable-next-line no-undef
+  config.set('view-engine', ExtagDOM);
 }
 
 // export {

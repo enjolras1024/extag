@@ -40,6 +40,12 @@ var METHODS_PRESERVED = [
   'get', 'set', 'cmd', 'bind', 'assign', 'update', 'render', 'attach', 'detach', 'invalidate', 'getSkin'
 ];
 
+/**
+ * 
+ * @param {Object}    props       - component attributes and DOM properties
+ * @param {Array}     scopes      - Internal use, including the host component and iterator variable from x:for loop
+ * @param {Object}    template    - Internal use, for initializing component attributes, contents and events
+ */
 export default function Component(props, scopes, template) {
   Component.initialize(this, props, scopes, template);
 }
@@ -47,34 +53,23 @@ export default function Component(props, scopes, template) {
 defineClass({
   constructor: Component, extends: Shell, mixins: [Parent.prototype],
 
-  //mixins: [Watcher.prototype, Accessor.prototype],
-
-  // __extag_descriptors__: {
-  //   contents: {
-  //     // type: Array
-  //   }
-  // }, 
-
   statics: {
     
     __extag_component_class__: true,
 
     /**
-     * Factory method for creating a component
+     * Creating a component
      *
-     * @param {Function} ctor
-     * @param {Object} props
+     * @param {Function}  ctor        - component constructor or class
+     * @param {Object}    props       - component attributes and DOM properties
      * @returns {Component}
      */
-    create: function create(ctor, props, scopes, template) {
-      return new ctor(props, scopes, template);
+    create: function create(ctor, props) {
+      return new ctor(props);
     },
 
     /**
      * Initialize this component, using template.
-     *
-     * @param {Component} component
-     * @param {Object} props
      */
     initialize: function initialize(component, props, scopes, template) {
       var constructor = component.constructor;

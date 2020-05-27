@@ -21,6 +21,8 @@ defineClass({
   constructor: Fragment, extends: Shell, mixins: [Parent.prototype],
 
   statics: {
+    __extag_fragment_class__: true,
+
     initialize: function initialize(fragment, props, scopes, template) {
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
@@ -34,7 +36,7 @@ defineClass({
       fragment.scopes = scopes;
       
       if (scopes && template) {
-        template.compile('contents', fragment, scopes);
+        template.connect('contents', fragment, scopes);
         
       }
 
@@ -46,7 +48,7 @@ defineClass({
     }
   },
   /**
-   * Update this shell and append it to the schedule for rendering.
+   * Update this shell and insert it into the schedule for rendering.
    */
   update: function update() {
     if (this.$flag === FLAG_NORMAL) {

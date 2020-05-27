@@ -282,9 +282,10 @@ defineClass({
       if (bindings) {
         for (i = bindings.length - 1; i >= 0; --i) {
           binding = bindings[i];
-          binding.constructor.destroy(binding);
+          binding.destroy();
         }
-        delete shell._bindings;
+        bindings.length = 0;
+        shell._bindings = null;
       }
       // destroying children
       var child, children = shell._children;

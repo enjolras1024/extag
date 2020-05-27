@@ -43,27 +43,13 @@ function toClasses(classList) {
   }
 }
 
-// function driveProps(target, props, scopes) {
-//   if (props) {
-//     var key, value;
-//     for (key in props) {
-//       value = props[key];
-//       if (typeof value === 'object' && value instanceof Expression) {
-//         value.compile(key, target, scopes);
-//       } else {
-//         target.set(key, value);
-//       }
-//     }
-//   }
-// }
-
 function driveProps(target, props, scopes) {
   if (props) {
     var key, value;
     for (key in props) {
       value = props[key];
       if (typeof value === 'object' && value instanceof Expression) {
-        value.compile(key, target, scopes);
+        value.connect(key, target, scopes);
       } else {
         target.set(key, value);
       }
@@ -77,7 +63,7 @@ function driveEvents(target, events, scopes) {
     for (type in events) {
       value = events[type];
       if (typeof value === 'object' && value instanceof Expression) {
-        value.compile(type, target, scopes);
+        value.connect(type, target, scopes);
       } else if (typeof value === 'function') {
         target.on(type, value);
       }
@@ -118,7 +104,7 @@ function makeContent(node, scopes) {
     content = new Text(node);
   } else if (node instanceof Expression) { // like "hello, @{name}..."
     content = new Fragment(null, scopes, node);
-    // node.compile('contents', content, scopes);
+    // node.connect('contents', content, scopes);
   } else if (node.xif || node.xfor) {
     content = new Block(null, scopes, node);
   } else if (node.tag !== '!') {

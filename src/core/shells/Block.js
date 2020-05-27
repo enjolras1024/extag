@@ -10,7 +10,27 @@ import Component from 'src/core/shells/Component'
 import { assign, defineClass } from 'src/share/functions'
 import config from 'src/share/config'
 
+function replaceScopes(content, newScopes) {
+  var bindings = content._bindings;
+  var numScopes = newScopes.length;
+  if (bindings) {
+    for (var i = 0; i < bindings.length; ++i) {
+      var binding = bindings[i];
+      var oldScopes = binding.scopes;
+      if (oldScopes && oldScopes.length === numScopes && 
+          oldScopes[numScopes - 1] !== newScopes[numScopes - 1]) {
+        binding.replace(newScopes);
+      }
+    }
+  }
+}
 
+/**
+ * Block for x:if and x:for
+ * @param {Object} props 
+ * @param {Array} scopes 
+ * @param {Object} template 
+ */
 export default function Block(props, scopes, template) {
   Block.initialize(this, props, scopes, template);
 }
@@ -42,13 +62,13 @@ defineClass({
       if (template.xif) {
         block.mode = 1;
         expression = template.xif;
-        expression.compile('condition', block, scopes);
+        expression.connect('condition', block, scopes);
       }
 
       if (template.xfor) {
         block.mode = 2;
         expression = template.xfor[1];
-        expression.compile('iterable', block, scopes);
+        expression.connect('iterable', block, scopes);
         if (template.xkey) {
           block.keyEval = template.xkey;//.evaluator;
         }
@@ -67,10 +87,10 @@ defineClass({
     var condition = this.get('condition');
     var template = this.template;
     var scopes = this.scopes;
-    var fragment = [];
+    var contents = [];
 
     if (!condition) {
-      this.setChildren(fragment);
+      this.setChildren(contents);
       return;
     }
 
@@ -79,9 +99,9 @@ defineClass({
     if (this.mode === 1) {
       content = HTMXEngine.makeContent(template, scopes);
       if (content) {
-        fragment.push(content);
+        contents.push(content);
       }
-      this.setChildren(fragment);
+      this.setChildren(contents);
       return;
     }
 
@@ -109,18 +129,20 @@ defineClass({
         index = indices[key];
         if (index != null) {
           content = children[index];
-
         }
       }
   
       if (!content) {
         content = HTMXEngine.makeContent(template, newScopes);
         content.__key__ = key;
+      } else {
+        replaceScopes(content, newScopes);
+        // content.__key__ = key;
       }
   
-      fragment.push(content);
+      contents.push(content);
     }
 
-    this.setChildren(fragment);
+    this.setChildren(contents);
   }
 });

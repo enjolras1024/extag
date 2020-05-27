@@ -1,6 +1,7 @@
 // src/template/Expression.js
 
 import { defineClass } from 'src/share/functions'
+import Binding from 'src/core/bindings/Binding'
 
 /**
  * Expression parsed from some piece, like 'title@="title"' or '@{label}', in the component template.
@@ -18,13 +19,13 @@ export default function Expression(binding, pattern) {
 defineClass({
   constructor: Expression,
   /**
-   * Compile this expression related to the target in the scope.
-   * @param {Object} property - the target property
-   * @param {Object} target   - the target that is related to the expressions
-   * @param {Object} scope    - the scope where the target is located
-   * @param {Array}  locals   - some other local varibles
+   * Connect this expression to the target in the scopes.
+   * @param {Object} property - the target property or event
+   * @param {Object} target   - the target related to this expression
+   * @param {Object} scopes   - the scopes where this expression is located
    */
-  compile: function(property, target, scopes) {
-    return this.binding.compile(this.pattern, property, target, scopes);
+  connect: function(property, target, scopes) {
+    var binding = this.binding.create(this.pattern);
+    binding.connect(property, target, scopes);
   }
 });

@@ -1,4 +1,5 @@
 // src/core/bindings/DataBinding.js
+
 import Path from 'src/base/Path'
 import Accessor from 'src/base/Accessor'
 import Dependency from 'src/core/Dependency'
@@ -13,6 +14,17 @@ function applyConverters(converters, scopes, value) {
     value = converters[i].execute(scopes, value);
   }
   return value;
+}
+
+function resolveSource(binding, scopes, identifiers) {
+  var path = binding.path;
+  var from = identifiers.indexOf(path[0]);
+  binding.sourceProp = path[path.length - 1];
+  if (from >= 0) {
+    binding.source = Path.search(path.slice(1, path.length - 1), scopes[from], true);
+  } else {
+    binding.source = Path.search(path.slice(1, path.length - 1), scopes[0].constructor.resources, true);
+  }
 }
 
 // function isBindable(src, prop) {
@@ -33,78 +45,78 @@ defineClass({
   constructor: DataBinding,
   statics: {
     MODES: MODES,
-
-    // create: function(pattern) {
-    //   return new DataBinding(pattern);
-    // },
-
-    compile: function(pattern, property, target, scopes) {
-      return (new DataBinding(pattern)).link(property, target, scopes);
-    },
-
-    destroy: function(binding) {
-      var scopes = binding.scopes;
-
-      if (binding.mode === MODES.TWO_WAY)  {
-        if (Accessor.getAttrDesc(binding.target, binding.targetProp)) {
-          binding.target.off('changed', binding.back);
-        }
-      }
-
-      if (binding.keys && binding.keys.length) {
-        scopes[0].off('updating', binding.exec);
-      }
-
-      // Binding.remove(binding.target, binding);
-
-      Dependency.clean(binding);
+    create: function create(pattern) {
+      return new DataBinding(pattern);
     }
   },
 
-  link: function(property, target, scopes) {
+  connect: function connect(property, target, scopes) {
     this.flag = 0;
     this.scopes = scopes;
     this.target = target;
     this.targetProp = property;
 
     if (this.mode === MODES.ASSIGN) {
-      this.target.set(this.targetProp, this.eval());
+      this.target.set(this.targetProp, this.evaluate());
       return;
     }
 
-    this.exec = this.exec.bind(this);
+    this.execute = this.execute.bind(this);
     this.invalidate = this.invalidate.bind(this);
 
     if (this.mode === MODES.TWO_WAY) {
-      this.back = this.back.bind(this);
-      var path = this.path;//Path.parse(this.path);
-      var from = this.identifiers.indexOf(path[0]);
-      this.sourceProp = path[path.length - 1];
-      if (from >= 0) {
-        this.source = Path.search(path.slice(1, path.length - 1), scopes[from], true);
-      } else {
-        this.source = Path.search(path.slice(1, path.length - 1), scopes[0].constructor.resources, true);
-      }
-      
+      this.backward = this.backward.bind(this);
+      resolveSource(this, scopes, this.identifiers);
       if (Accessor.getAttrDesc(this.target, this.targetProp)) {
-        this.target.on('changed', this.back);
+        this.target.on('changed', this.backward);
       }
     }
 
     if (this.mode === MODES.ANY_WAY) {
-      this.scopes[0].on('updating', this.exec);
-      this.target.set(this.targetProp, this.eval());
+      this.scopes[0].on('updating', this.execute);
+      this.target.set(this.targetProp, this.evaluate());
     } else {
       this.flag = 1;
-      this.exec();
+      this.execute();
       if (this.keys && this.keys.length) {
-        Binding.record(target, this);
-        scopes[0].on('updating', this.exec);
+        scopes[0].on('updating', this.execute);
       }
     }
+
+    Binding.record(target, this);
   },
 
-  eval: function() {
+  replace: function replace(scopes) {
+    if (scopes.length > 1 && scopes.length === this.scopes.length) {
+      if (this.mode === MODES.TWO_WAY) {
+        resolveSource(this, scopes, this.identifiers);
+      }
+      this.scopes = scopes;
+      this.flag = 1;
+      this.execute();
+    }
+
+  },
+
+  destroy: function destroy() {
+    var scopes = this.scopes;
+
+    if (this.mode === MODES.TWO_WAY)  {
+      if (Accessor.getAttrDesc(this.target, this.targetProp)) {
+        this.target.off('changed', this.backward);
+      }
+    }
+
+    if (this.keys && this.keys.length) {
+      scopes[0].off('updating', this.execute);
+    }
+
+    // Binding.remove(binding.target, binding);
+
+    Dependency.clean(this);
+  },
+
+  evaluate: function() {
     var converters = this.converters;
     if (converters && converters.length) {
       return applyConverters(converters, this.scopes, this.evaluator.execute(this.scopes));
@@ -113,9 +125,9 @@ defineClass({
     }
   },
 
-  exec: function exec() {
+  execute: function execute() {
     if (this.mode === MODES.ANY_WAY) {
-      this.target.set(this.targetProp, this.eval());
+      this.target.set(this.targetProp, this.evaluate());
       return;
     }
     if (this.flag === 0) {
@@ -123,24 +135,24 @@ defineClass({
     }
 
     Dependency.begin(this);
-    var value = this.eval();
+    var value = this.evaluate();
     Dependency.end();
     this.target.set(this.targetProp, value);
 
     this.flag = 0;
     if (this.mode === MODES.ONE_TIME) {
-      DataBinding.destroy(this);
+      this.destroy();
     }
   },
 
-  back: function back(key) {
+  backward: function backward(key) {
     if (key === this.targetProp) {
       var value = this.target[this.targetProp];
       this.source.set(this.sourceProp, value);
     }
   },
 
-  invalidate: function(key) {
+  invalidate: function invalidate(key) {
     if (this.keys.indexOf(key) >= 0) {
       this.scopes[0].invalidate(FLAG_CHANGED);
       this.flag = 1;

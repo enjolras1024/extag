@@ -1,5 +1,6 @@
 // src/core/bindings/EventBinding.js
 
+import Binding from 'src/core/bindings/Binding'
 import { defineClass } from 'src/share/functions'
 import logger from 'src/share/logger'
 
@@ -11,17 +12,19 @@ defineClass({
   constructor: EventBinding,
 
   statics: {
-    // create: function(pattern) {
-    //   return new EventBinding(pattern);
-    // },
-
-    compile: function(pattern, type, target, scopes) {
-      (new EventBinding(pattern)).link(type, target, scopes);
+    create: function create(pattern) {
+      return new EventBinding(pattern);
     }
   },
 
-  link: function(type, target, scopes) {
-    var wrapper, pattern = this.pattern, handler = pattern.handler, evaluator = pattern.evaluator, modifiers = pattern.modifiers;
+  connect: function connect(type, target, scopes) {
+    this.type = type;
+    this.target = target;
+
+    var pattern = this.pattern;
+    var handler = pattern.handler;
+    var evaluator = pattern.evaluator;
+    var modifiers = pattern.modifiers;
 
     if (handler) {
       var func = scopes[0][handler];
@@ -29,18 +32,17 @@ defineClass({
       if (!func) {
         // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
-          logger.warn('No such handler method named ' + handler + ' in ' + scopes[0], scopes[0]);
+          logger.warn('No such handler method named `' + handler + '` in ' + scopes[0], scopes[0]);
         }
         return;
       }
 
       if (!modifiers || !modifiers.length) {
-        target.on(type, func);
+        this.handler = func;
       } else if (modifiers[0] === 'bind' && modifiers.length === 1) {
-        target.on(type, func.bind(scopes[0]));
+        this.handler = func.bind(scopes[0]);
       } else {
-        wrapper = function(event) {
-          // process(event, type, target, wrapper, modifiers);
+        this.handler = function(event) {
           processModifiers(modifiers, event);
           if (modifiers.indexOf('bind') >= 0) {
             func.apply(scopes[0], arguments);
@@ -49,27 +51,62 @@ defineClass({
           }
           
         };
-        target.on(type, wrapper, extractOptions(modifiers));
+        this.options = extractOptions(modifiers);
       }
-    } else {
+    } else if (scopes.length <= 1) {
       if (!modifiers || !modifiers.length) {
-        target.on(type, function() {
+        this.handler = function() {
           evaluator.execute(scopes);
-        });
-      } else {
-        wrapper = function(event) {
-          // process(event, type, target, wrapper, modifiers);
-          processModifiers(modifiers, event);
-          // if (event) {
-          //   evaluator.execute(scopes.concat([event]));
-          // } else {
-            evaluator.execute(scopes);
-          // }
         };
-        target.on(type, wrapper, extractOptions(modifiers));
+      } else {
+        this.handler = function(event) {
+          processModifiers(modifiers, event);
+          evaluator.execute(scopes);
+        };
+        this.options = extractOptions(modifiers);
+      }
+      
+    } else {
+      this.scopes = scopes; // the 2nd scope may be replaced later in x:for loop.
+      if (!modifiers || !modifiers.length) {
+        this.handler = (function() {
+          evaluator.execute(this.scopes);
+        }).bind(this);
+      } else {
+        this.handler = (function(event) {
+          processModifiers(modifiers, event);
+          evaluator.execute(this.scopes);
+        }).bind(this);
+        this.options = extractOptions(modifiers);
       }
     }
-    // target.on(type, wrapper);
+    if (this.handler) {
+      if (!this.options) {
+        target.on(type, this.handler);
+      } else {
+        target.on(type, this.handler, this.options);
+      }
+      Binding.record(target, this);
+    }
+  },
+
+  replace: function replace(scopes) {
+    if (this.scopes && scopes.length > 1 
+        && this.scopes.length === scopes.length) {
+      this.scopes = scopes;
+    }
+  },
+
+  destroy: function destroy() {
+    var handler = this.handler;
+    if (handler) {
+      if (!this.options) {
+        this.target.off(this.type, handler);
+      } else {
+        this.target.off(this.type, handler, this.options);
+      }
+    }
+    // Binding.remove(binding);
   }
 });
 

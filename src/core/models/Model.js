@@ -7,8 +7,7 @@ import Dependency from 'src/core/Dependency'
 import { 
   hasOwnProp, 
   defineProp, 
-  defineClass, 
-  getOwnPropDesc 
+  defineClass
 } from 'src/share/functions'
 
 function getMorePropDescriptors(model, props) {
@@ -23,7 +22,7 @@ function getMorePropDescriptors(model, props) {
 }
 
 /**
- * Model for storing data an sending property-changed event with declaration.
+ * Model for storing data and emit `changed` event with declaration.
  * It is like Component, but there is nothing to do with view, just the model.
  * @class
  * @constructor
@@ -39,50 +38,38 @@ defineClass({
   mixins: [Accessor.prototype, Watcher.prototype],
 
   statics: {
-    // create: function create(props) {
-    //   return new Model(props);
-    // },
+    create: function create(props) {
+      return new Model(props);
+    },
 
     initialize: function initialize(model, props) {
       var constructor = model.constructor;
-      // if (constructor === Model) {
-      //   // defineProp(model, '_props', {
-      //   //   value: {}, writable: false, enumerable: false, configurable: true
-      //   // });
-      //   watcher._props = {};
-      //   if (props) {
-      //     var descriptors = getMorePropDescriptors(props);
-      //     Accessor.applyAttributeDescriptors(model, descriptors, false);
-      //     model.assign(props);
-      //   }
-      // } else {
-        if (constructor !== Model && constructor.attributes) {
-          Accessor.applyAttributeDescriptors(
-            constructor.prototype, 
-            constructor.attributes
-          ); 
+      if (constructor !== Model && constructor.attributes) {
+        Accessor.applyAttributeDescriptors(
+          constructor.prototype, 
+          constructor.attributes
+        ); 
+      }
+      var defaults = Accessor.getAttributeDefaultValues(model);
+      defineProp(model, '_props', {
+        value: defaults, writable: false, enumerable: false, configurable: true
+      });
+      // eslint-disable-next-line no-undef
+      if (__ENV__ === 'development') {
+        Validator.validate0(model, props);
+      }
+      if (props) {
+        var descriptors = getMorePropDescriptors(model, props);
+        if (descriptors.length) {
+          Accessor.applyAttributeDescriptors(model, descriptors);
         }
-        var defaults = Accessor.getAttributeDefaultValues(model);
-        defineProp(model, '_props', {
-          value: defaults, writable: false, enumerable: false, configurable: true
-        });
-        // eslint-disable-next-line no-undef
-        if (__ENV__ === 'development') {
-          Validator.validate0(model, props);
-        }
-        if (props) {
-          var descriptors = getMorePropDescriptors(model, props);
-          if (descriptors.length) {
-            Accessor.applyAttributeDescriptors(model, descriptors);
-          }
-          model.assign(props);
-        }
-      // }
+        model.assign(props);
+      }
     }
   },
 
   /**
-   * Get property in _props.
+   * Get custom attribute declared in attributes.
    * @param {string} key
    */
   get: function get(key) {
@@ -99,13 +86,13 @@ defineClass({
   },
 
   /**
-   * Set custom property declared in attributes.
+   * Set custom attribute declared in attributes.
    * @param {string} key
    * @param {*} val
    */
   set: function set(key, val) {
     var desc = Accessor.getAttrDesc(this, key);
-    // usual property
+    // normal property
     if (!desc) {
       this[key] = val;
       return;

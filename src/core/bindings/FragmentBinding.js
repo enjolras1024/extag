@@ -4,7 +4,6 @@ import Cache from 'src/core/models/Cache'
 import DirtyMarker from 'src/base/DirtyMarker'
 import Binding from 'src/core/bindings/Binding'
 import Expression from 'src/core/template/Expression'
-import DataBinding from 'src/core/bindings/DataBinding'
 import { defineClass, slice } from 'src/share/functions'
 
 // var Array$join = Array.prototype.join;
@@ -15,35 +14,18 @@ export default function FragmentBinding(pattern) {
 
 defineClass({
   /**
+   * FragmentBinding is composed with strings and data-binding expressions.
    * e.g. <a href#="https://www.abc.com/@{page}">Goto @{page}</a>
    */
   constructor: FragmentBinding,
 
   statics: {
-    // create: function(pattern) {
-    //   return new FragmentBinding(pattern);
-    // },
-
-    compile: function(pattern, property, target, scopes) {
-      (new FragmentBinding(pattern)).link(property, target, scopes);
-    },
-
-    destroy: function(binding) {
-      binding.scopes[0].off('updating', binding.exec);
-
-      var bindings = binding.cache._bindings;
-
-      if (bindings) {
-        for (var i = bindings.length - 1; i >= 0; --i) {
-          DataBinding.destroy(bindings[i]);
-        }
-      }
-
-      Binding.remove(binding.target, binding);
+    create: function(pattern) {
+      return new FragmentBinding(pattern);
     }
   },
 
-  link: function(property, target, scopes) {
+  connect: function connect(property, target, scopes) {
     var i, n, piece, pattern = this.pattern;
 
     this.scopes = scopes;
@@ -55,7 +37,7 @@ defineClass({
     for (i = 0, n = pattern.length; i < n; ++i) {
       piece = pattern[i];
       if (piece instanceof Expression) {
-        piece.compile(i, cache, scopes);
+        piece.connect(i, cache, scopes);
       } else {
         cache.set(i, piece);
       } 
@@ -63,16 +45,40 @@ defineClass({
 
     cache.set('length', n);
 
+    this.execute();
+
+    this.execute = this.execute.bind(this);
+
+    scopes[0].on('updating', this.execute);
+
     Binding.record(target, this);
-
-    this.exec();
-
-    this.exec = this.exec.bind(this);
-
-    scopes[0].on('updating', this.exec);
   },
 
-  exec: function() {
+  replace: function replace(scopes) {
+    var bindings = this.cache._bindings;
+    if (bindings) {
+      for (var i = 0; i < bindings.length; ++i) {
+        bindings[i].replace(scopes);
+      }
+    }
+  },
+
+  destroy: function destroy() {
+    this.scopes[0].off('updating', this.execute);
+
+    var bindings = this.cache._bindings;
+
+    if (bindings) {
+      for (var i = bindings.length - 1; i >= 0; --i) {
+        bindings[i].destroy();
+      }
+      bindings.length = 0;
+    }
+    
+    // Binding.remove(this.target, binding);
+  },
+
+  execute: function execute() {
     var cache = this.cache;
 
     if (!cache.hasDirty()) { return; }

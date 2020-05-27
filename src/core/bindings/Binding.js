@@ -11,20 +11,20 @@ function Binding(scope, target, property, collect, reflect) {
 
   if (typeof collect === 'function') {
     this.invalidate = this.invalidate.bind(this);
-    this.exec = this.exec.bind(this);
+    this.execute = this.execute.bind(this);
     this.collect = collect;
     this.flag = 1;
-    this.exec();
+    this.execute();
     
     if (this.keys && this.keys.length) {
       Binding.record(target, this);
-      this.scope.on('updating', this.exec);
+      this.scope.on('updating', this.execute);
     }
 
     if (typeof reflect === 'function') {
       this.reflect = reflect;
-      this.back = this.back.bind(this);
-      target.on('changed', this.back);
+      this.backward = this.backward.bind(this);
+      target.on('changed', this.backward);
     }
   }
 }
@@ -75,11 +75,11 @@ defineClass({
       var target = binding.target, scope = binding.scope;
 
       if (typeof binding.reflect === 'function') {
-        target.off('changed', binding.back);
+        target.off('changed', binding.backward);
       }
       
       if (typeof binding.collect === 'function' && binding.keys) {
-        scope.off('updating', binding.exec);
+        scope.off('updating', binding.execute);
       }
 
       Dependency.clean(binding);
@@ -88,7 +88,23 @@ defineClass({
     }
   },
 
-  exec: function() {
+  destroy: function() {
+    var target = this.target, scope = this.scope;
+
+    if (typeof this.reflect === 'function') {
+      target.off('changed', this.backward);
+    }
+    
+    if (typeof this.collect === 'function' && this.keys) {
+      scope.off('updating', this.execute);
+    }
+
+    Dependency.clean(this);
+
+    // Binding.remove(scope, binding);
+  },
+
+  execute: function() {
     if (this.flag === 0) {
       return;
     }
@@ -99,7 +115,7 @@ defineClass({
     this.flag = 0;
   },
 
-  back: function(key) {
+  backward: function(key) {
     if (key === this.property) {
       this.reflect.call(this.scope, this.target[this.property]);
     }
