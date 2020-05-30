@@ -9,9 +9,11 @@ import Block from 'src/core/shells/Block'
 import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
+import DataBinding from 'src/core/bindings/DataBinding'
 import { WHITE_SPACES_REGEXP } from 'src/share/constants'
 import { assign } from 'src/share/functions'
 import config from 'src/share/config'
+
 
 function toStyle(cssText, viewEngine) {
   if (!viewEngine || typeof cssText !== 'string') {
@@ -98,24 +100,25 @@ function makeContents(children, scopes) {
 
 
 function makeContent(node, scopes) {
-  var tag = node.tag, type, content;
+  var tag = node.tag, ctor, content;
 
   if (typeof node === 'string') {
     content = new Text(node);
-  } else if (node instanceof Expression) { // like "hello, @{name}..."
-    content = new Fragment(null, scopes, node);
-    // node.connect('contents', content, scopes);
+  } else if (node instanceof Expression) { // like "hello, @{name}..." or "@{{drawSelect()}}"
+    if (node.binding === DataBinding && node.pattern.target === 'frag') {
+      content = new Fragment(null, scopes, node);
+    } else {
+      content = new Text('');
+      node.connect('data', content, scopes);
+    }
   } else if (node.xif || node.xfor) {
     content = new Block(null, scopes, node);
   } else if (node.tag !== '!') {
-    type = node.type;
-    if (type) {
-      content = new type(null, scopes, node);
+    ctor = node.type;
+    if (ctor) {
+      content = new ctor(null, scopes, node);
     } else {
-      // if (node.ns == null) {
-      //   node.ns = node.ns;
-      // }
-      content = new Element(node.ns ? node.ns + ':' + tag : tag, null, scopes, node);
+      content = new Element(node.ns ? node.ns + ':' + tag : tag);
       if (node.events) {
         driveEvents(content, node.events, scopes);
       }

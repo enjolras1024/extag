@@ -256,12 +256,11 @@ function reflow(scope, target, nodes) {
     nodes = target;
     target = scope;
   } 
-  // console.log(nodes)
-  if (target instanceof Component && target !== scope) {
-    updateChildrenOrContents({contents: flatten(nodes)}, target, scope);
-  } else {
+  // if (target instanceof Component && target !== scope) {
+  //   updateChildrenOrContents({contents: flatten(nodes)}, target, scope);
+  // } else {
     updateChildrenOrContents({children: flatten(nodes)}, target, scope);
-  }
+  // }
 }
 
 var JSXEngine = {

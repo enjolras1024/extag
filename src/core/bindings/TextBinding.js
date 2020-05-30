@@ -1,32 +1,38 @@
-// src/core/bindings/FragmentBinding.js
+// src/core/bindings/TextBinding.js
 
 import Cache from 'src/core/models/Cache'
 import DirtyMarker from 'src/base/DirtyMarker'
 import Binding from 'src/core/bindings/Binding'
+import DataBinding from 'src/core/bindings/DataBinding'
 import Expression from 'src/core/template/Expression'
 import { defineClass, slice } from 'src/share/functions'
 
-// var Array$join = Array.prototype.join;
-
-export default function FragmentBinding(pattern) {
-  this.pattern = pattern;
+export default function TextBinding(pattern) {
+  var pieces = this.pieces = [];
+  for (var i = 0; i < pattern.length; ++i) {
+    if (typeof pattern[i] === 'object') {
+      pieces.push(new Expression(DataBinding, pattern[i]));
+    } else {
+      pieces.push(pattern[i]);
+    }
+  }
 }
 
 defineClass({
   /**
-   * FragmentBinding is composed with strings and data-binding expressions.
+   * TextBinding is composed of strings and data-binding expressions.
    * e.g. <a href#="https://www.abc.com/@{page}">Goto @{page}</a>
    */
-  constructor: FragmentBinding,
+  constructor: TextBinding,
 
   statics: {
     create: function(pattern) {
-      return new FragmentBinding(pattern);
+      return new TextBinding(pattern);
     }
   },
 
   connect: function connect(property, target, scopes) {
-    var i, n, piece, pattern = this.pattern;
+    var i, n, piece, pieces = this.pieces;
 
     this.scopes = scopes;
     this.target = target;
@@ -34,8 +40,8 @@ defineClass({
 
     var cache = this.cache = new Cache(scopes[0]);
 
-    for (i = 0, n = pattern.length; i < n; ++i) {
-      piece = pattern[i];
+    for (i = 0, n = pieces.length; i < n; ++i) {
+      piece = pieces[i];
       if (piece instanceof Expression) {
         piece.connect(i, cache, scopes);
       } else {
@@ -85,11 +91,7 @@ defineClass({
 
     var value = slice.call(cache._props, 0);
 
-    if (this.pattern.asStr) {
-      value = value.join('');
-    }
-
-    this.target.set(this.property, value);
+    this.target.set(this.property, value.join(''));
 
     DirtyMarker.clean(cache);
   }

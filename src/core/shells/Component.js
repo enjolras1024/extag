@@ -3,6 +3,7 @@
 import Parent from 'src/base/Parent'
 import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
+import DirtyMarker from 'src/base/DirtyMarker'
 import Schedule from 'src/core/Schedule'
 import Dependency from 'src/core/Dependency'
 import Shell from 'src/core/shells/Shell'
@@ -402,11 +403,9 @@ defineClass({
         }
       }).bind(this));
     }
-    // if (this.onRendered && this.$skin) {
-    //   Schedule.pushCallbackQueue((function() {
-    //     this.onRendered(this.$skin);
-    //   }).bind(this));
-    // }
+    this.__attrs && DirtyMarker.clean(this.__attrs);
+    this.__style && DirtyMarker.clean(this.__style);
+    this.__classes && DirtyMarker.clean(this.__classes);
     return true;
   },
 

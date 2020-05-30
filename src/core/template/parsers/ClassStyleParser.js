@@ -1,9 +1,8 @@
 // src/core/template/parsers/ClassStyleParser.js
 
-import PrimaryLiteralParser from 'src/core/template/parsers/PrimaryLiteralParser'
-import FragmentBindingParser from 'src/core/template/parsers/FragmentBindingParser'
-import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
-import FragmentBinding from 'src/core/bindings/FragmentBinding'
+import PrimitiveLiteralParser from 'src/core/template/parsers/PrimitiveLiteralParser'
+import TextBindingParser from 'src/core/template/parsers/TextBindingParser'
+import TextBinding from 'src/core/bindings/TextBinding'
 import DataBinding from 'src/core/bindings/DataBinding'
 import Expression from 'src/core/template/Expression'
 import { 
@@ -12,17 +11,17 @@ import {
 } from 'src/share/functions'
 import { 
   BINDING_FORMAT,
-  BINDING_BRACKETS,
-  BINDING_OPERATORS, 
+  // BINDING_BRACKETS,
+  // BINDING_OPERATORS, 
   WHITE_SPACES_REGEXP
 } from 'src/share/constants'
 
 var STYLE_DELIMITER = /;/g;
 var CSS_NAME_REGEXP = /^[a-z0-9\-_]+$/i;
 // var SINGLE_BINDING_REGEXP = /^@\{[^@]*\}$/;
-var SINGLE_BINDING_REGEXP = new RegExp(
-  '^' + BINDING_OPERATORS.DATA +'\\' + BINDING_BRACKETS[0] + '[^' + BINDING_OPERATORS.DATA + ']*\\' + BINDING_BRACKETS[1] + '$'
-);
+// var SINGLE_BINDING_REGEXP = new RegExp(
+//   '^' + BINDING_OPERATORS.DATA +'\\' + BINDING_BRACKETS[0] + '[^' + BINDING_OPERATORS.DATA + ']*\\' + BINDING_BRACKETS[1] + '$'
+// );
 
 export default {
   /**
@@ -68,16 +67,16 @@ export default {
       }
 
       try {
-        if (!FragmentBindingParser.like(expr)) {
-          group[name] = camelCase ? expr : PrimaryLiteralParser.tryParse(expr);
+        if (!TextBindingParser.like(expr)) {
+          group[name] = camelCase ? expr : PrimitiveLiteralParser.tryParse(expr);
           continue;
         }
-        if (SINGLE_BINDING_REGEXP.test(expr)) {
-          result = DataBindingParser.parse(expr.slice(2, expr.length-1), prototype, identifiers);
-          group[name] = new Expression(DataBinding, result);
-          continue;
-        }
-        result = FragmentBindingParser.parse(expr, prototype, identifiers);
+        // if (SINGLE_BINDING_REGEXP.test(expr)) {
+        //   result = DataBindingParser.parse(expr.slice(2, expr.length-1), prototype, identifiers);
+        //   group[name] = new Expression(DataBinding, result);
+        //   continue;
+        // }
+        result = TextBindingParser.parse(expr, prototype, identifiers);
       } catch (e) {
         // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
@@ -88,11 +87,10 @@ export default {
         throw e;
       }
       if (result) {
-        if (result.length === 1 && (result[0] instanceof Expression)) {
-          group[name] = result[0]
+        if (result.length === 1) {
+          group[name] = new Expression(DataBinding, result[0]);
         } else if (camelCase) {
-          result.asStr = true;
-          group[name] = new Expression(FragmentBinding, result);
+          group[name] = new Expression(TextBinding, result);
         } else {
           throwError('Illegal x:class expression.', {
             code: 1001,
@@ -100,7 +98,7 @@ export default {
           });
         }
       } else {
-        group[name] = camelCase ? expr : PrimaryLiteralParser.tryParse(expr);
+        group[name] = camelCase ? expr : PrimitiveLiteralParser.tryParse(expr);
       }
     }
 

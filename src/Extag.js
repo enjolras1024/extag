@@ -24,7 +24,7 @@ import Component from 'src/core/shells/Component'
 import Binding from 'src/core/bindings/Binding'
 import DataBinding from 'src/core/bindings/DataBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
-import FragmentBinding from 'src/core/bindings/FragmentBinding'
+import TextBinding from 'src/core/bindings/TextBinding'
 
 import Evaluator from 'src/core/template/Evaluator'
 import Expression from 'src/core/template/Expression'
@@ -35,7 +35,7 @@ import HTMXParser from 'src/core/template/parsers/HTMXParser'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
 import EventBindingParser from 'src/core/template/parsers/EventBindingParser'
-import FragmentBindingParser from 'src/core/template/parsers/FragmentBindingParser'
+import TextBindingParser from 'src/core/template/parsers/TextBindingParser'
 
 import config from 'src/share/config'
 import { 

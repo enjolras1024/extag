@@ -4,12 +4,10 @@ import Output from 'src/core/shells/Output'
 import Fragment from 'src/core/shells/Fragment'
 import Evaluator from 'src/core/template/Evaluator'
 import Expression from 'src/core/template/Expression'
-// import EvaluatorParser from "src/core/template/parsers/EvaluatorParser";
 import DataBindingParser from "src/core/template/parsers/DataBindingParser";
 import EventBindingParser from "src/core/template/parsers/EventBindingParser";
 import DataBinding from 'src/core/bindings/DataBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
-import FragmentBinding  from 'src/core/bindings/FragmentBinding'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
 import { 
@@ -125,20 +123,9 @@ function parseConverters(converters, prototype, identifiers) {
 }
 
 function parseJsxDataExpr(args, node, prototype) {
-  var pattern, type = typeof args[0];
+  var target, type = typeof args[0];
   if (args.length === 1) {
-    if (Array.isArray(args[0])) {
-      pattern = args[0];
-      for (var i = 0; i < pattern.length; ++i) {
-        if (typeof pattern[i] === 'object' && pattern[i].__extag_expr__) {
-          pattern[i] = parseJsxDataExpr(pattern[i].args, node, prototype);
-          if (pattern[i] && pattern[i].binding === FragmentBinding) {
-            throwError('FragmentBinding expression are not allowed in child nodes.');
-          }
-        }
-      }
-      return new Expression(FragmentBinding, pattern);
-    } else if (type === 'string') {
+    if (type === 'string') {
       return new Expression(DataBinding, 
         DataBindingParser.parse(args[0], prototype, node.identifiers));
     } else if (type === 'function') {
@@ -151,6 +138,10 @@ function parseJsxDataExpr(args, node, prototype) {
     }
     
   } else {
+    if (args[0] === '{' && args[args.length - 1] === '}') {
+      args = args.slice(1, 2);
+      target = 'frag';
+    }
     if (args[0] === '@') {
       return new Expression(DataBinding, {
         mode: 2,
@@ -176,10 +167,11 @@ function parseJsxDataExpr(args, node, prototype) {
       }
       return new Expression(DataBinding, {
         mode: mode,
+        target: target,
         evaluator: parseEvaluater(args[1], prototype, node.identifiers),
         converters: args.length === 2 ? null : 
                     parseConverters(args.slice(2), prototype, node.identifiers)
-      })
+      });
     }
   }
 }
@@ -216,34 +208,19 @@ function parseJsxChildren(node, prototype) {
   if (!children || !children.length) {
     return;
   }
-  var i, j = -1, args, child, hasExpr;
+  var i, args, child;
   for (i = children.length - 1; i >= 0; --i) {
     child = children[i];
     if (typeof child === 'object') {
       if (child.__extag_node__) {
-        if (hasExpr) {
-          // combine strings and expressions to an fragment-bingding expression
-          hasExpr = false;
-          args = [children.slice(i + 1, j + 1)];
-          children.splice(i + 1, j - i, parseJsxDataExpr(args, node, prototype))
-        }
-        j = -1;
         child.identifiers = node.identifiers;
         parseJsxNode(child, prototype);
         parseJsxChildren(child, prototype);
         continue;
-      }
-      if (child.__extag_expr__) {
-        hasExpr = true;
+      } else if (child.__extag_expr__) {
+        children[i] = parseJsxDataExpr(args, node, prototype);
       }
     }
-    if (j < 0) { 
-      j = i;
-    }
-  }
-  if (hasExpr && j > -1) {
-    args = [children.slice(0, j + 1)];
-    children.splice(0, j + 1, parseJsxDataExpr(args, node, prototype));
   }
 }
 
@@ -348,10 +325,8 @@ function node(type, options, children) {
   }
 
   if (children) {
-    if (arguments.length > 3) {
+    if (arguments.length > 3 || Array.isArray(children)) {
       children = slice.call(arguments, 2);
-    }
-    if (Array.isArray(children)) {
       children = flatten(children);
     } else {
       children = [children];

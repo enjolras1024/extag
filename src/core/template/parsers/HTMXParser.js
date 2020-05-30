@@ -2,7 +2,6 @@
 
 import config from 'src/share/config'
 import { 
-  VIEW_ENGINE, 
   BINDING_FORMAT,
   CAPITAL_REGEXP,
   BINDING_OPERATORS,
@@ -21,14 +20,14 @@ import Output from 'src/core/shells/Output'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
+import TextBinding  from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
-import FragmentBinding  from 'src/core/bindings/FragmentBinding'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 import ClassStyleParser from 'src/core/template/parsers/ClassStyleParser'
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
+import TextBindingParser from 'src/core/template/parsers/TextBindingParser'
 import EventBindingParser from 'src/core/template/parsers/EventBindingParser'
-import FragmentBindingParser from 'src/core/template/parsers/FragmentBindingParser'
-import PrimaryLiteralParser from 'src/core/template/parsers/PrimaryLiteralParser'
+import PrimitiveLiteralParser from 'src/core/template/parsers/PrimitiveLiteralParser'
 
 var FOR_LOOP_REGEXP = /^([_$\w]+)\s+of\s+(.+)$/;
 var LETTER_REGEXP = /[a-zA-Z]/;
@@ -80,6 +79,11 @@ var SELF_CLOSING_TAGS = {
   wbr: true
 };
 
+var SPECIAL_CASES = {
+  'class': 'classes',
+  'inner-html': 'innerHTML'
+};
+
 var DIRECTIVES = {
   'x:ns': true,
   'x:if': true,
@@ -100,7 +104,10 @@ function getGroup(node, name) {
 }
 
 function getPropName(attrName) {
-  return attrName !== 'class' ? toCamelCase(attrName) : 'classes';
+  if (attrName in SPECIAL_CASES) {
+    return SPECIAL_CASES[attrName];
+  }
+  return toCamelCase(attrName);
 }
 
 function isDirective(name) {
@@ -193,7 +200,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
 
   if (attrValue == null) {
     if (attrName.indexOf(':') < 0) {
-      key = toCamelCase(attrName);
+      key = getPropName(attrName);
       getGroup(node, 'props')[key] = true;
       return;
     }
@@ -220,7 +227,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
       case BINDING_OPERATORS.DATA: // last char is '@'
         attrName = attrName.slice(0, -1);
         key = index < 0 ? getPropName(attrName) : attrName;
-        result = PrimaryLiteralParser.tryParse(attrValue);
+        result = PrimitiveLiteralParser.tryParse(attrValue);
         if (result != null) {
           group[key] = result;
         } else {
@@ -232,7 +239,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         attrName = attrName.slice(0, -1);
         key = index < 0 ? getPropName(attrName) : attrName;
         try {
-          result = FragmentBindingParser.parse(attrValue, prototype, identifiers);
+          result = TextBindingParser.parse(attrValue, prototype, identifiers);
         } catch (e) {
           // eslint-disable-next-line no-undef
           if (__ENV__ === 'development') {
@@ -243,8 +250,11 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
           throw e;
         }
         if (result) {
-          result.asStr = true;
-          group[key] = new Expression(FragmentBinding, result);
+          if (result.length === 1) {
+            group[key] = new Expression(DataBinding, result[0]);
+          } else {
+            group[key] = new Expression(TextBinding, result);
+          }
         } else {
           group[key] = attrValue;
         }
@@ -363,17 +373,20 @@ function parseAttributes(htmx, from, node, prototype) {
   }
 }
 
-var BLANK_LINES_REGEXP = /^\s*\n\s*$/;
+// var LF_IN_BLANK_REGEXP = /\s*\n\s*/;
+var LF_IN_BLANK_START = /^\s*\n\s*/;
+var LF_IN_BLANK_END = /\s*\n\s*$/;
 
 function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
   var children = parent.children || [], result;
   var text = htmx.slice(start, stop);
-  if (BLANK_LINES_REGEXP.test(text)) {
+  text = text.replace(LF_IN_BLANK_START, '').replace(LF_IN_BLANK_END, '');
+  if (!text) {
     return;
   }
-  if (FragmentBindingParser.like(text)) {
+  if (TextBindingParser.like(text)) {
     try {
-      result = FragmentBindingParser.parse(text, prototype, identifiers);
+      result = TextBindingParser.parse(text, prototype, identifiers);
     } catch (e) {
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
@@ -387,7 +400,31 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
       throw e;
     }
     if (result) {
-      children.push(new Expression(FragmentBinding, result));
+      if (result.length === 1 && typeof result[0] === 'object') {
+        children.push(new Expression(DataBinding, result[0]));
+      } else {
+        var i = -1, j = 0 , n = result.length, frag;
+        for (; j <= n; ++j) {
+          var pattern = result[j];
+          if (typeof pattern === 'object' && pattern.target === 'frag') {
+            children.push(new Expression(DataBinding, pattern));
+            frag = true;
+          }
+          if (frag || j === n) {
+            if (j > i) {
+              if (j - i > 1) {
+                children.push(new Expression(TextBinding, result.slice(i, j)));
+              } else  {
+                children.push(new Expression(DataBinding, result[i]));
+              }
+            }
+            frag = false;
+            i = -1;
+          } else if (i < 0) {
+            i = j;
+          }
+        }
+      }
     } else {
       children.push(decodeHTML(text));
     }

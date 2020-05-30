@@ -285,7 +285,6 @@ defineClass({
           binding.destroy();
         }
         bindings.length = 0;
-        shell._bindings = null;
       }
       // destroying children
       var child, children = shell._children;
