@@ -1,7 +1,6 @@
 // src/core/bindings/Binding.js
 
 import  { defineProp, defineClass } from 'src/share/functions'
-import { FLAG_CHANGED } from 'src/share/constants'
 import Dependency from 'src/core/Dependency'
 
 function Binding(scope, target, property, collect, reflect) {
@@ -110,7 +109,7 @@ defineClass({
 
   invalidate: function(key) {
     if (this.keys.indexOf(key) >= 0) {
-      this.scope.invalidate(FLAG_CHANGED);
+      this.scope.invalidate();
       this.flag = 1;
     }
   }

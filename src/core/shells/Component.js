@@ -8,7 +8,6 @@ import Schedule from 'src/core/Schedule'
 import Dependency from 'src/core/Dependency'
 import Shell from 'src/core/shells/Shell'
 import Element from 'src/core/shells/Element'
-import Fragment from 'src/core/shells/Fragment'
 import Binding from 'src/core/bindings/Binding'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
@@ -20,18 +19,16 @@ import {
 import {
   TYPE_FRAG,
   TYPE_ELEM,
-  FLAG_NORMAL,
-  FLAG_CHANGED,
   FLAG_CHANGED_CACHE,
   // FLAG_CHANGED_COMMANDS,
   FLAG_CHANGED_CHILDREN,
-  FLAG_WAITING_TO_RENDER
+  FLAG_WAITING_UPDATING,
+  FLAG_WAITING_RENDERING,
+  FLAG_SHOULD_RENDER_TO_VIEW
 } from 'src/share/constants'
 import captureError from 'src/core/captureError'
 
 var shellProto = Shell.prototype;
-var elementPropto = Element.prototype;
-var fragmentProto = Fragment.prototype;
 
 var KEYS_PRESERVED = [
   '$meta', '$flag', '$skin', 
@@ -236,7 +233,7 @@ defineClass({
       old = props[key];
       if (old !== val) {
         props[key] = val;
-        this.invalidate(FLAG_CHANGED);
+        this.invalidate();
         this.emit('changed', key, val);
       }
     } else if (desc.set) { // else, `get`, `set` and `get` again, then check if the property value is changed.
@@ -244,7 +241,7 @@ defineClass({
       desc.set.call(this, val, props);
       val = desc.get.call(this, props);
       if (old !== val) {
-        this.invalidate(FLAG_CHANGED);
+        this.invalidate();
         this.emit('changed', key, val);
       }
     }
@@ -316,9 +313,12 @@ defineClass({
    * Update this shell and append it to the schedule for rendering.
    */
   update: function update() {
-    if (this.$flag === FLAG_NORMAL) {
-      return false;
+    if ((this.$flag & FLAG_WAITING_UPDATING) === 0) {
+      return;
     }
+    // if (this.$flag === FLAG_NORMAL) {
+    //   return false;
+    // }
 
     try {
       this.emit('updating');
@@ -335,23 +335,24 @@ defineClass({
       this._parent.invalidate(FLAG_CHANGED_CHILDREN);
     }
 
-    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
       // If this type is 0, we should ask its parent to render parent's children,
       // since its children are belong to its parent actually.
       if (type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
         // this._parent.invalidate(2); 
         var parent = this.getParent(true);
         parent.$flag |= FLAG_CHANGED_CHILDREN;
-        if ((parent.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-          parent.$flag |= FLAG_WAITING_TO_RENDER;
+        if ((parent.$flag & FLAG_WAITING_RENDERING) === 0) {
+          parent.$flag |= FLAG_WAITING_RENDERING;
           Schedule.insertRenderQueue(parent);
         }
       }
-      this.$flag |= FLAG_WAITING_TO_RENDER;
+      this.$flag |= FLAG_WAITING_RENDERING;
       Schedule.insertRenderQueue(this);
       // this.render();
     }
 
+    // this.$flag ^= FLAG_WAITING_UPDATING;
     // this.render();
     
     return true;
@@ -361,14 +362,39 @@ defineClass({
    * Render the dirty parts of this shell to the attached skin 
    */
   render: function render() {
-    if (this.$flag === FLAG_NORMAL) {
-      return false;
+    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+      return;
     }
-    if (this.$meta.type !== 0) {
-      elementPropto.render.call(this);
-    } else {
-      fragmentProto.render.call(this);
+    // if (this.$flag === FLAG_NORMAL) {
+    //   return false;
+    // }
+    // if (this.$meta.type !== 0) {
+    //   elementPropto.render.call(this);
+    // } else {
+    //   fragmentProto.render.call(this);
+    // }
+    if (this.$skin && this.$meta.type !== 0 && (this.$flag & FLAG_SHOULD_RENDER_TO_VIEW)) {
+      var viewEngine = Shell.getViewEngine(this);
+
+      viewEngine.renderShell(this.$skin, this);
+      this._children && Parent.clean(this);
+      DirtyMarker.clean(this);
+  
+      this._attrs && DirtyMarker.clean(this._attrs);
+      this._style && DirtyMarker.clean(this._style);
+      this._classes && DirtyMarker.clean(this._classes);
+
+      this.__attrs && DirtyMarker.clean(this.__attrs);
+      this.__style && DirtyMarker.clean(this.__style);
+      this.__classes && DirtyMarker.clean(this.__classes);
+
+      if (this._commands) {
+        this._commands = null;
+      }
+
+      this.$flag &= ~FLAG_SHOULD_RENDER_TO_VIEW;
     }
+
     var actions = this._actions;
     if (actions && actions.rendered && this.$skin) {
       Schedule.pushCallbackQueue((function() {
@@ -379,9 +405,9 @@ defineClass({
         }
       }).bind(this));
     }
-    this.__attrs && DirtyMarker.clean(this.__attrs);
-    this.__style && DirtyMarker.clean(this.__style);
-    this.__classes && DirtyMarker.clean(this.__classes);
+
+    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
+    
     return true;
   },
 

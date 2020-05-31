@@ -5,7 +5,6 @@ import Accessor from 'src/base/Accessor'
 import Dependency from 'src/core/Dependency'
 import Binding from 'src/core/bindings/Binding'
 import { defineClass } from 'src/share/functions'
-import { FLAG_CHANGED } from 'src/share/constants'
 
 var MODES = { ASSIGN: -1, ONE_TIME: 0, ONE_WAY: 1, TWO_WAY: 2, ANY_WAY: 3 };
 
@@ -154,7 +153,7 @@ defineClass({
 
   invalidate: function invalidate(key) {
     if (this.keys.indexOf(key) >= 0) {
-      this.scopes[0].invalidate(FLAG_CHANGED);
+      this.scopes[0].invalidate();
       this.flag = 1;
     }
   }

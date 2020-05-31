@@ -17,11 +17,10 @@ import {
   FLAG_CAPTURE, 
   FLAG_PASSIVE,
   FLAG_NORMAL, 
-  // FLAG_CHANGED, 
   FLAG_CHANGED_CACHE, 
   FLAG_CHANGED_COMMANDS,
-  FLAG_CHANGED_CHILDREN,
-  FLAG_WAITING_TO_RENDER
+  FLAG_WAITING_UPDATING,
+  FLAG_WAITING_RENDERING
 } from 'src/share/constants'
 
 var shellGuid = 0;
@@ -42,10 +41,11 @@ defineClass({
    * @param {number} flag - 1: changed things, 2: changed children, 4: changed commands
    */
   invalidate: function invalidate(flag) {
-    if (this.$flag === FLAG_NORMAL) {
+    if ((this.$flag & FLAG_WAITING_UPDATING) === 0) {
+      this.$flag |= FLAG_WAITING_UPDATING;
       Schedule.insertUpdateQueue(this);
     }
-    if ((this.$flag & flag) === 0) {
+    if (flag && (this.$flag & flag) === 0) {
       this.$flag |= flag;
     }
   },
@@ -104,9 +104,8 @@ defineClass({
       }
     }
 
-    // this.invalidate(FLAG_CHANGED_CHILDREN);
-    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-      this.$flag |= FLAG_WAITING_TO_RENDER;
+    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+      this.$flag |= FLAG_WAITING_RENDERING;
       Schedule.insertRenderQueue(this);
     }
 

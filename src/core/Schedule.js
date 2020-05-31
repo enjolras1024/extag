@@ -96,7 +96,6 @@ function flushQueues() {
       ++updateQueueCursor;
     }
   
-    
     updateQueue.length = 0;
     updateQueueCursor = 0;
     updating = false;
@@ -112,7 +111,7 @@ function flushQueues() {
       shell.render();
       ++renderQueueCursor;
     }
-  
+
     renderQueue.length = 0;
     renderQueueCursor = 0;
     rendering = false;
@@ -136,7 +135,7 @@ function flushQueues() {
 }
 
 function binarySearch(id) {
-  var i = 0, j = updateQueue.length - 1;
+  var i = updateQueueCursor + 1, j = updateQueue.length - 1;
   while (i <= j) {
     var m = (i + j) >> 1;
     var guid = updateQueue[m].$meta.guid;
@@ -163,7 +162,9 @@ function binarySearch(id) {
 function insertUpdateQueue(shell) {
   var i, n = updateQueue.length, id = shell.$meta.guid;
 
-  if (n > updateQueueCursor && id > updateQueue[n-1].$meta.guid) {
+  if (n > 0 && id > updateQueue[n-1].$meta.guid) {
+    i = n;
+  } else if (n === 0) {
     i = n;
   } else {
     var index = binarySearch(id);
@@ -210,6 +211,11 @@ function insertUpdateQueue(shell) {
       renderQueue.push(shell);
     } else {
       renderQueue.splice(i, 0, shell);
+    }
+
+    if (!waiting) {
+      waiting = true;
+      setImmediate(flushQueues);
     }
   }
 

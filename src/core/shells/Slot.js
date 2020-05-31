@@ -3,7 +3,6 @@
 // import Shell from 'src/core/shells/Shell'
 import Component from 'src/core/shells/Component'
 import HTMXEngine from 'src/core/template/HTMXEngine'
-import { FLAG_CHANGED } from 'src/share/constants'
 import { assign, defineClass } from 'src/share/functions'
 
 export default function Slot(props, scopes, template) {
@@ -31,12 +30,12 @@ defineClass({
 
       slot.scopes = scopes;
 
-      slot.invalidate(FLAG_CHANGED);
+      slot.invalidate();
       slot.on('updating', slot.onUpdating.bind(slot));
       // slot.invalidate = slot.invalidate.bind(slot);
       scopes[0].on('changed', function(key) {
         if (key !== 'contents') { return; }
-        slot.invalidate(FLAG_CHANGED);
+        slot.invalidate();
       });
     },
     template: '<x:frag></x:frag>'

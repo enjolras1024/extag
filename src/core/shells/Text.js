@@ -2,14 +2,15 @@
 import Parent from 'src/base/Parent'
 import Schedule from 'src/core/Schedule'
 import Shell from 'src/core/shells/Shell'
-import DirtyMarker from 'src/base/DirtyMarker'
 import { defineClass } from 'src/share/functions'
 import {
   TYPE_TEXT,
-  FLAG_NORMAL,
-  FLAG_CHANGED,
-  FLAG_WAITING_TO_RENDER
+  FLAG_CHANGED_CACHE,
+  FLAG_WAITING_UPDATING,
+  FLAG_WAITING_RENDERING,
+  FLAG_SHOULD_RENDER_TO_VIEW
 } from 'src/share/constants'
+
 
 
 export default function Text(data) {
@@ -55,7 +56,7 @@ defineClass({
     if (key === 'data' && value !== this._data) {
       this._data = value;
       this._dirty = true;
-      this.invalidate(FLAG_CHANGED);
+      this.invalidate(FLAG_CHANGED_CACHE);
     }
   },
 
@@ -64,13 +65,17 @@ defineClass({
    * @param {boolean} force - If true, update this shell anyway.
    */
   update: function update() {
-    if (this.$flag === FLAG_NORMAL) {
+    if ((this.$flag & FLAG_WAITING_UPDATING) === 0) {
       return false;
     }
-    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-      this.$flag |= FLAG_WAITING_TO_RENDER;
+    // if (this.$flag === FLAG_NORMAL) {
+    //   return false;
+    // }
+    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+      this.$flag |= FLAG_WAITING_RENDERING;
       Schedule.insertRenderQueue(this);
     }
+    // this.$flag ^= FLAG_WAITING_UPDATING;
     // this.render();
     return true;
   },
@@ -79,23 +84,24 @@ defineClass({
    * Render the dirty parts of this shell to the attached skin 
    */
   render: function render() {
-    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-    //   this.$flag = FLAG_NORMAL;
-    //   return false;
-    // }
-    if (this.$flag === FLAG_NORMAL) {
+    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
       return false;
     }
+    // if (this.$flag === FLAG_NORMAL) {
+    //   return false;
+    // }
 
-    if (this.$skin) {
+    if (this.$skin && (this.$flag & FLAG_SHOULD_RENDER_TO_VIEW)) {
       var viewEngine = Shell.getViewEngine(this);
       // if (!viewEngine) { return this; }
       viewEngine.renderShell(this.$skin, this);
       // DirtyMarker.clean(this);
+      this.$flag &= ~FLAG_SHOULD_RENDER_TO_VIEW;
       this._dirty = false;
     }
 
-    this.$flag = FLAG_NORMAL;
+    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
+    // this.$flag = FLAG_NORMAL;
 
     return true;
   },
@@ -109,6 +115,6 @@ defineClass({
   toString: function() {
     var data = this.get('data');
     data = data == null ? '' : data.toString();
-    return '"' + (data.length < 24 ? data : (data.slice(0, 21) + '...'))  + '"(' + this.$guid +')';
+    return '"' + (data.length < 24 ? data : (data.slice(0, 21) + '...'))  + '"(' + this.$meta.guid +')';
   }
 });

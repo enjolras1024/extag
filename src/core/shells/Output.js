@@ -5,7 +5,6 @@ import Cache from 'src/core/models/Cache'
 import DirtyMarker from 'src/base/DirtyMarker'
 import Component from 'src/core/shells/Component'
 import { assign, defineClass } from 'src/share/functions'
-import { FLAG_CHANGED } from 'src/share/constants'
 import config from 'src/share/config'
 /**
  * Output dynamic component, <x:output x:type="Button"/>, just like <input type="button">
@@ -39,7 +38,7 @@ defineClass({
 
         output.scopes = scopes;
         
-        output.invalidate(FLAG_CHANGED);
+        output.invalidate();
         output.on('updating', output.onUpdating.bind(output));
       }
     },

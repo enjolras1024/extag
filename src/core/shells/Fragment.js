@@ -5,10 +5,9 @@ import Schedule from 'src/core/Schedule'
 import Shell from 'src/core/shells/Shell'
 import { defineClass } from 'src/share/functions'
 import {
-  FLAG_NORMAL,
-  // FLAG_CHANGED,
   FLAG_CHANGED_CHILDREN,
-  FLAG_WAITING_TO_RENDER
+  FLAG_WAITING_UPDATING,
+  FLAG_WAITING_RENDERING
 } from 'src/share/constants'
 
 import config from 'src/share/config'
@@ -51,9 +50,12 @@ defineClass({
    * Update this shell and insert it into the schedule for rendering.
    */
   update: function update() {
-    if (this.$flag === FLAG_NORMAL) {
-      return false;
+    if ((this.$flag & FLAG_WAITING_UPDATING) == 0) {
+      return;
     }
+    // if (this.$flag === FLAG_NORMAL) {
+    //   return false;
+    // }
 
     // if (this.onUpdating) {
     //   this.onUpdating();
@@ -70,33 +72,34 @@ defineClass({
       JSXEngine.reflow(this.scopes[0], this, contents);
     }
 
-    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
+    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
       if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
         var parent = this.getParent(true);
         parent.$flag |= FLAG_CHANGED_CHILDREN;
-        if ((parent.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-          parent.$flag |= FLAG_WAITING_TO_RENDER;
+        if ((parent.$flag & FLAG_WAITING_RENDERING) === 0) {
+          parent.$flag |= FLAG_WAITING_RENDERING;
           Schedule.insertRenderQueue(parent);
         }
       }
-      this.$flag |= FLAG_WAITING_TO_RENDER;
+      this.$flag |= FLAG_WAITING_RENDERING;
       Schedule.insertRenderQueue(this);
     }
-    
+
+    // this.$flag ^= FLAG_WAITING_UPDATING;
     // this.render();
     
     return true;
   },
 
   render: function render() {
-    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-    //   this.$flag = FLAG_NORMAL;
-    //   return false;
-    // }
-    if (this.$flag === FLAG_NORMAL) {
+    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
       return false;
     }
-    this.$flag = FLAG_NORMAL;
+    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
+    // if (this.$flag === FLAG_NORMAL) {
+    //   return false;
+    // }
+    // this.$flag = FLAG_NORMAL;
     return true;
   }
 });

@@ -8,16 +8,11 @@ import DirtyMarker from 'src/base/DirtyMarker'
 import { defineProp, defineClass } from 'src/share/functions'
 import {
   TYPE_ELEM,
-  FLAG_NORMAL,
-  FLAG_CHANGED_CACHE,
-  FLAG_CHANGED_CHILDREN,
-  FLAG_CHANGED_COMMANDS,
-  FLAG_WAITING_TO_RENDER
+  FLAG_WAITING_UPDATING,
+  FLAG_WAITING_RENDERING,
+  FLAG_SHOULD_RENDER_TO_VIEW
 } from 'src/share/constants'
 import config from 'src/share/config'
-
-var FLAG_SHOULD_RENDER = (FLAG_CHANGED_CACHE | FLAG_CHANGED_CHILDREN | FLAG_CHANGED_COMMANDS);
-
 
 // function buildCache(element) {
 //   var cache = new Cache(element);
@@ -130,16 +125,21 @@ defineClass({
    * Update this element and insert it into the schedule for rendering.
    */
   update: function update() {
-    if (this.$flag === FLAG_NORMAL) {
+    if ((this.$flag & FLAG_WAITING_UPDATING) === 0) {
       return false;
     }
+    // if (this.$flag === FLAG_NORMAL) {
+    //   return false;
+    // }
 
     config.HTMXEngine.transferProperties(this);
 
-    if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-      this.$flag |= FLAG_WAITING_TO_RENDER;
+    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+      this.$flag |= FLAG_WAITING_RENDERING;
       Schedule.insertRenderQueue(this);
     }
+
+    // this.$flag ^= FLAG_WAITING_UPDATING;
     // this.render();
     return true;
   },
@@ -148,16 +148,15 @@ defineClass({
    * Render the dirty parts of this element to the attached skin 
    */
   render: function render() {
-    // if ((this.$flag & FLAG_WAITING_TO_RENDER) === 0) {
-    //   this.$flag = FLAG_NORMAL;
-    //   return false;
-    // }
-
-    if (this.$flag === FLAG_NORMAL) {
+    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
       return false;
     }
 
-    if (this.$skin && (this.$flag & FLAG_SHOULD_RENDER)) {
+    // if (this.$flag === FLAG_NORMAL) {
+    //   return false;
+    // }
+
+    if (this.$skin && (this.$flag & FLAG_SHOULD_RENDER_TO_VIEW)) {
       var viewEngine = Shell.getViewEngine(this);
 
       viewEngine.renderShell(this.$skin, this);
@@ -171,9 +170,12 @@ defineClass({
       if (this._commands) {
         this._commands = null;
       }
+
+      this.$flag &= ~FLAG_SHOULD_RENDER_TO_VIEW;
     }
 
-    this.$flag = FLAG_NORMAL;
+    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
+
     return true;
   }
 });
