@@ -100,74 +100,6 @@ function isNativeFunc(func) {
   return typeof func === 'function' && /native code/.test(func.toString())
 }
 
-var setImmediate = (function(Promise, setImmediate, MutationObserver, requestAnimationFrame) {
-  // setTimeout(function(){console.log('4')})
-  // requestAnimationFrame(function() {console.log('3')})
-  // thenFunc(function(){console.log('2')})
-  // var p = Promise.resolve();
-  // p.then(function() {console.log('1')});
-  
-
-  if (Promise) {
-    var p = Promise.resolve();
-    return function(callback) {
-      if (typeof callback === 'function') {
-        p.then(callback);
-      }
-    }
-  }
-
-  if (MutationObserver) {
-    var cbs = [];
-    var flag = 0;
-    var text = document.createTextNode('');
-    var observer = new MutationObserver(function() {
-      var callback;
-
-      while ((callback = cbs.pop())) {
-        callback();
-      }
-
-      flag = flag ? 0 : 1;
-    });
-
-    observer.observe(text, {
-      characterData: true
-    });
-
-    return function(callback) {
-      if (typeof callback === 'function') {
-        cbs.unshift(callback);
-        text.data = flag;
-      }
-    }
-  }
-
-  if (requestAnimationFrame) {
-    return function(callback) {
-      if (typeof callback === 'function') {
-        var fired = false;
-        var cb = function() {
-          if (fired) return;
-          fired = true;
-          callback();
-        }
-        requestAnimationFrame(cb);
-        // `requestAnimationFrame` does not run when the tab is in the background.
-        // We use `setTimeout` as a fallback.
-        setTimeout(cb);
-      }
-    }
-  }
-
-  return setImmediate ? setImmediate : setTimeout;
-})(
-  typeof Promise !== 'undefined' && isNativeFunc(Promise) ? Promise : null,
-  typeof setImmediate !== 'undefined' && isNativeFunc(setImmediate) ? setImmediate : null,
-  typeof MutationObserver !== 'undefined' && isNativeFunc(MutationObserver) ? MutationObserver : null,
-  typeof requestAnimationFrame !== 'undefined' && isNativeFunc(requestAnimationFrame) ? requestAnimationFrame : null
-);
-
 function defineProps(target, sources) {
   var i, n, source;
   for (i = 0, n = sources.length; i < n; ++i) {
@@ -265,59 +197,28 @@ function defineClass(proto) {
 // }
 
 var HTML_CHAR_ENTITY_REGEXP = /&[\w#]{2,6};/;
-var encodeHTML, decodeHTML;
 
-try {
-  var div = document.createElement('div');
-  encodeHTML = function(text) {
-    // div.innerText = text;
-    div.textContent = text;
-    return div.innerHTML;
+function encodeHTML(text) {
+  if (!/[<>&"\u00a0]/.test(text)) {
+    return text;
   }
-  decodeHTML = function(html) {
-    if (!HTML_CHAR_ENTITY_REGEXP.test(html)) {
-      return html;
-    }
-    div.innerHTML = html;
-    return div.textContent;// || div.innerText || '';
+  return  text.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/\u00a0/g, '&nbsp;');
+}
+
+function decodeHTML(html) {
+  if (!HTML_CHAR_ENTITY_REGEXP.test(html)) {
+    return html;
   }
-} catch(e) {
-  encodeHTML = function(text) {
-    // var entities = config.get('html_char_entities');
-    // if (entities) {
-    //   for (var i = 0; i < entities.length; ++i) {
-    //     var entity = entities[i];
-    //     text = text.replace(new RegExp('\\' + entity.char, 'g'), entity.code);
-    //   }
-    // }
-    if (!/[<>&"\u00a0]/.test(text)) {
-      return text;
-    }
-    return  text.replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/\u00a0/g, '&nbsp;');
-  }
-  decodeHTML = function(html) {
-    if (!HTML_CHAR_ENTITY_REGEXP.test(html)) {
-      return html;
-    }
-  
-    // var entities = config.get('html_char_entities');
-    // if (entities) {
-    //   for (var i = 0; i < entities.length; ++i) {
-    //     var entity = entities[i];
-    //     html = html.replace(new RegExp('\\' + entity.code, 'g'), entity.char);
-    //   }
-    // }
-  
-    return  html.replace(/&nbsp;/g, String.fromCharCode(160))
-                .replace(/&quot;/g, '"')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&amp;/g, '&');
-  }
+
+  return  html.replace(/&nbsp;/g, String.fromCharCode(160))
+              .replace(/&quot;/g, '"')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&amp;/g, '&');
 }
 
 var WHITE_SPACES_REGEXG = /\s+/;
@@ -379,6 +280,6 @@ export {
   defineProp, 
   defineClass, 
   toCamelCase,
-  setImmediate,
+  isNativeFunc,
   getOwnPropDesc
 };

@@ -33,20 +33,7 @@ defineClass({
   constructor: Binding,
 
   statics: {
-    // assign: function assign(target, key, val, binding) {
-    //   if (binding.locked) {
-    //     return;
-    //   }
-    //   binding.locked = true;
-    //   if (target.set) {
-    //     target.set(key, val);
-    //   } else {
-    //     target[key] = val;
-    //   }
-    //   binding.locked = false;
-    // },
-
-    record: function record(target, binding) {
+     record: function record(target, binding) {
       var _bindings = target._bindings;
 
       if (_bindings) {

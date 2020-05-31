@@ -4,27 +4,27 @@ import DirtyMarker from 'src/base/DirtyMarker'
 import Validator from 'src/base/Validator'
 import Cache from 'src/core/models/Cache'
 import Text from 'src/core/shells/Text'
-import Shell from 'src/core/shells/Shell'
 import Block from 'src/core/shells/Block'
 import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
 import { WHITE_SPACES_REGEXP } from 'src/share/constants'
-import { assign } from 'src/share/functions'
+import { assign, toCamelCase } from 'src/share/functions'
 import config from 'src/share/config'
 
 
-function toStyle(cssText, viewEngine) {
-  if (!viewEngine || typeof cssText !== 'string') {
-    return;
-  }
-  var style = {},  pieces = cssText.split(';'), piece, index, i;
+function toStyle(cssText) {
+  var style = {};
+  var pieces = cssText.split(';');
+  var piece, index, i, name, value;
   for (i = pieces.length - 1; i >= 0; --i) {
     piece = pieces[i];
     index = piece.indexOf(':');
     if (index > 0) {
-      style[viewEngine.toCamelCase(piece.slice(0, index).trim())] = piece.slice(index + 1).trim();
+      name = piece.slice(0, index).trim();
+      value =  piece.slice(index + 1).trim();
+      style[toCamelCase(name)] = value;
     }
   }
   return style;
@@ -238,18 +238,16 @@ function transferProperties(shell) {
   }
 
   var _props = shell._props;
-  var style, classes, viewEngine;
+  var type, style, classes;
     
   if (shell.hasDirty('style')) {
     DirtyMarker.clean(shell, 'style');
     style = _props.style;
-    if (typeof style === 'object') {
+    type = typeof style;
+    if (type === 'object') {
       shell.style.reset(style);
-    } else if (typeof style === 'string') {
-      viewEngine = Shell.getViewEngine(shell);
-      if (viewEngine) {
-        style = toStyle(style, viewEngine);
-      }
+    } else if (type === 'string') {
+      style = toStyle(style);
       shell.style.reset(style);
     }
   }
@@ -280,13 +278,11 @@ function transferProperties(shell) {
     }
     DirtyMarker.clean(__props, 'style');
     style = __props.get('style');
-    if (typeof style === 'object') {
+    type = typeof style;
+    if (type === 'object') {
       __style.reset(style);
-    } else if (typeof style === 'string') {
-      viewEngine = Shell.getViewEngine(shell);
-      if (viewEngine) {
-        style = toStyle(style, viewEngine);
-      }
+    } else if (type === 'string') {
+      style = toStyle(style);
       __style.reset(style);
     }
   }

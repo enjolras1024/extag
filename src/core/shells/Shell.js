@@ -7,19 +7,24 @@ import Schedule from 'src/core/Schedule'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
 import { VIEW_ENGINE } from 'src/share/constants'
-import { slice, hasOwnProp, defineClass } from 'src/share/functions'
+import { 
+  slice, 
+  hasOwnProp, 
+  defineClass 
+} from 'src/share/functions'
 import {
+  TYPE_TEXT,
   FLAG_CAPTURE, 
   FLAG_PASSIVE,
   FLAG_NORMAL, 
   // FLAG_CHANGED, 
   FLAG_CHANGED_CACHE, 
   FLAG_CHANGED_COMMANDS,
-  // FLAG_CHANGED_CHILDREN,
+  FLAG_CHANGED_CHILDREN,
   FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
 
-var shellGuid = 0;//Number.MIN_VALUE;
+var shellGuid = 0;
 
 var defaultViewEngine = null;
 
@@ -32,26 +37,6 @@ defineClass({
 
   mixins: [Watcher.prototype, Accessor.prototype, DirtyMarker.prototype],
 
-  // /**
-  //  * 
-  //  */
-  // config: function config(name, value) {
-  //   var arg = arguments[0];
-  //   if (typeof arg === 'object') {
-  //     if (!this._config) {
-  //       defineProp(this, '_config', {value: {}});
-  //     }
-  //     assign(this._config, arg);
-  //   } else if (arguments.length > 1) {
-  //     if (!this._config) {
-  //       defineProp(this, '_config', {value: {}});
-  //     }
-  //     this._config[name] = value;
-  //   } else if (this._config) {
-  //     return this._config[name];
-  //   }
-  // },
-
   /**
    * invalidate this shell and insert it to the schedule, so this shell can be updated and rendered in async mode.
    * @param {number} flag - 1: changed things, 2: changed children, 4: changed commands
@@ -63,7 +48,6 @@ defineClass({
     if ((this.$flag & flag) === 0) {
       this.$flag |= flag;
     }
-    // return this;
   },
 
   update: function() {
@@ -131,18 +115,12 @@ defineClass({
 
   /**
    * detach the skin from this shell, and destroy itself firstly.
-   * You can config('prevent-detach', true) to prevent detaching and destroying.
-   * @param {boolean} force - if not, detaching can be prevented, so this shell and the skin can be reused.
    */
-  detach: function detach(force) {
-    // if (!force && this._props && hasOwnProp.call(this._props, 'preventDetach')) {
-    //   return false;
-    // }
-
+  detach: function detach() {
     var parent = this._parent;
-    if (parent && !parent._parent/* && parent.$body === this*/) {
+    if (parent && !parent._parent) {
       this._parent = null;
-      parent.detach(force);
+      parent.detach();
       return;
     }
 
@@ -155,9 +133,9 @@ defineClass({
     return true;
   },
 
-  getSkin: function getSkin() {
-    return this.$skin;
-  },
+  // getSkin: function getSkin() {
+  //   return this.$skin;
+  // },
 
   // getParent: function getParent(actual) {
   //   return actual ? Parent.findParent(this) : this._parent;
@@ -187,16 +165,12 @@ defineClass({
    */
   set: function set(key, val) {
     var props = this._props;
-  
     var old = props[key];
-  
     if (old !== val) {
       props[key] = val;
       this.invalidate(FLAG_CHANGED_CACHE);
       DirtyMarker.check(this, key, val, old);
     }
-
-    // return this;
   },
 
   /**
@@ -223,16 +197,10 @@ defineClass({
      * @param {string} ns     - namespace, defalut '', can be 'svg', 'math'...
      */
     initialize: function initialize(shell, type, tag, ns) {
-      if (!hasOwnProp.call(shell, '_props')) {
-        // defineProp(shell, '_props', {
-        //   value: {}, writable: false, enumerable: false, configurable: true
-        // });
+      if (type !== TYPE_TEXT && !hasOwnProp.call(shell, '_props')) {
         shell._props = {};
       }
 
-      // defineProp(shell, '$flag', {
-      //   value: FLAG_NORMAL, writable: true, enumerable: false, configurable: true
-      // });
       shell.$flag = FLAG_NORMAL;
       
       shell.$meta = {
@@ -247,24 +215,6 @@ defineClass({
           shell.$meta = Object.freeze(shell.$meta);
         }
       }
-
-      // defineProp(shell, '$guid', {
-      //   value: shellGuid++, writable: false, enumerable: false, configurable: true
-      // }); // should be less than Number.MAX_SAFE_INTEGER
-
-      // defineProp(shell, '$type', {
-      //   value: type, writable: false, enumerable: false, configurable: true
-      // });
-
-      // defineProp(shell, 'tag', {
-      //   value: tag, writable: false, enumerable: false, configurable: true
-      // });
-
-      // defineProp(shell, 'ns', {
-      //   value: ns, writable: true, enumerable: false, configurable: true
-      // });
-
-      // defineMembersOf(shell);
     },
 
     /**
@@ -293,26 +243,16 @@ defineClass({
           child = children[i];
           child._parent = null;
           child.detach();
-          // child.constructor.destroy(child);
         }
         shell._children.length = 0;
       }
-      
-      
       // detaching
       var $skin = shell.$skin;
       if ($skin) {
         var viewEngine = Shell.getViewEngine(shell);
         viewEngine.detachShell($skin, shell);
         shell.$skin = null;
-        // if (shell.onDetached) {
-        //   shell.onDetached($skin);
-        // }
       }
-      // destroyed
-      // if (shell.onDestroyed) {
-      //   shell.onDestroyed();
-      // }
     },
 
     getViewEngine: function(shell) {
@@ -333,7 +273,7 @@ defineClass({
      * @param {string} handler  - event handler
      */
     addEventListener: function addEventListener(shell, action, handler) {
-      var $skin = shell.getSkin();
+      var $skin = shell.$skin;
       var viewEngine = Shell.getViewEngine(shell);
       if (!$skin || !viewEngine) { return; }
       if (viewEngine.mayDispatchEvent($skin, action.type)) {
@@ -361,7 +301,7 @@ defineClass({
      */
     removeEventListener: function removeEventListener(shell, action, handler) {
       var i, flag, listener;
-      var $skin = shell.getSkin();
+      var $skin = shell.$skin;
       var listeners = action.listeners;
       var viewEngine = Shell.getViewEngine(shell);
       if (!$skin || !listeners || !viewEngine) { return; }

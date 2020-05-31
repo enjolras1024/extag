@@ -1,5 +1,6 @@
 // src/view/ExtagDOM.js
 import { 
+  TYPE_TEXT,
   TYPE_ELEM,
   TYPE_FRAG,
   FLAG_CHANGED_CHILDREN,
@@ -709,20 +710,24 @@ assign(ExtagDOM, {
       throw new Error('the shell is not attached to this $skin');
     }
 
-    var props, dirty;
-
-    props = shell._props;
-    dirty = shell._dirty;
-    if (shell.__props) {
-      props = mergeProps(props, shell.__props._props);
-      dirty = mergeDirty(dirty, shell.__props._dirty);
-    }
-    if (props && dirty) {
-      ExtagDOM.renderProps($skin, props, dirty);
-    }
-
     var meta = shell.$meta;
-    if (meta.tag) {
+    if (meta.type === TYPE_TEXT) {
+      if (shell._dirty) {
+        $skin.nodeValue = shell._data;
+      }
+    } else if (meta.type === TYPE_ELEM) {
+      var props, dirty;
+
+      props = shell._props;
+      dirty = shell._dirty;
+      if (shell.__props) {
+        props = mergeProps(props, shell.__props._props);
+        dirty = mergeDirty(dirty, shell.__props._dirty);
+      }
+      if (props && dirty) {
+        ExtagDOM.renderProps($skin, props, dirty);
+      }
+
       var shadowMode = props.shadowMode;
 
       var attrs = shell._attrs;
@@ -730,52 +735,50 @@ assign(ExtagDOM, {
       var classes = shell._classes;
       var children = shell._children;
 
-      if (meta.type === TYPE_ELEM) {
-        if (attrs) {
-          props = attrs._props;
-          dirty = attrs._dirty;
-        } else {
-          props = null;
-          dirty = null;
-        }
-        if (shell.__attrs) {
-          props = mergeProps(props, shell.__attrs && shell.__attrs._props);
-          dirty = mergeDirty(dirty, shell.__attrs && shell.__attrs._dirty);
-        }
-        if (props && dirty) {
-          ExtagDOM.renderAttrs($skin, props, dirty);
-        }
-        
-        if (style) {
-          props = style._props;
-          dirty = style._dirty;
-        } else {
-          props = null;
-          dirty = null;
-        }
-        if (shell.__style) {
-          props = mergeProps(props, shell.__style._props);
-          dirty = mergeDirty(dirty, shell.__style._dirty);
-        }
-        if (props && dirty) {
-          ExtagDOM.renderStyle($skin, props, dirty);
-        }
+      if (attrs) {
+        props = attrs._props;
+        dirty = attrs._dirty;
+      } else {
+        props = null;
+        dirty = null;
+      }
+      if (shell.__attrs) {
+        props = mergeProps(props, shell.__attrs && shell.__attrs._props);
+        dirty = mergeDirty(dirty, shell.__attrs && shell.__attrs._dirty);
+      }
+      if (props && dirty) {
+        ExtagDOM.renderAttrs($skin, props, dirty);
+      }
+      
+      if (style) {
+        props = style._props;
+        dirty = style._dirty;
+      } else {
+        props = null;
+        dirty = null;
+      }
+      if (shell.__style) {
+        props = mergeProps(props, shell.__style._props);
+        dirty = mergeDirty(dirty, shell.__style._dirty);
+      }
+      if (props && dirty) {
+        ExtagDOM.renderStyle($skin, props, dirty);
+      }
 
-        if (classes) {
-          props = classes._props;
-          dirty = classes._dirty;
-        } else {
-          props = null;
-          dirty = null;
-        }
-        if (shell.__classes) {
-          props = mergeProps(props, shell.__classes._props);
-          dirty = mergeDirty(dirty, shell.__classes._dirty);
-        }
-        if (props && dirty) {
-          ExtagDOM.renderClasses($skin, props, dirty);
-        }
-      }          
+      if (classes) {
+        props = classes._props;
+        dirty = classes._dirty;
+      } else {
+        props = null;
+        dirty = null;
+      }
+      if (shell.__classes) {
+        props = mergeProps(props, shell.__classes._props);
+        dirty = mergeDirty(dirty, shell.__classes._dirty);
+      }
+      if (props && dirty) {
+        ExtagDOM.renderClasses($skin, props, dirty);
+      }        
       
       if (children && (shell.$flag & FLAG_CHANGED_CHILDREN)) {
         // var $removed;

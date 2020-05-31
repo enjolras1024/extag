@@ -47,7 +47,6 @@ import {
   toClasses,
   defineProp, 
   defineClass, 
-  setImmediate, 
   encodeHTML, 
   decodeHTML } from 'src/share/functions'
 
@@ -92,12 +91,12 @@ export default {
   //@test assign: assign, 
   //@test defineProp: defineProp, 
   defineClass: defineClass, 
-  //@test setImmediate: setImmediate,
   //@test slice: slice,
   //@test flatten: flatten,
   //@test toClasses: toClasses,
   //@test encodeHTML: encodeHTML,
   //@test decodeHTML: decodeHTML,
+  setImmediate: Schedule.setImmediate,
 
   // base
   //@test Accessor: Accessor,

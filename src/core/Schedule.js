@@ -1,8 +1,68 @@
 /* eslint-disable no-unused-vars */
 // src/core/Schedule.js
 
-import { setImmediate } from 'src/share/functions'
+import { isNativeFunc } from 'src/share/functions'
 import logger from 'src/share/logger';
+
+var setImmediate = (function(Promise, MutationObserver, requestAnimationFrame) {
+  if (Promise) {
+    var p = Promise.resolve();
+    return function(callback) {
+      if (typeof callback === 'function') {
+        p.then(callback);
+      }
+    }
+  }
+
+  if (MutationObserver) {
+    var cbs = [];
+    var flag = 0;
+    var text = document.createTextNode('');
+    var observer = new MutationObserver(function() {
+      var callback;
+
+      while ((callback = cbs.pop())) {
+        callback();
+      }
+
+      flag = flag ? 0 : 1;
+    });
+
+    observer.observe(text, {
+      characterData: true
+    });
+
+    return function(callback) {
+      if (typeof callback === 'function') {
+        cbs.unshift(callback);
+        text.data = flag;
+      }
+    }
+  }
+
+  if (requestAnimationFrame) {
+    return function(callback) {
+      if (typeof callback === 'function') {
+        var fired = false;
+        var cb = function() {
+          if (fired) return;
+          fired = true;
+          callback();
+        }
+        requestAnimationFrame(cb);
+        // `requestAnimationFrame` does not run when the tab is in the background.
+        // We use `setTimeout` as a fallback.
+        setTimeout(cb);
+      }
+    }
+  }
+
+  return setTimeout;
+})(
+  typeof Promise !== 'undefined' && isNativeFunc(Promise) ? Promise : null,
+  typeof MutationObserver !== 'undefined' && isNativeFunc(MutationObserver) ? MutationObserver : null,
+  typeof requestAnimationFrame !== 'undefined' && isNativeFunc(requestAnimationFrame) ? requestAnimationFrame : null
+);
 
 var updateQueue = []; 
 var renderQueue = [];
@@ -32,11 +92,7 @@ function flushQueues() {
       //   throw new Error('too much things to update');
       // }
       shell = updateQueue[updateQueueCursor];
-      // try {
-        shell.update();
-      // } catch (e) { 
-      //   logger.error(e);
-      // }
+      shell.update();
       ++updateQueueCursor;
     }
   
@@ -53,11 +109,7 @@ function flushQueues() {
       //   throw new Error('too much things to update');
       // }
       shell = renderQueue[renderQueueCursor];
-      // try {
-        shell.render();
-      // } catch (e) {
-      //   logger.error(e);
-      // }
+      shell.render();
       ++renderQueueCursor;
     }
   
@@ -66,11 +118,7 @@ function flushQueues() {
     rendering = false;
   
     for (i = callbackQueue.length - 1; i >= 0; --i) {
-      // try {
         callbackQueue[i]();
-      // } catch (e) {
-      //   logger.error(e);
-      // }
     }
 
     callbackQueue.length = 0;
@@ -125,24 +173,6 @@ function insertUpdateQueue(shell) {
       return;
     }
   }
-  // if (!updating) {
-    // i = n - 1;
-    // while (i > updateQueueCursor && id < updateQueue[i].$guid) {
-    //   --i;
-    // }
-    // ++i;
-  // } else { // the method `invalidate` maybe called when updating
-  //   i = updateQueueCursor + 1;
-  //   // if (id < updateQueue[updateQueueCursor].$guid) {
-  //   //   if (__ENV__ === 'development') {
-  //   //     logger.warn('Do not change properties or emit event to parent component on updating.');
-  //   //   }
-  //   //   throw new Error(shell.toString() + ' should not update after some child component has updated.');
-  //   // }
-  //   while (i < n && id >= updateQueue[i].$guid) {
-  //     ++i;
-  //   }
-  // }
 
   if (i === n) {
     updateQueue.push(shell);
@@ -153,7 +183,6 @@ function insertUpdateQueue(shell) {
   if (!waiting) {
     waiting = true;
     setImmediate(flushQueues);
-    // console.log('##########');
   }
 }
 
@@ -194,6 +223,7 @@ function pushCallbackQueue(callback) {
 }
 
 export default {
+  setImmediate: setImmediate,
   insertUpdateQueue: insertUpdateQueue,
   insertRenderQueue: insertRenderQueue,
   pushCallbackQueue: pushCallbackQueue

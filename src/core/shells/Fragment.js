@@ -61,7 +61,12 @@ defineClass({
 
     if (this.scopes && this.hasDirty('contents')) {
       var JSXEngine = config.JSXEngine;
-      var contents = this._props.contents || [];
+      var contents = this._props.contents;
+      if (!contents) {
+        contents = [];
+      } else if (!Array.isArray(contents)) {
+        contents= [contents];
+      }
       JSXEngine.reflow(this.scopes[0], this, contents);
     }
 

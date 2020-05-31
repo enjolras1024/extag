@@ -7,6 +7,7 @@ import { defineClass } from 'src/share/functions'
 import {
   TYPE_TEXT,
   FLAG_NORMAL,
+  FLAG_CHANGED,
   FLAG_WAITING_TO_RENDER
 } from 'src/share/constants'
 
@@ -21,7 +22,7 @@ defineClass({
   statics: {
     /**
      * Create a text.
-     * @param {string} data - as text content
+     * @param {string} data - as text data
      */
     create: function(data) {
       return new Text(data);
@@ -41,6 +42,20 @@ defineClass({
       }
       Shell.initialize(text, TYPE_TEXT, '', '');
       text.set('data', data || '');
+    }
+  },
+
+  get: function(key) {
+    if (key === 'data') {
+      return this._data;
+    }
+  },
+
+  set: function(key, value) {
+    if (key === 'data' && value !== this._data) {
+      this._data = value;
+      this._dirty = true;
+      this.invalidate(FLAG_CHANGED);
     }
   },
 
@@ -76,7 +91,8 @@ defineClass({
       var viewEngine = Shell.getViewEngine(this);
       // if (!viewEngine) { return this; }
       viewEngine.renderShell(this.$skin, this);
-      DirtyMarker.clean(this);
+      // DirtyMarker.clean(this);
+      this._dirty = false;
     }
 
     this.$flag = FLAG_NORMAL;
@@ -87,7 +103,7 @@ defineClass({
   getParent: Parent.prototype.getParent,
 
   /**
-   * return text content snapshot and its guid.
+   * return text data snapshot and its guid.
    * @override
    */
   toString: function() {

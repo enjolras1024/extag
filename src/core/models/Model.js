@@ -5,20 +5,29 @@ import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
 import Dependency from 'src/core/Dependency'
 import { 
+  getOwnPropDesc,
   hasOwnProp, 
   defineProp, 
   defineClass
 } from 'src/share/functions'
 
-function getMorePropDescriptors(model, props) {
-  var descriptors = [];
-  for (var key in props) {
-    if (!Accessor.getAttrDesc(model, key)
-        && hasOwnProp.call(props, key)) {
-          descriptors.push(key);
+function assignProps(model, props) {
+  var key, desc;
+  for (key in props) {
+    if (hasOwnProp.call(props, key)) {
+      if (Accessor.getAttrDesc(model, key)) {
+        model.set(key, props[key]);
+      } else {
+        desc = getOwnPropDesc(props, key);
+        if (!desc.get && !desc.set) {
+          Accessor.defineGetterSetter(model, key);
+          model.set(key, desc.value);
+        } else {
+          defineProp(model, key, desc);
+        }
+      }
     }
   }
-  return descriptors;
 }
 
 /**
@@ -43,73 +52,58 @@ defineClass({
     },
 
     initialize: function initialize(model, props) {
-      var constructor = model.constructor;
+      var constructor = model.constructor, defaults;
       if (constructor !== Model && constructor.attributes) {
         Accessor.applyAttributeDescriptors(
           constructor.prototype, 
           constructor.attributes
         ); 
-      }
-      var defaults = Accessor.getAttributeDefaultValues(model);
-      defineProp(model, '_props', {
-        value: defaults, writable: false, enumerable: false, configurable: true
-      });
-      // eslint-disable-next-line no-undef
-      if (__ENV__ === 'development') {
-        Validator.validate0(model, props);
+        defaults = Accessor.getAttributeDefaultValues(model);
+        defineProp(model, '_props', {
+          value: defaults, writable: false, enumerable: false, configurable: true
+        });
+        // eslint-disable-next-line no-undef
+        if (__ENV__ === 'development') {
+          Validator.validate0(model, props);
+        }
+      } else {
+        defineProp(model, '_props', {
+          value: {}, writable: false, enumerable: false, configurable: true
+        });
       }
       if (props) {
-        var descriptors = getMorePropDescriptors(model, props);
-        if (descriptors.length) {
-          Accessor.applyAttributeDescriptors(model, descriptors);
-        }
-        model.assign(props);
+        assignProps(model, props);
       }
     }
   },
 
   /**
-   * Get custom attribute declared in attributes.
+   * Get custom attribute
    * @param {string} key
    */
   get: function get(key) {
+    Dependency.add(this, key);
     var desc = Accessor.getAttrDesc(this, key);
-    if (desc/* && desc.bindable*/) {
-      // if (Dependency.binding()) {
-        Dependency.add(this, key);
-      // }
-      return !desc.get ? 
+    return !desc || !desc.get ? 
                 this._props[key] : 
                   desc.get.call(this, this._props);
-    }
-    return this[key];
   },
 
   /**
-   * Set custom attribute declared in attributes.
+   * Set custom attribute
    * @param {string} key
    * @param {*} val
    */
   set: function set(key, val) {
     var desc = Accessor.getAttrDesc(this, key);
-    // normal property
-    if (!desc) {
-      this[key] = val;
-      return;
-    }
     // validation in development 
     // eslint-disable-next-line no-undef
     if (__ENV__ === 'development') {
       Validator.validate(this, key, val, true);
     }
-    // // Unbindable custom prpoerty
-    // if (!desc.bindable) {
-    //   this[key] = val;
-    //   return;
-    // }
     // Custom attribute in _props
     var props = this._props, old;
-    if (!desc.get) { // usually, no custom `get` and `set`, checking if the property value is changed firstly.
+    if (!desc || !desc.get) { // usually, no custom `get` and `set`, checking if the property value is changed firstly.
       old = props[key];
       if (old !== val) {
         props[key] = val;

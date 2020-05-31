@@ -32,13 +32,17 @@ import captureError from 'src/core/captureError'
 var shellProto = Shell.prototype;
 var elementPropto = Element.prototype;
 var fragmentProto = Fragment.prototype;
-// var emptyDesc = {};
-var KEYS_PRESERVED = ['$meta', '$flag'];
+
+var KEYS_PRESERVED = [
+  '$meta', '$flag', '$skin', 
+  'attrs', 'style', 'classes',
+  '_dirty', '_props', '_attrs', '_style', '_classes'
+];
 var METHODS_PRESERVED = [
   'on', 'off', 'emit',
   'appendChild', 'insertChild', 'removeChild', 'replaceChild', 
   'getParent', 'getChildren', 'setChildren', 'getContents', 'setContents',
-  'get', 'set', 'cmd', 'bind', 'assign', 'update', 'render', 'attach', 'detach', 'invalidate', 'getSkin'
+  'get', 'set', 'cmd', 'bind', 'assign', 'update', 'render', 'attach', 'detach', 'invalidate'
 ];
 
 /**
@@ -102,37 +106,39 @@ defineClass({
         }
       }
 
-          // TODO: check attributes
-      // 1. initialize attribute descriptors once and only once.
+      // apply attribute descriptors once and only once.
       // if (!prototype.hasOwnProperty('__extag_descriptors__')) {
         Accessor.applyAttributeDescriptors(prototype, attributes); //
       // }
 
-      // 2. initialize the attribute default values
+      // get attribute default values
       var defaults = Accessor.getAttributeDefaultValues(component);
       // defineProp(component, '_props', {
       //   value: defaults, writable: false, enumerable: false, configurable: true
       // });
       component._props = defaults;
 
-      // 3. compile the template once and only once.
+      // parsing template once and only once.
       if (!_template) {
-
-        if (typeof constructor.template === 'string') {
-          var HTMXParser = config.HTMXParser;
-          _template = HTMXParser.parse(constructor.template, prototype);
-        } else if (typeof constructor.template === 'function') {
-          var JSXParser = config.JSXParser;
-          _template = JSXParser.parse(constructor.template, prototype);
-        }
-
-        if (_template) {
-          constructor.__extag_template__ = _template;
-          // defineProp(constructor, '__extag_template__', {
-          //   value: _template, writable: false, enumerable: false, configurable: true
-          // })
-        } else {
-          throw new TypeError('The template must be legal HTML string or DOM element');
+        try {
+          if (typeof constructor.template === 'string') {
+            var HTMXParser = config.HTMXParser;
+            _template = HTMXParser.parse(constructor.template, prototype);
+          } else if (typeof constructor.template === 'function') {
+            var JSXParser = config.JSXParser;
+            _template = JSXParser.parse(constructor.template, prototype);
+          } else {
+            throw new TypeError('The static template must be string or function');
+          }
+  
+          if (_template) {
+            constructor.__extag_template__ = _template;
+            // defineProp(constructor, '__extag_template__', {
+            //   value: _template, writable: false, enumerable: false, configurable: true
+            // })
+          }
+        } catch (e) {
+          captureError(e, component, 'parsing');
         }
       }
 
@@ -158,7 +164,7 @@ defineClass({
         }
         for (var key in model) {
           var desc = getOwnPropDesc(model, key);
-          if (desc.get) {
+          if (desc.get || desc.set) {
             defineProp(component, key, desc);
           } else {
             component[key] = desc.value;
@@ -166,11 +172,15 @@ defineClass({
         }
       }
 
+      // building
       var HTMXEngine = config.HTMXEngine;
+      try {
+        HTMXEngine.driveComponent(component, _template, scopes, template, props);
+      } catch (e) {
+        captureError(e, component, 'building');
+      }
 
-      HTMXEngine.driveComponent(component, _template, scopes, template, props);
-
-      // 8. created
+      // created
       try {
         component.emit('created');
       } catch (e) {
@@ -196,19 +206,6 @@ defineClass({
       return !desc.get ? 
               this._props[key] : 
                 desc.get.call(this, this._props);
-    // }
-    // return this[key];
-    // return value;
-    // return (desc && desc.get) ? desc.get.call(this, key, this._props) : this._props[key];
-    // if (desc) {
-    //   // if (Dep.binding && !desc.compute) {
-    //   //   Dep.add(this, key);
-    //   // }
-    //   return !desc.get ? 
-    //             this._props[key] : 
-    //               desc.get.call(this, key, this._props);
-    // }
-    // return this._props[key];
   },
 
   /**
@@ -217,14 +214,6 @@ defineClass({
    * @param {*} val
    */
   set: function set(key, val) {
-    // if (arguments.length === 1) {
-    //   var opts = key;
-    //   for (key in opts) {
-    //     this.set(key, opts[key]);
-    //   }
-    //   return this;
-    // }
-
     var desc = Accessor.getAttrDesc(this, key);//this.__extag_descriptors__[key];
     // DOM property, stored in _props
     if (!desc) {
@@ -264,18 +253,6 @@ defineClass({
   },
 
   bind: function(target, property, collect, reflect) {
-    // var scope = this; 
-    // if (collect && (typeof collect === 'function')) {
-    //   DataBinding.compile({
-    //     mode: DataBinding.MODES.ONE_WAY,
-    //     evaluator: new Evaluator({func: collect})
-    //   }, property, target, [scope]);
-    // }
-    // if (reflect && (typeof reflect === 'function')) {
-    //   target.on('changed.' + property, function() {
-    //     reflect.call(scope, target[property]);
-    //   });
-    // }
     Binding.create(this, target, property, collect, reflect);
   },
 
@@ -317,11 +294,10 @@ defineClass({
    * @param {boolean} force - if not, detaching can be prevented, so this shell and the skin can be reused.
    */
   detach: function detach(force) {
-    var $skin = this.getSkin();
     if (Shell.prototype.detach.call(this, force)) {
-      if ($skin) {
+      if (this.$skin) {
         try {
-          this.emit('detached', $skin);
+          this.emit('detached', this.$skin);
         } catch (e) {
           captureError(e, this, 'detached');
         }
