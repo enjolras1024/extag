@@ -195,11 +195,16 @@ function parseDirective(name, expr, node, prototype, identifiers) {
 
 function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
   var lastChar = attrName[attrName.length - 1];
+  var index = attrName.indexOf(':');
   var result, group, key;
-  var index;
+
+  // :title => title
+  if (index === 0) {
+    attrName = attrName.slice(1);
+  }
 
   if (attrValue == null) {
-    if (attrName.indexOf(':') < 0) {
+    if (index < 0) {
       key = getPropName(attrName);
       getGroup(node, 'props')[key] = true;
       return;
@@ -209,19 +214,15 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
 
   if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
     group = getGroup(node, 'events');
-    key = toCamelCase(attrName.slice(0, -1));
+    attrName = attrName.slice(0, -1);
+    key = index < 0 ? toCamelCase(attrName) : attrName;
     result = EventBindingParser.parse(attrValue, prototype, identifiers);
     group[key] = new Expression(EventBinding, result);
   } else {
-    index = attrName.indexOf(':');
     if (index < 0) {
       group = getGroup(node, 'props');
     } else {
       group = getGroup(node, 'attrs');
-      // :title => title
-      if (index === 0) {
-        attrName = attrName.slice(1);
-      }
     }
     switch (lastChar) {
       case BINDING_OPERATORS.DATA: // last char is '@'
@@ -403,25 +404,32 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
       if (result.length === 1 && typeof result[0] === 'object') {
         children.push(new Expression(DataBinding, result[0]));
       } else {
-        var i = -1, j = 0 , n = result.length, frag;
-        for (; j <= n; ++j) {
+        var i = -1, j = 0 , n = result.length;
+        for (; j < n; ++j) {
           var pattern = result[j];
           if (typeof pattern === 'object' && pattern.target === 'frag') {
-            children.push(new Expression(DataBinding, pattern));
-            frag = true;
-          }
-          if (frag || j === n) {
             if (j > i) {
               if (j - i > 1) {
                 children.push(new Expression(TextBinding, result.slice(i, j)));
-              } else  {
+              } else if (typeof result[i] === 'object' && result[i].target === 'text') {
                 children.push(new Expression(DataBinding, result[i]));
+              } else {
+                children.push(result[i]);
               }
             }
-            frag = false;
+            children.push(new Expression(DataBinding, pattern));
             i = -1;
           } else if (i < 0) {
             i = j;
+          }
+        }
+        if (i >= 0 && j > i) {
+          if (j - i > 1) {
+            children.push(new Expression(TextBinding, result.slice(i, j)));
+          } else if (typeof result[i] === 'object' && result[i].target === 'text') {
+            children.push(new Expression(DataBinding, result[i]));
+          } else {
+            children.push(result[i]);
           }
         }
       }
@@ -431,7 +439,6 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
   } else {
     children.push(decodeHTML(text));
   }
-
   parent.children = children;
 }
 

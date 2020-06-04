@@ -69,76 +69,59 @@ var renderQueue = [];
 var callbackQueue = [];
 var updateQueueCursor = 0;
 var renderQueueCursor = 0;
-var turn = 0;
-// var 
 var waiting = false;
-var updating = false;
-var rendering = false;
+var turn = 0;
 
 function flushQueues() {
-  if (updating || !waiting) {
-    return;
-  }
   try {
     turn++;
-    updating = true;
     updateQueueCursor = 0;
 
-    var shell, i, n;
+    var shell, i;
   
     // quene may be lengthen if the method `invalidate` is called when updating
     while (updateQueueCursor < updateQueue.length) {
-      // if (updateQueueCursor > 999) {
-      //   throw new Error('too much things to update');
-      // }
       shell = updateQueue[updateQueueCursor];
       shell.update();
       ++updateQueueCursor;
     }
   
     updateQueue.length = 0;
-    updateQueueCursor = 0;
-    updating = false;
-    waiting = false;
-  
-    rendering = true;
+    updateQueueCursor = -1;
+
     renderQueueCursor = 0;
     while (renderQueueCursor < renderQueue.length) {
-      // if (updateQueueCursor > 999) {
-      //   throw new Error('too much things to update');
-      // }
       shell = renderQueue[renderQueueCursor];
       shell.render();
       ++renderQueueCursor;
     }
 
     renderQueue.length = 0;
-    renderQueueCursor = 0;
-    rendering = false;
+    renderQueueCursor = -1;
   
     for (i = callbackQueue.length - 1; i >= 0; --i) {
         callbackQueue[i]();
     }
 
     callbackQueue.length = 0;
+
+    waiting = false;
   } catch (e) {
-    updateQueueCursor = 0;
-    renderQueueCursor = 0;
+    updateQueueCursor = -1;
+    renderQueueCursor = -1;
     updateQueue.length = 0;
     renderQueue.length = 0;
     callbackQueue.length = 0;
-    rendering = false;
-    updating = false;
     waiting = false;
     throw e;
   }
 }
 
-function binarySearch(id) {
-  var i = updateQueueCursor + 1, j = updateQueue.length - 1;
+function binarySearch(id, i, j, queue) {
+  var m, guid;
   while (i <= j) {
-    var m = (i + j) >> 1;
-    var guid = updateQueue[m].$meta.guid;
+    m = (i + j) >> 1;
+    guid = queue[m].$meta.guid;
     if (id > guid) {
       i = m + 1;
     } else if (id < guid) {
@@ -164,10 +147,10 @@ function insertUpdateQueue(shell) {
 
   if (n > 0 && id > updateQueue[n-1].$meta.guid) {
     i = n;
-  } else if (n === 0) {
+  } /*else if (n === 0) {
     i = n;
-  } else {
-    var index = binarySearch(id);
+  }*/ else {
+    var index = binarySearch(id, updateQueueCursor + 1, updateQueue.length - 1, updateQueue);
     if (index < 0) {
       i = - index - 1;
     } else {
@@ -194,16 +177,16 @@ function insertUpdateQueue(shell) {
   function insertRenderQueue(shell) {
     var i, n = renderQueue.length, id = shell.$meta.guid;
 
-    if (!rendering) {
-      i = n - 1;
-      while (i >= 0 && id < renderQueue[i].$meta.guid) {
-        --i;
-      }
-      ++i;
-    } else {
-      i = renderQueueCursor + 1;
-      while (i < n && id >= renderQueue[i].$meta.guid) {
-        ++i;
+    if (n > 0 && id > renderQueue[n-1].$meta.guid) {
+      i = n;
+    } /*else if (n === 0) {
+      i = n;
+    }*/ else {
+      var index = binarySearch(id, renderQueueCursor + 1, renderQueue.length - 1, renderQueue);
+      if (index < 0) {
+        i = - index - 1;
+      } else {
+        return;
       }
     }
 

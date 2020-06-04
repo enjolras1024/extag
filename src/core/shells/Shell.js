@@ -67,7 +67,7 @@ defineClass({
    */
   attach: function attach($skin) {
     if (this.$meta.type === 0) {
-      return false;
+      throw new Error('Fragment and component using <x:frag> as root tag, can not attach a skin.')
     }
     
     var viewEngine = Shell.getViewEngine(this);
@@ -108,14 +108,14 @@ defineClass({
       this.$flag |= FLAG_WAITING_RENDERING;
       Schedule.insertRenderQueue(this);
     }
-
-    return true;
   },
 
   /**
    * detach the skin from this shell, and destroy itself firstly.
    */
   detach: function detach() {
+    if (this._destroyed) { return; }
+    
     var parent = this._parent;
     if (parent && !parent._parent) {
       this._parent = null;
@@ -129,7 +129,14 @@ defineClass({
 
     this.constructor.destroy(this);
 
-    return true;
+    var $skin = this.$skin;
+    if ($skin) {
+      var viewEngine = Shell.getViewEngine(this);
+      viewEngine.detachShell($skin, this);
+      this.$skin = null;
+    }
+
+    this._destroyed = true;
   },
 
   // getSkin: function getSkin() {
@@ -246,12 +253,12 @@ defineClass({
         shell._children.length = 0;
       }
       // detaching
-      var $skin = shell.$skin;
-      if ($skin) {
-        var viewEngine = Shell.getViewEngine(shell);
-        viewEngine.detachShell($skin, shell);
-        shell.$skin = null;
-      }
+      // var $skin = shell.$skin;
+      // if ($skin) {
+      //   var viewEngine = Shell.getViewEngine(shell);
+      //   viewEngine.detachShell($skin, shell);
+      //   shell.$skin = null;
+      // }
     },
 
     getViewEngine: function(shell) {
@@ -323,7 +330,6 @@ defineClass({
           listeners[flag] = null;
         }
       }
-      
     }
   }
 });

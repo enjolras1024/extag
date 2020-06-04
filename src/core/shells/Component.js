@@ -70,6 +70,11 @@ defineClass({
       return new ctor(props);
     },
 
+    destroy: function destroy(component) {
+      component.emit('destroying');
+      Shell.destroy(component);
+    },
+
     /**
      * Initialize this component, using template.
      */
@@ -263,51 +268,51 @@ defineClass({
     }
   },
 
-  /**
-   * attach a skin to this shell.
-   * You should use this method for a root component in browser. 
-   * For the child texts, elements and components, the viewEngine (ExtagSkin as default) help them attach the skins.
-   * On the server-side, the shell do not need to attach some skin, since there is no skin on server-side actually.
-   * @param {HTMLElement} $skin
-   */
-  attach: function attach($skin) {
-    if (shellProto.attach.call(this, $skin)) {
-      try {
-        this.emit('attached', $skin);
-      } catch (e) {
-        captureError(e, this, 'attached');
-      }
-      // if (this.onAttached) {
-      //   this.onAttached($skin);
-      // }
-      return true;
-    }
-    return false;
-  },
+  // /**
+  //  * attach a skin to this shell.
+  //  * You should use this method for a root component in browser. 
+  //  * For the child texts, elements and components, the viewEngine (ExtagSkin as default) help them attach the skins.
+  //  * On the server-side, the shell do not need to attach some skin, since there is no skin on server-side actually.
+  //  * @param {HTMLElement} $skin
+  //  */
+  // attach: function attach($skin) {
+  //   if (shellProto.attach.call(this, $skin)) {
+  //     try {
+  //       this.emit('attached', $skin);
+  //     } catch (e) {
+  //       captureError(e, this, 'attached');
+  //     }
+  //     // if (this.onAttached) {
+  //     //   this.onAttached($skin);
+  //     // }
+  //     return true;
+  //   }
+  //   return false;
+  // },
 
-  /**
-   * detach the skin from this shell, and destroy itself firstly.
-   * You can config('prevent-detach', true) to prevent detaching and destroying.
-   * @param {boolean} force - if not, detaching can be prevented, so this shell and the skin can be reused.
-   */
-  detach: function detach(force) {
-    if (Shell.prototype.detach.call(this, force)) {
-      if (this.$skin) {
-        try {
-          this.emit('detached', this.$skin);
-        } catch (e) {
-          captureError(e, this, 'detached');
-        }
-      }
-      try {
-        this.emit('destroyed');
-      } catch (e) {
-        captureError(e, this, 'destroyed');
-      }
-      return true;
-    }
-    return false;
-  },
+  // /**
+  //  * detach the skin from this shell, and destroy itself firstly.
+  //  * You can config('prevent-detach', true) to prevent detaching and destroying.
+  //  * @param {boolean} force - if not, detaching can be prevented, so this shell and the skin can be reused.
+  //  */
+  // detach: function detach(force) {
+  //   if (Shell.prototype.detach.call(this, force)) {
+  //     if (this.$skin) {
+  //       try {
+  //         this.emit('detached', this.$skin);
+  //       } catch (e) {
+  //         captureError(e, this, 'detached');
+  //       }
+  //     }
+  //     try {
+  //       this.emit('destroyed');
+  //     } catch (e) {
+  //       captureError(e, this, 'destroyed');
+  //     }
+  //     return true;
+  //   }
+  //   return false;
+  // },
 
   /**
    * Update this shell and append it to the schedule for rendering.

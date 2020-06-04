@@ -238,17 +238,27 @@ function transferProperties(shell) {
   }
 
   var _props = shell._props;
-  var type, style, classes;
-    
+  var style, attrs, classes;
+
+  if (shell.hasDirty('attrs')) {
+    DirtyMarker.clean(shell, 'attrs');
+    attrs = _props.attrs;
+    if (typeof attrs === 'object') {
+      shell.attrs.reset(attrs);
+    } else {
+      shell.attrs.reset(null);
+    }
+  }
   if (shell.hasDirty('style')) {
     DirtyMarker.clean(shell, 'style');
     style = _props.style;
-    type = typeof style;
-    if (type === 'object') {
-      shell.style.reset(style);
-    } else if (type === 'string') {
+    if (typeof style === 'string') {
       style = toStyle(style);
+    }
+    if (typeof style === 'object') {
       shell.style.reset(style);
+    } else {
+      shell.style.reset(null);
     }
   }
   if (shell.hasDirty('classes')) {
@@ -257,7 +267,11 @@ function transferProperties(shell) {
     if (typeof classes !== 'object') {
       classes = toClasses(classes);
     }
-    shell.classes.reset(classes);
+    if (typeof classes === 'object') {
+      shell.classes.reset(classes);
+    } else {
+      shell.classes.reset(null);
+    }
   }
 
   if (!shell.__props || !shell.constructor.__extag_component_class__) { 
@@ -266,42 +280,53 @@ function transferProperties(shell) {
 
   var __props = shell.__props;
   
-  if (__props && __props.hasDirty('style')) {
+  if (__props.hasDirty('attrs')) {
+    var __attrs = shell.__attrs;
+    if (!__attrs) {
+      __attrs = new Cache(shell);
+      shell.__attrs = __attrs;
+    }
+    DirtyMarker.clean(__props, 'attrs');
+    attrs = __props.get('attrs');
+    if (typeof attrs === 'object') {
+      __attrs.reset(attrs);
+    } else {
+      __attrs.reset(null);
+    }
+  }
+  if (__props.hasDirty('style')) {
     var __style = shell.__style;
     if (!__style) {
       __style = new Cache(shell);
       shell.__style = __style;
-      // defineProp(shell, '__style', {
-      //   value: __style, 
-      //   configurable: true
-      // });
     }
     DirtyMarker.clean(__props, 'style');
     style = __props.get('style');
-    type = typeof style;
-    if (type === 'object') {
-      __style.reset(style);
-    } else if (type === 'string') {
+    if (typeof style === 'string') {
       style = toStyle(style);
+    }
+    if (typeof style === 'object') {
       __style.reset(style);
+    } else {
+      __style.reset(null);
     }
   }
-  if (__props && __props.hasDirty('classes')) {
+  if (__props.hasDirty('classes')) {
     var __classes = shell.__classes;
     if (!__classes) {
       __classes = new Cache(shell);
       shell.__classes = __classes;
-      // defineProp(shell, '__classes', {
-      //   value: __classes, 
-      //   configurable: true
-      // });
     }
     DirtyMarker.clean(__props, 'classes');
     classes = __props.get('classes');
     if (typeof classes !== 'object') {
       classes = toClasses(classes);
     }
-    __classes.reset(classes);
+    if (typeof classes === 'object') {
+      __classes.reset(classes);
+    } else {
+      __classes.reset(null);
+    }
   }
 }
 

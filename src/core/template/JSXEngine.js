@@ -132,7 +132,11 @@ function updatePropsAndEvents(node, target, scope) {
   }
   if (newEvents) {
     // add new event handlers
-    target.on(newEvents);
+    for (name in newEvents) {
+      if (newEvents[name]) {
+        target.on(name, newEvents[name]);
+      }
+    }
     target._events = newEvents;
   }
 }

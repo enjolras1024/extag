@@ -250,6 +250,7 @@ function toCamelCase(key) {
   if (key.indexOf('-') < 0) {
     return key;
   }
+  key = key.toLowerCase();
   if (key in camelCache) {
     return camelCache[key];
   }

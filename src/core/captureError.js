@@ -21,7 +21,7 @@ export default function captureError(error, component, phase) {
   var targets = [target];
   while (component) {
     if (!_stop) {
-      component.emit('captured', {
+      component.emit('throwed', {
         targets: targets.slice(0),
         target: target,
         phase: phase,

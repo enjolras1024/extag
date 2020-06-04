@@ -44,7 +44,7 @@ export default {
                 template.push(text);
               }
             }
-            if (expr.charCodeAt(stop + 3) === 123 && expr.charCodeAt(i - 1) === 125) {
+            if (expr.charCodeAt(stop + 2) === 123 && expr.charCodeAt(i - 1) === 125) {
               // @{{...}}
               pattern = DataBindingParser.parse(expr.slice(stop + 3, i - 1), prototype, identifiers);
               pattern.target = 'frag';
