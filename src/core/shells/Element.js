@@ -1,13 +1,15 @@
 // src/core/shells/Element.js
 
-import Parent from 'src/base/Parent'
+
 import Schedule from 'src/core/Schedule'
-import Shell from 'src/core/shells/Shell'
 import Cache from 'src/core/models/Cache'
+import Shell from 'src/core/shells/Shell'
+import Parent from 'src/core/shells/Parent'
 import DirtyMarker from 'src/base/DirtyMarker'
 import { defineProp, defineClass } from 'src/share/functions'
 import {
   TYPE_ELEM,
+  FLAG_MOUNTED,
   FLAG_WAITING_UPDATING,
   FLAG_WAITING_RENDERING,
   FLAG_SHOULD_RENDER_TO_VIEW
@@ -141,7 +143,6 @@ defineClass({
 
     // this.$flag ^= FLAG_WAITING_UPDATING;
     // this.render();
-    return true;
   },
 
   /**
@@ -160,7 +161,7 @@ defineClass({
       var viewEngine = Shell.getViewEngine(this);
 
       viewEngine.renderShell(this.$skin, this);
-      this._children && Parent.clean(this);
+
       DirtyMarker.clean(this);
   
       this._attrs && DirtyMarker.clean(this._attrs);
@@ -173,10 +174,12 @@ defineClass({
 
       this.$flag &= ~FLAG_SHOULD_RENDER_TO_VIEW;
     }
+    
+    if (this.$skin && (this.$flag & FLAG_MOUNTED === 0)) {
+      this.$flag |= FLAG_MOUNTED;
+    }
 
     this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
-
-    return true;
   }
 });
   

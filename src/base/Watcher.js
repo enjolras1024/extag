@@ -265,7 +265,7 @@ defineClass({
     var actions = this._actions;
     if (!actions) { return; }
     var action = actions[type];
-    if (action) {
+    if (action && action.head) {
       var flag = action.listeners ? arguments[2] : 0;
       var handler, handlers;
       handler = action.head;

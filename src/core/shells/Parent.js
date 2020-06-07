@@ -1,5 +1,6 @@
 // src/base/Parent.js
 
+import Schedule from 'src/core/Schedule'
 import { defineClass, throwError } from 'src/share/functions'
 import { TYPE_FRAG, FLAG_CHANGED_CHILDREN } from 'src/share/constants'
 
@@ -35,27 +36,30 @@ function flattenChildren(shell, array) {
   return array;
 }
 
+var removed = [];
+var inQueue = false;
+function collectRemovedChild(child) {
+  removed.push(child);
+  if (!inQueue) {
+    inQueue = true;
+    Schedule.pushCallbackQueue(cleanRemovedChildren);
+  }
+}
+function cleanRemovedChildren() {
+  for (var i = 0; i < removed.length; ++i) {
+    var child = removed[i];
+    if (!child._parent) {
+      child.detach();
+    }
+  }
+  removed.length = 0;
+  inQueue = false;
+}
+
 defineClass({
   constructor: Parent, // mixins: [Watcher.prototype],
 
   statics: {
-    /**
-     * Clean the parent.
-     * @param {Parent} parent
-     */
-    clean: function(parent) {
-      if (parent._children) {
-        parent._children.isInvalidated = false;
-      }
-    },
-
-    // invalidate: function invalidate(parent) {
-    //   if (parent._children) {
-    //     parent._children.isInvalidated = true;
-    //     parent.invalidate(FLAG_CHANGED_CHILDREN);
-    //   }
-    // },
-
     findParent: findParent,
     flattenChildren: flattenChildren
   },
@@ -88,13 +92,14 @@ defineClass({
         }
       }
       if (i === n) { // nothing change
-        return this;
+        return;
       }
     }
  
     if (m) {
       for (i = 0; i < m; ++i) {
         _children[i]._parent = null;
+        collectRemovedChild(_children[i]);
       }
       _children.length = 0;
     }
@@ -105,8 +110,6 @@ defineClass({
     } else if (m) {
       this.invalidate(FLAG_CHANGED_CHILDREN);
     }
-
-    return this;
   },
 
   /**
@@ -119,9 +122,7 @@ defineClass({
     if (child == null) {
       throwError('The new child to be inserted into this parent must not be null!');
     }
-    // if (child.$guid <= this.$guid) {
-    //   throwError('The child must be created after its parent for rendering top-down (parent to child)!')
-    // }
+
     var i, j, n, children = this._children;
 
     if (!children) {
@@ -144,24 +145,18 @@ defineClass({
         throwError('The child before which the new child is to be inserted is not a child of this parent!');
       }
       if (before === child) { 
-        return this; 
+        return; 
       }
     } else {
       i = n;
     }
-
-    // if (__ENV__ === 'development') {
-    //   if (child.guid < this.guid) {
-    //     logger.warn('Do not insert the child ' + child.toString() + ' into ' + this.toString() + '. The parent\'s guid should be less than the child\'s for ordered updating from parent to child.');
-    //   }
-    // }
 
     if (child._parent) {
       if (child._parent === this) {
         for (j = 0; j < n; ++j) {
           if (children[j] === child) {
             if (j === i) {
-              return this;
+              return;
             }
             children.splice(j, 1);
             i = j < i ? i - 1 : i;
@@ -183,8 +178,6 @@ defineClass({
     child._parent = this;
 
     this.invalidate(FLAG_CHANGED_CHILDREN);
-
-    return this;
   },
 
   appendChild: function appendChild(child) {
@@ -221,9 +214,8 @@ defineClass({
     }
 
     child._parent = null;
+    collectRemovedChild(child);
     this.invalidate(FLAG_CHANGED_CHILDREN);
-
-    return this;
   },
 
   /**
@@ -253,7 +245,7 @@ defineClass({
     }
 
     if (child === existed) { 
-      return this; 
+      return; 
     }
 
     if (child._parent) {
@@ -271,12 +263,11 @@ defineClass({
       }
     }
 
+    collectRemovedChild(existed);
     existed._parent = null;
     child._parent = this;
     children[i] = child;
 
     this.invalidate(FLAG_CHANGED_CHILDREN);
-
-    return this;
   }
 });

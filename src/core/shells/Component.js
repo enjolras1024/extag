@@ -1,12 +1,12 @@
 // src/core/shells/Component.js
 
-import Parent from 'src/base/Parent'
 import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
 import DirtyMarker from 'src/base/DirtyMarker'
 import Schedule from 'src/core/Schedule'
 import Dependency from 'src/core/Dependency'
 import Shell from 'src/core/shells/Shell'
+import Parent from 'src/core/shells/Parent'
 import Element from 'src/core/shells/Element'
 import Binding from 'src/core/bindings/Binding'
 import config from 'src/share/config'
@@ -19,6 +19,8 @@ import {
 import {
   TYPE_FRAG,
   TYPE_ELEM,
+  FLAG_MOUNTED,
+  FLAG_DESTROYED,
   FLAG_CHANGED_CACHE,
   // FLAG_CHANGED_COMMANDS,
   FLAG_CHANGED_CHILDREN,
@@ -71,6 +73,7 @@ defineClass({
     },
 
     destroy: function destroy(component) {
+      if (component.$flag & FLAG_DESTROYED) { return; }
       component.emit('destroying');
       Shell.destroy(component);
     },
@@ -177,7 +180,7 @@ defineClass({
       // building
       var HTMXEngine = config.HTMXEngine;
       try {
-        HTMXEngine.driveComponent(component, _template, scopes, template, props);
+        HTMXEngine.driveComponent(component, scopes, template, props, _template);
       } catch (e) {
         captureError(e, component, 'building');
       }
@@ -324,7 +327,6 @@ defineClass({
     // if (this.$flag === FLAG_NORMAL) {
     //   return false;
     // }
-
     try {
       this.emit('updating');
     } catch (e) {
@@ -359,8 +361,6 @@ defineClass({
 
     // this.$flag ^= FLAG_WAITING_UPDATING;
     // this.render();
-    
-    return true;
   },
 
   /**
@@ -382,7 +382,7 @@ defineClass({
       var viewEngine = Shell.getViewEngine(this);
 
       viewEngine.renderShell(this.$skin, this);
-      this._children && Parent.clean(this);
+ 
       DirtyMarker.clean(this);
   
       this._attrs && DirtyMarker.clean(this._attrs);
@@ -401,19 +401,38 @@ defineClass({
     }
 
     var actions = this._actions;
-    if (actions && actions.rendered && this.$skin) {
+
+    if (this.$flag & FLAG_MOUNTED === 0) {
+      if (this.$meta.type === 0) {
+        var parent = Parent.findParent(true);
+        if (parent && parent.$skin) {
+          this.$flag |= FLAG_MOUNTED;
+        }
+      } else if (this.$skin) {
+        this.$flag |= FLAG_MOUNTED;
+      }
+      if (actions && actions.rendered && (this.$flag & FLAG_MOUNTED)) {
+        Schedule.pushCallbackQueue((function() {
+          try {
+            this.emit('mounted');
+          } catch (e) {
+            captureError(e, this, 'mounted');
+          }
+        }).bind(this));
+      }
+    }
+    
+    if (actions && actions.updated) {
       Schedule.pushCallbackQueue((function() {
         try {
-          this.emit('rendered', this.$skin);
+          this.emit('updated');
         } catch (e) {
-          captureError(e, this, 'rendered');
+          captureError(e, this, 'updated');
         }
       }).bind(this));
     }
 
     this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
-    
-    return true;
   },
 
   getContents: function getContents() {

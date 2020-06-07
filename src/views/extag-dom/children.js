@@ -13,9 +13,9 @@ import {
   getNameSpace
 } from './utils'
 
-function getParent($skin) {
-  return $skin.parentNode;
-}
+// function getParent($skin) {
+//   return $skin.parentNode;
+// }
 
 function createChild(type, tag, ns) {
   return type === TYPE_TEXT ? 
@@ -47,8 +47,8 @@ function renderChildren($skin, shell, children) {
 
   var i, n, m;
   var newChild, oldChild;
-  var $newChild, $oldChild, $parent;
-  var $removed = [], $children = $skin.childNodes;
+  var $newChild, $oldChild;
+  var $children = $skin.childNodes;
 
   n = children.length;
   m = $children.length;
@@ -57,38 +57,38 @@ function renderChildren($skin, shell, children) {
     for (i = m - 1; i >= 0; --i) {
       $oldChild = $children[i];
       oldChild = getShell($oldChild);
-      if (oldChild && !oldChild.getParent()) {
+      if (oldChild && shell !== oldChild.getParent()) {
         $skin.removeChild($oldChild);
-        $removed.push($oldChild);
+        // $removed.push($oldChild);
       }
     }
-    for (i = $removed.length - 1; i >= 0;  --i) {
-      $parent = getParent($removed[i]);
-      oldChild = getShell($removed[i]);
-      if (!$parent && oldChild) { 
-        oldChild.detach();
-      }
-    }
+    // for (i = $removed.length - 1; i >= 0;  --i) {
+    //   $parent = getParent($removed[i]);
+    //   oldChild = getShell($removed[i]);
+    //   if (!$parent && oldChild) { 
+    //     oldChild.detach();
+    //   }
+    // }
   }
 
   if (n) {
     for (i = 0; i < n; ++i) {
       newChild = children[i];
-      $newChild = newChild.$skin;
-      if ($newChild) {
-        $newChild.__extag_index__ = i;
+      if (newChild.$skin) {
+        newChild.__extag_index__ = i;
       }
     }
     for (i = 0; i < n; ++i) {
       newChild = children[i];
       $newChild = newChild.$skin;
       $oldChild = $children[i];
+      oldChild = $oldChild ? getShell($oldChild) : null;
       if (!$newChild) {
         var meta = newChild.$meta;
         if (!$oldChild || 
             meta.tag !== getTagName($oldChild) || 
             meta.ns !== getNameSpace($oldChild) || 
-            ((oldChild = $oldChild ? getShell($oldChild) : null) && oldChild !== newChild)) {
+            (oldChild && oldChild !== newChild)) {
           $newChild = createChild(meta.type, meta.tag, meta.ns);
         } else {
           $newChild = $oldChild;
@@ -100,8 +100,10 @@ function renderChildren($skin, shell, children) {
         $skin.appendChild($newChild);
       } else if ($newChild !== $oldChild) {
         $skin.insertBefore($newChild, $oldChild);
-        if ($oldChild.__extag_index__) {
-          $skin.insertBefore($oldChild, $children[$oldChild.__extag_index__] || null)
+        if (oldChild && oldChild.__extag_index__) {
+          $skin.insertBefore($oldChild, $children[oldChild.__extag_index__] || null)
+        } else {
+          $skin.removeChild($oldChild);
         }
       }
     }

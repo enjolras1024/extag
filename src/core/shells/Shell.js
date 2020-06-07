@@ -16,7 +16,7 @@ import {
   TYPE_TEXT,
   FLAG_CAPTURE, 
   FLAG_PASSIVE,
-  FLAG_NORMAL, 
+  FLAG_DESTROYED,
   FLAG_CHANGED_CACHE, 
   FLAG_CHANGED_COMMANDS,
   FLAG_WAITING_UPDATING,
@@ -114,14 +114,12 @@ defineClass({
    * detach the skin from this shell, and destroy itself firstly.
    */
   detach: function detach() {
-    if (this._destroyed) { return; }
-    
-    var parent = this._parent;
-    if (parent && !parent._parent) {
-      this._parent = null;
-      parent.detach();
-      return;
-    }
+    // var parent = this._parent;
+    // if (parent && !parent._parent) {
+    //   this._parent = null;
+    //   parent.detach();
+    //   return;
+    // }
 
     if (this.$owner) {
       this.$owner = null;
@@ -135,8 +133,6 @@ defineClass({
       viewEngine.detachShell($skin, this);
       this.$skin = null;
     }
-
-    this._destroyed = true;
   },
 
   // getSkin: function getSkin() {
@@ -207,7 +203,7 @@ defineClass({
         shell._props = {};
       }
 
-      shell.$flag = FLAG_NORMAL;
+      shell.$flag = 0;
       
       shell.$meta = {
         guid: shellGuid++,
@@ -228,6 +224,7 @@ defineClass({
      * @param {Shell} shell
      */
     destroy: function(shell) {
+      if (shell.$flag & FLAG_DESTROYED) { return; }
       var i;
       // removing event linsteners and handlers
       shell.off();
@@ -247,8 +244,8 @@ defineClass({
       if (children) {
         for (i = children.length - 1; i >= 0; --i) {
           child = children[i];
+          child.constructor.destroy(child);
           child._parent = null;
-          child.detach();
         }
         shell._children.length = 0;
       }
@@ -259,6 +256,7 @@ defineClass({
       //   viewEngine.detachShell($skin, shell);
       //   shell.$skin = null;
       // }
+      shell.$flag |= FLAG_DESTROYED;
     },
 
     getViewEngine: function(shell) {

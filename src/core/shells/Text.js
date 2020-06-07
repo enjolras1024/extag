@@ -1,10 +1,12 @@
 // src/core/shells/Text.js
-import Parent from 'src/base/Parent'
+
 import Schedule from 'src/core/Schedule'
 import Shell from 'src/core/shells/Shell'
+import Parent from 'src/core/shells/Parent'
 import { defineClass } from 'src/share/functions'
 import {
   TYPE_TEXT,
+  FLAG_MOUNTED,
   FLAG_CHANGED_CACHE,
   FLAG_WAITING_UPDATING,
   FLAG_WAITING_RENDERING,
@@ -77,7 +79,6 @@ defineClass({
     }
     // this.$flag ^= FLAG_WAITING_UPDATING;
     // this.render();
-    return true;
   },
 
   /**
@@ -100,10 +101,12 @@ defineClass({
       this._dirty = false;
     }
 
+    if (this.$skin && (this.$flag & FLAG_MOUNTED === 0)) {
+      this.$flag |= FLAG_MOUNTED;
+    }
+
     this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
     // this.$flag = FLAG_NORMAL;
-
-    return true;
   },
 
   getParent: Parent.prototype.getParent,
