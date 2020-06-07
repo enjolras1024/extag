@@ -6,9 +6,9 @@
 // import Fragment from 'src/core/shells/Fragment'
 import Component from 'src/core/shells/Component'
 // import Expression from 'src/core/template/Expression'
-// import HTMXEngine from 'src/core/template/HTMXEngine'
+import HTMXEngine from 'src/core/template/HTMXEngine'
 import { assign, defineClass } from 'src/share/functions'
-import config from 'src/share/config'
+// import config from 'src/share/config'
 
 function replaceScopes(content, newScopes) {
   var bindings = content._bindings;
@@ -94,10 +94,8 @@ defineClass({
       return;
     }
 
-    var HTMXEngine = config.HTMXEngine;
-
     if (this.mode === 1) {
-      content = HTMXEngine.makeContent(template, scopes);
+      content = HTMXEngine.createContent(template, scopes, true);
       if (content) {
         contents.push(content);
       }

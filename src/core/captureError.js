@@ -45,7 +45,7 @@ export default function captureError(error, component, phase) {
         error: error
       });
       if (!solver) {
-        logger.error('Unsolved error in phase `' + phase + '` from ' + target.toString(), target);
+        logger.error('Unsolved error in phase `' + phase + '` from ', target);
         throw error;
       }
       break;

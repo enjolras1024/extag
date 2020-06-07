@@ -4,8 +4,9 @@
 import Cache from 'src/core/models/Cache'
 import DirtyMarker from 'src/base/DirtyMarker'
 import Component from 'src/core/shells/Component'
+import HTMXEngine from 'src/core/template/HTMXEngine'
 import { assign, defineClass } from 'src/share/functions'
-import config from 'src/share/config'
+// import config from 'src/share/config'
 /**
  * Output dynamic component, <x:output x:type="Button"/>, just like <input type="button">
  * @param {Object} props 
@@ -83,7 +84,7 @@ defineClass({
         try {
           template.tag = '?';
           template.type = ctor;
-          child = config.HTMXEngine.makeContent(template, scopes);
+          child = HTMXEngine.createContent(template, scopes);
           this.setChildren([child]);
         } catch (e) {
           this.setChildren([]);

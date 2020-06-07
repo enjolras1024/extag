@@ -173,7 +173,7 @@ export default {
 
     try {
       var func = Function.apply(null, args);
-      return new Evaluator(func, expr);
+      return new Evaluator(func, arguments[0]);
     } catch (e) {
       throwError(e, {
         code: 1001,

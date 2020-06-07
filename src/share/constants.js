@@ -21,6 +21,11 @@ var FLAG_SHOULD_RENDER_TO_VIEW = (FLAG_CHANGED_CACHE | FLAG_CHANGED_CHILDREN | F
 var FLAG_MOUNTED = 32;
 var FLAG_DESTROYED = 64;
 
+// vnode type
+var NODE_IN_JSX = 1;
+var NODE_IN_HTMX = 2;
+
+
 var VIEW_ENGINE = 'view-engine';
 
 // empty things
@@ -73,6 +78,9 @@ export {
   FLAG_SHOULD_RENDER_TO_VIEW,
   FLAG_MOUNTED,
   FLAG_DESTROYED,
+
+  NODE_IN_JSX,
+  NODE_IN_HTMX,
   
   VIEW_ENGINE,
 

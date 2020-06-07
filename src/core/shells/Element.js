@@ -6,6 +6,7 @@ import Cache from 'src/core/models/Cache'
 import Shell from 'src/core/shells/Shell'
 import Parent from 'src/core/shells/Parent'
 import DirtyMarker from 'src/base/DirtyMarker'
+import HTMXEngine from 'src/core/template/HTMXEngine'
 import { defineProp, defineClass } from 'src/share/functions'
 import {
   TYPE_ELEM,
@@ -14,7 +15,7 @@ import {
   FLAG_WAITING_RENDERING,
   FLAG_SHOULD_RENDER_TO_VIEW
 } from 'src/share/constants'
-import config from 'src/share/config'
+// import config from 'src/share/config'
 
 // function buildCache(element) {
 //   var cache = new Cache(element);
@@ -134,7 +135,7 @@ defineClass({
     //   return false;
     // }
 
-    config.HTMXEngine.transferProperties(this);
+    HTMXEngine.transferProps(this);
 
     if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
       this.$flag |= FLAG_WAITING_RENDERING;

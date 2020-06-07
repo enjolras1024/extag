@@ -4,13 +4,15 @@ import Output from 'src/core/shells/Output'
 import Fragment from 'src/core/shells/Fragment'
 import Evaluator from 'src/core/template/Evaluator'
 import Expression from 'src/core/template/Expression'
+import HTMXEngine from 'src/core/template/HTMXEngine'
 import DataBindingParser from "src/core/template/parsers/DataBindingParser";
 import EventBindingParser from "src/core/template/parsers/EventBindingParser";
 import DataBinding from 'src/core/bindings/DataBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
-import config from 'src/share/config'
 import logger from 'src/share/logger'
 import { 
+  NODE_IN_JSX,
+  NODE_IN_HTMX,
   CAPITAL_REGEXP,
  } from 'src/share/constants'
 import { 
@@ -208,17 +210,23 @@ function parseJsxChildren(node, prototype) {
   if (!children || !children.length) {
     return;
   }
-  var i, args, child;
+  var i, child;
   for (i = children.length - 1; i >= 0; --i) {
     child = children[i];
     if (typeof child === 'object') {
       if (child.__extag_node__) {
+        child.__extag_node__ = NODE_IN_HTMX;
         child.identifiers = node.identifiers;
         parseJsxNode(child, prototype);
         parseJsxChildren(child, prototype);
         continue;
       } else if (child.__extag_expr__) {
-        children[i] = parseJsxDataExpr(args, node, prototype);
+        // children[i] = parseJsxDataExpr(child.args, node, prototype);
+        children[i] = {
+          __extag_node__: NODE_IN_HTMX,
+          type: Expression,
+          expr: parseJsxDataExpr(child.args, node, prototype)
+        }
       }
     }
   }
@@ -243,7 +251,7 @@ var RESERVED_PARAMS = {
  */
 function node(type, options, children) {
   var node = {
-    __extag_node__: true
+    __extag_node__: NODE_IN_JSX
   };
 
   var t = typeof type;
@@ -384,6 +392,6 @@ var JSXParser = {
   }
 }
 
-config.JSXParser = JSXParser;
+HTMXEngine.parseJSX = JSXParser.parse;
 
 export default JSXParser

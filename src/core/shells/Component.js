@@ -9,7 +9,8 @@ import Shell from 'src/core/shells/Shell'
 import Parent from 'src/core/shells/Parent'
 import Element from 'src/core/shells/Element'
 import Binding from 'src/core/bindings/Binding'
-import config from 'src/share/config'
+import HTMXEngine from 'src/core/template/HTMXEngine'
+// import config from 'src/share/config'
 import logger from 'src/share/logger'
 import { 
   defineProp, 
@@ -127,11 +128,9 @@ defineClass({
       if (!_template) {
         try {
           if (typeof constructor.template === 'string') {
-            var HTMXParser = config.HTMXParser;
-            _template = HTMXParser.parse(constructor.template, prototype);
+            _template = HTMXEngine.parseHTMX(constructor.template, prototype);
           } else if (typeof constructor.template === 'function') {
-            var JSXParser = config.JSXParser;
-            _template = JSXParser.parse(constructor.template, prototype);
+            _template = HTMXEngine.parseJSX(constructor.template, prototype);
           } else {
             throw new TypeError('The static template must be string or function');
           }
@@ -178,7 +177,6 @@ defineClass({
       }
 
       // building
-      var HTMXEngine = config.HTMXEngine;
       try {
         HTMXEngine.driveComponent(component, scopes, template, props, _template);
       } catch (e) {
@@ -336,7 +334,7 @@ defineClass({
     var type = this.$meta.type;
     if (type !== 0) {
       if ((this.$flag & FLAG_CHANGED_CACHE)) {
-        config.HTMXEngine.transferProperties(this);
+        HTMXEngine.transferProps(this);
       }
     } else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
       this._parent.invalidate(FLAG_CHANGED_CHILDREN);

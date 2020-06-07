@@ -3,6 +3,7 @@
 import Schedule from 'src/core/Schedule'
 import Shell from 'src/core/shells/Shell'
 import Parent from 'src/core/shells/Parent'
+import HTMXEngine from 'src/core/template/HTMXEngine'
 import { defineClass } from 'src/share/functions'
 import {
   FLAG_CHANGED_CHILDREN,
@@ -10,7 +11,7 @@ import {
   FLAG_WAITING_RENDERING
 } from 'src/share/constants'
 
-import config from 'src/share/config'
+// import config from 'src/share/config'
 
 export default function Fragment(props, scopes, template) {
   Fragment.initialize(this, props, scopes, template);
@@ -62,14 +63,15 @@ defineClass({
     // }
 
     if (this.scopes && this.hasDirty('contents')) {
-      var JSXEngine = config.JSXEngine;
+      // var JSXEngine = config.JSXEngine;
       var contents = this._props.contents;
-      if (!contents) {
+      if (contents == null) {
         contents = [];
       } else if (!Array.isArray(contents)) {
         contents= [contents];
       }
-      JSXEngine.reflow(this.scopes[0], this, contents);
+      // JSXEngine.reflow(this.scopes[0], this, contents);
+      HTMXEngine.driveChildren(this, this.scopes, contents, false);
     }
 
     if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {

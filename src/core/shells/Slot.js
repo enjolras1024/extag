@@ -1,9 +1,9 @@
 // src/core/shells/Slot.js
 
-import config from 'src/share/config'
+// import config from 'src/share/config'
 // import Shell from 'src/core/shells/Shell'
 import Component from 'src/core/shells/Component'
-// import HTMXEngine from 'src/core/template/HTMXEngine'
+import HTMXEngine from 'src/core/template/HTMXEngine'
 import { assign, defineClass } from 'src/share/functions'
 
 export default function Slot(props, scopes, template) {
@@ -63,7 +63,7 @@ defineClass({
       }
       children = template.children;
       for (i = 0, n = children.length; i < n; ++i) {
-        content = config.HTMXEngine.makeContent(children[i], scopes);
+        content = HTMXEngine.createContent(children[i], scopes);
         if (content) {
           fragment.push(content);
         }

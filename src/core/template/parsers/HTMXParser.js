@@ -1,7 +1,7 @@
 // src/core/template/parsers/HTMXParser.js
 
-import config from 'src/share/config'
 import { 
+  NODE_IN_HTMX,
   BINDING_FORMAT,
   CAPITAL_REGEXP,
   BINDING_OPERATORS,
@@ -22,6 +22,7 @@ import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
 import TextBinding  from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
+import HTMXEngine from 'src/core/template/HTMXEngine'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 import ClassStyleParser from 'src/core/template/parsers/ClassStyleParser'
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
@@ -378,6 +379,15 @@ function parseAttributes(htmx, from, node, prototype) {
 var LF_IN_BLANK_START = /^\s*\n\s*/;
 var LF_IN_BLANK_END = /\s*\n\s*$/;
 
+function createExprNode(binding, pattern) {
+  return {
+    __extag_node__: NODE_IN_HTMX,
+    type: Expression,
+    expr: new Expression(binding, pattern)
+  }
+}
+
+
 function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
   var children = parent.children || [], result;
   var text = htmx.slice(start, stop);
@@ -385,6 +395,7 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
   if (!text) {
     return;
   }
+
   if (TextBindingParser.like(text)) {
     try {
       result = TextBindingParser.parse(text, prototype, identifiers);
@@ -402,7 +413,7 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
     }
     if (result) {
       if (result.length === 1 && typeof result[0] === 'object') {
-        children.push(new Expression(DataBinding, result[0]));
+        children.push(createExprNode(DataBinding, result[0]));
       } else {
         var i = -1, j = 0 , n = result.length;
         for (; j < n; ++j) {
@@ -410,14 +421,14 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
           if (typeof pattern === 'object' && pattern.target === 'frag') {
             if (j > i) {
               if (j - i > 1) {
-                children.push(new Expression(TextBinding, result.slice(i, j)));
-              } else if (typeof result[i] === 'object' && result[i].target === 'text') {
-                children.push(new Expression(DataBinding, result[i]));
+                children.push(createExprNode(TextBinding, result.slice(i, j)));
+              } else if (typeof result[i] === 'object') {
+                children.push(createExprNode(DataBinding, result[i]));
               } else {
                 children.push(result[i]);
               }
             }
-            children.push(new Expression(DataBinding, pattern));
+            children.push(createExprNode(DataBinding, pattern));
             i = -1;
           } else if (i < 0) {
             i = j;
@@ -425,9 +436,9 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
         }
         if (i >= 0 && j > i) {
           if (j - i > 1) {
-            children.push(new Expression(TextBinding, result.slice(i, j)));
-          } else if (typeof result[i] === 'object' && result[i].target === 'text') {
-            children.push(new Expression(DataBinding, result[i]));
+            children.push(createExprNode(TextBinding, result.slice(i, j)));
+          } else if (typeof result[i] === 'object') {
+            children.push(createExprNode(DataBinding, result[i]));
           } else {
             children.push(result[i]);
           }
@@ -473,7 +484,7 @@ function parseHTMX(htmx, prototype) {
    
         node = {};
         node.tag = tagName;
-        node.__extag_node__ = true;
+        node.__extag_node__ = NODE_IN_HTMX;
 
         // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
@@ -597,7 +608,8 @@ function parseHTMX(htmx, prototype) {
         stop = stop > 0 ? stop : htmx.length;
         node =  {
           tag: '!',
-          comment: htmx.slice(start, stop)
+          comment: htmx.slice(start, stop),
+          __extag_node__: NODE_IN_HTMX
         };
         parent.children = parent.children || [];
         parent.children.push(node);
@@ -647,6 +659,6 @@ var HTMXParser = {
   }
 };
 
-config.HTMXParser = HTMXParser;
+HTMXEngine.parseHTMX = HTMXParser.parse;
 
 export default HTMXParser
