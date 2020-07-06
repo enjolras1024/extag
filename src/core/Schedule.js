@@ -65,10 +65,10 @@ var setImmediate = (function(Promise, MutationObserver, requestAnimationFrame) {
 );
 
 var updateQueue = []; 
-var renderQueue = [];
+var digestQueue = [];
 var callbackQueue = [];
 var updateQueueCursor = 0;
-var renderQueueCursor = 0;
+var digestQueueCursor = 0;
 var waiting = false;
 var turn = 0;
 
@@ -89,15 +89,15 @@ function flushQueues() {
     updateQueue.length = 0;
     updateQueueCursor = -1;
 
-    renderQueueCursor = 0;
-    while (renderQueueCursor < renderQueue.length) {
-      shell = renderQueue[renderQueueCursor];
-      shell.render();
-      ++renderQueueCursor;
+    digestQueueCursor = 0;
+    while (digestQueueCursor < digestQueue.length) {
+      shell = digestQueue[digestQueueCursor];
+      shell.digest();
+      ++digestQueueCursor;
     }
 
-    renderQueue.length = 0;
-    renderQueueCursor = -1;
+    digestQueue.length = 0;
+    digestQueueCursor = -1;
   
     for (i = callbackQueue.length - 1; i >= 0; --i) {
         callbackQueue[i]();
@@ -108,9 +108,9 @@ function flushQueues() {
     waiting = false;
   } catch (e) {
     updateQueueCursor = -1;
-    renderQueueCursor = -1;
+    digestQueueCursor = -1;
     updateQueue.length = 0;
-    renderQueue.length = 0;
+    digestQueue.length = 0;
     callbackQueue.length = 0;
     waiting = false;
     throw e;
@@ -171,18 +171,18 @@ function insertUpdateQueue(shell) {
 }
 
 /**
-   * Insert a shell into the renderQueue.
+   * Insert a shell into the digestQueue.
    * @param {Shell} shell 
    */
-  function insertRenderQueue(shell) {
-    var i, n = renderQueue.length, id = shell.$meta.guid;
+  function insertDigestQueue(shell) {
+    var i, n = digestQueue.length, id = shell.$meta.guid;
 
-    if (n > 0 && id > renderQueue[n-1].$meta.guid) {
+    if (n > 0 && id > digestQueue[n-1].$meta.guid) {
       i = n;
     } /*else if (n === 0) {
       i = n;
     }*/ else {
-      var index = binarySearch(id, renderQueueCursor + 1, renderQueue.length - 1, renderQueue);
+      var index = binarySearch(id, digestQueueCursor + 1, digestQueue.length - 1, digestQueue);
       if (index < 0) {
         i = - index - 1;
       } else {
@@ -191,9 +191,9 @@ function insertUpdateQueue(shell) {
     }
 
     if (i === n) {
-      renderQueue.push(shell);
+      digestQueue.push(shell);
     } else {
-      renderQueue.splice(i, 0, shell);
+      digestQueue.splice(i, 0, shell);
     }
 
     if (!waiting) {
@@ -214,6 +214,6 @@ function pushCallbackQueue(callback) {
 export default {
   setImmediate: setImmediate,
   insertUpdateQueue: insertUpdateQueue,
-  insertRenderQueue: insertRenderQueue,
+  insertDigestQueue: insertDigestQueue,
   pushCallbackQueue: pushCallbackQueue
 };

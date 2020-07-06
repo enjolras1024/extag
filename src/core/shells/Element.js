@@ -12,7 +12,7 @@ import {
   TYPE_ELEM,
   FLAG_MOUNTED,
   FLAG_WAITING_UPDATING,
-  FLAG_WAITING_RENDERING,
+  FLAG_WAITING_DIGESTING,
   FLAG_SHOULD_RENDER_TO_VIEW
 } from 'src/share/constants'
 // import config from 'src/share/config'
@@ -59,14 +59,14 @@ defineClass({
         element.assign(props);
       }
     },
-    /**
-     * 
-     * @param {string} tag      - tag name, maybe with a namespace as prefix, e.g. 'svg:rect'
-     * @param {Object} props    - DOM properties
-     */
-    create: function create(tag, props) {
-      return new Element(tag, props);
-    },
+    // /**
+    //  * 
+    //  * @param {string} tag      - tag name, maybe with a namespace as prefix, e.g. 'svg:rect'
+    //  * @param {Object} props    - DOM properties
+    //  */
+    // create: function create(tag, props) {
+    //   return new Element(tag, props);
+    // },
 
     /**
      * Define getter/setter for attrs, style and classes
@@ -137,20 +137,29 @@ defineClass({
 
     HTMXEngine.transferProps(this);
 
-    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
-      this.$flag |= FLAG_WAITING_RENDERING;
-      Schedule.insertRenderQueue(this);
+    // if (this.hasDirty('children')) {
+    //   DirtyMarker.clean(this, 'children');
+    //   var children = this.get('children') || [];
+    //   if (!Array.isArray(children)) {
+    //     children = [children];
+    //   }
+    //   HTMXEngine.driveChildren(this, children.scopes, children);
+    // }
+
+    if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
+      this.$flag |= FLAG_WAITING_DIGESTING;
+      Schedule.insertDigestQueue(this);
     }
 
     // this.$flag ^= FLAG_WAITING_UPDATING;
-    // this.render();
+    // this.digest();
   },
 
   /**
    * Render the dirty parts of this element to the attached skin 
    */
-  render: function render() {
-    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+  digest: function digest() {
+    if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       return false;
     }
 
@@ -180,7 +189,7 @@ defineClass({
       this.$flag |= FLAG_MOUNTED;
     }
 
-    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
+    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
   }
 });
   

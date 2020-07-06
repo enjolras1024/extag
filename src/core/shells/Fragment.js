@@ -4,11 +4,12 @@ import Schedule from 'src/core/Schedule'
 import Shell from 'src/core/shells/Shell'
 import Parent from 'src/core/shells/Parent'
 import HTMXEngine from 'src/core/template/HTMXEngine'
+import DirtyMarker from 'src/base/DirtyMarker'
 import { defineClass } from 'src/share/functions'
 import {
   FLAG_CHANGED_CHILDREN,
   FLAG_WAITING_UPDATING,
-  FLAG_WAITING_RENDERING
+  FLAG_WAITING_DIGESTING
 } from 'src/share/constants'
 
 // import config from 'src/share/config'
@@ -36,16 +37,16 @@ defineClass({
       fragment.scopes = scopes;
       
       if (scopes && template) {
-        template.connect('contents', fragment, scopes);
+        template.connect('children', fragment, scopes);
         
       }
 
       
-    },
-
-    create: function create(props, scopes, template) {
-      return new Fragment(props, scopes, template);
     }
+
+    // create: function create(props, scopes, template) {
+    //   return new Fragment(props, scopes, template);
+    // }
   },
   /**
    * Update this shell and insert it into the schedule for rendering.
@@ -62,43 +63,43 @@ defineClass({
     //   this.onUpdating();
     // }
 
-    if (this.scopes && this.hasDirty('contents')) {
+    if (this.scopes && this.hasDirty('children')) {
       // var JSXEngine = config.JSXEngine;
-      var contents = this._props.contents;
-      if (contents == null) {
-        contents = [];
-      } else if (!Array.isArray(contents)) {
-        contents= [contents];
+      DirtyMarker.clean(this, 'children');
+      var children = this.get('children') || [];
+      if (!Array.isArray(children)) {
+        children = [children];
       }
       // JSXEngine.reflow(this.scopes[0], this, contents);
-      HTMXEngine.driveChildren(this, this.scopes, contents, false);
+      HTMXEngine.driveChildren(this, this.scopes, children, false);
     }
 
-    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+    if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
         var parent = this.getParent(true);
         parent.$flag |= FLAG_CHANGED_CHILDREN;
-        if ((parent.$flag & FLAG_WAITING_RENDERING) === 0) {
-          parent.$flag |= FLAG_WAITING_RENDERING;
-          Schedule.insertRenderQueue(parent);
+        if ((parent.$flag & FLAG_WAITING_DIGESTING) === 0) {
+          parent.$flag |= FLAG_WAITING_DIGESTING;
+          Schedule.insertDigestQueue(parent);
         }
       }
-      this.$flag |= FLAG_WAITING_RENDERING;
-      Schedule.insertRenderQueue(this);
+      this.$flag |= FLAG_WAITING_DIGESTING;
+      Schedule.insertDigestQueue(this);
     }
 
     // this.$flag ^= FLAG_WAITING_UPDATING;
-    // this.render();
+    // this.digest();
   },
 
-  render: function render() {
-    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+  digest: function digest() {
+    if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       return false;
     }
-    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
+    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
     // if (this.$flag === FLAG_NORMAL) {
     //   return false;
     // }
     // this.$flag = FLAG_NORMAL;
+    DirtyMarker.clean(this);
   }
 });

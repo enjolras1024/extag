@@ -20,7 +20,7 @@ import {
   FLAG_CHANGED_CACHE, 
   FLAG_CHANGED_COMMANDS,
   FLAG_WAITING_UPDATING,
-  FLAG_WAITING_RENDERING
+  FLAG_WAITING_DIGESTING
 } from 'src/share/constants'
 
 var shellGuid = 0;
@@ -54,8 +54,8 @@ defineClass({
     throw new Error('The method `update` must be implemented by sub-class');
   },
 
-  render: function() {
-    throw new Error('The method `render` must be implemented by sub-class');
+  digest: function() {
+    throw new Error('The method `digest` must be implemented by sub-class');
   },
 
   /**
@@ -104,9 +104,9 @@ defineClass({
       }
     }
 
-    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
-      this.$flag |= FLAG_WAITING_RENDERING;
-      Schedule.insertRenderQueue(this);
+    if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
+      this.$flag |= FLAG_WAITING_DIGESTING;
+      Schedule.insertDigestQueue(this);
     }
   },
 

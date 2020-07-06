@@ -45,10 +45,12 @@ defineClass({
      * @param {string} key
      */
     clean: function clean(object, key) {
-      if (!key) {
-        object._dirty = null;
-      } else {
-        delete object._dirty[key];
+      if (object._dirty) {
+        if (!key) {
+          object._dirty = null;
+        } else {
+          delete object._dirty[key];
+        }
       }
     }
   },

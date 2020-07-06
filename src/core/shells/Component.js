@@ -26,7 +26,7 @@ import {
   // FLAG_CHANGED_COMMANDS,
   FLAG_CHANGED_CHILDREN,
   FLAG_WAITING_UPDATING,
-  FLAG_WAITING_RENDERING,
+  FLAG_WAITING_DIGESTING,
   FLAG_SHOULD_RENDER_TO_VIEW
 } from 'src/share/constants'
 import captureError from 'src/core/captureError'
@@ -35,14 +35,14 @@ var shellProto = Shell.prototype;
 
 var KEYS_PRESERVED = [
   '$meta', '$flag', '$skin', 
-  'attrs', 'style', 'classes',
-  '_dirty', '_props', '_attrs', '_style', '_classes'
+  'attrs', 'style', 'classes', 'contents', 'children', 
+  '_dirty', '_props', '_attrs', '_style', '_classes', '_children'
 ];
 var METHODS_PRESERVED = [
   'on', 'off', 'emit',
   'appendChild', 'insertChild', 'removeChild', 'replaceChild', 
   'getParent', 'getChildren', 'setChildren', 'getContents', 'setContents',
-  'get', 'set', 'cmd', 'bind', 'assign', 'update', 'render', 'attach', 'detach', 'invalidate'
+  'get', 'set', 'cmd', 'bind', 'assign', 'update', 'digest', 'attach', 'detach', 'invalidate'
 ];
 
 /**
@@ -62,16 +62,16 @@ defineClass({
     
     __extag_component_class__: true,
 
-    /**
-     * Creating a component
-     *
-     * @param {Function}  ctor        - component constructor or class
-     * @param {Object}    props       - component attributes and DOM properties
-     * @returns {Component}
-     */
-    create: function create(ctor, props) {
-      return new ctor(props);
-    },
+    // /**
+    //  * Creating a component
+    //  *
+    //  * @param {Function}  ctor        - component constructor or class
+    //  * @param {Object}    props       - component attributes and DOM properties
+    //  * @returns {Component}
+    //  */
+    // create: function create(ctor, props) {
+    //   return new ctor(props);
+    // },
 
     destroy: function destroy(component) {
       if (component.$flag & FLAG_DESTROYED) { return; }
@@ -127,6 +127,9 @@ defineClass({
       // parsing template once and only once.
       if (!_template) {
         try {
+          if (!constructor.template) {
+            constructor.template = '<x:frag children@="render(this._props) ^"></x:frag>';
+          }
           if (typeof constructor.template === 'string') {
             _template = HTMXEngine.parseHTMX(constructor.template, prototype);
           } else if (typeof constructor.template === 'function') {
@@ -336,45 +339,60 @@ defineClass({
       if ((this.$flag & FLAG_CHANGED_CACHE)) {
         HTMXEngine.transferProps(this);
       }
-    } else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+    } /*else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
       this._parent.invalidate(FLAG_CHANGED_CHILDREN);
+    }*/ else {
+      if (this.__props && this.__props.hasDirty('children')) {
+        var children = this.__props.get('children') || [];
+        DirtyMarker.clean(this.__props, 'children');
+        if (!Array.isArray(children)) {
+          children = [children];
+        }
+        HTMXEngine.driveChildren(this, [this], children, false);
+      }
+      // if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+      //   this._parent.invalidate(FLAG_CHANGED_CHILDREN);
+      // }
     }
 
-    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+    // DirtyMarker.clean(this, 'children');
+    DirtyMarker.clean(this, 'contents');
+
+    if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       // If this type is 0, we should ask its parent to render parent's children,
       // since its children are belong to its parent actually.
       if (type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
         // this._parent.invalidate(2); 
         var parent = this.getParent(true);
         parent.$flag |= FLAG_CHANGED_CHILDREN;
-        if ((parent.$flag & FLAG_WAITING_RENDERING) === 0) {
-          parent.$flag |= FLAG_WAITING_RENDERING;
-          Schedule.insertRenderQueue(parent);
+        if ((parent.$flag & FLAG_WAITING_DIGESTING) === 0) {
+          parent.$flag |= FLAG_WAITING_DIGESTING;
+          Schedule.insertDigestQueue(parent);
         }
       }
-      this.$flag |= FLAG_WAITING_RENDERING;
-      Schedule.insertRenderQueue(this);
-      // this.render();
+      this.$flag |= FLAG_WAITING_DIGESTING;
+      Schedule.insertDigestQueue(this);
+      // this.digest();
     }
 
     // this.$flag ^= FLAG_WAITING_UPDATING;
-    // this.render();
+    // this.digest();
   },
 
   /**
    * Render the dirty parts of this shell to the attached skin 
    */
-  render: function render() {
-    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+  digest: function digest() {
+    if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       return;
     }
     // if (this.$flag === FLAG_NORMAL) {
     //   return false;
     // }
     // if (this.$meta.type !== 0) {
-    //   elementPropto.render.call(this);
+    //   elementPropto.digest.call(this);
     // } else {
-    //   fragmentProto.render.call(this);
+    //   fragmentProto.digest.call(this);
     // }
     if (this.$skin && this.$meta.type !== 0 && (this.$flag & FLAG_SHOULD_RENDER_TO_VIEW)) {
       var viewEngine = Shell.getViewEngine(this);
@@ -430,7 +448,7 @@ defineClass({
       }).bind(this));
     }
 
-    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
+    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
   },
 
   getContents: function getContents() {

@@ -9,7 +9,7 @@ import {
   FLAG_MOUNTED,
   FLAG_CHANGED_CACHE,
   FLAG_WAITING_UPDATING,
-  FLAG_WAITING_RENDERING,
+  FLAG_WAITING_DIGESTING,
   FLAG_SHOULD_RENDER_TO_VIEW
 } from 'src/share/constants'
 
@@ -23,13 +23,13 @@ defineClass({
   constructor: Text, extends: Shell,
 
   statics: {
-    /**
-     * Create a text.
-     * @param {string} data - as text data
-     */
-    create: function(data) {
-      return new Text(data);
-    },
+    // /**
+    //  * Create a text.
+    //  * @param {string} data - as text data
+    //  */
+    // create: function(data) {
+    //   return new Text(data);
+    // },
 
     /**
      * initialize the text with data.
@@ -73,19 +73,19 @@ defineClass({
     // if (this.$flag === FLAG_NORMAL) {
     //   return false;
     // }
-    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
-      this.$flag |= FLAG_WAITING_RENDERING;
-      Schedule.insertRenderQueue(this);
+    if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
+      this.$flag |= FLAG_WAITING_DIGESTING;
+      Schedule.insertDigestQueue(this);
     }
     // this.$flag ^= FLAG_WAITING_UPDATING;
-    // this.render();
+    // this.digest();
   },
 
   /**
    * Render the dirty parts of this shell to the attached skin 
    */
-  render: function render() {
-    if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+  digest: function digest() {
+    if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       return false;
     }
     // if (this.$flag === FLAG_NORMAL) {
@@ -105,7 +105,7 @@ defineClass({
       this.$flag |= FLAG_MOUNTED;
     }
 
-    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
+    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
     // this.$flag = FLAG_NORMAL;
   },
 
