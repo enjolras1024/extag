@@ -30,9 +30,9 @@ export default {
    *                              and "display: none; font-size#:@{fontSize}px;" for x:style
    * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
    * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
-   * @param {boolean} camelCase  - using camel case for x:style="...", not for x:calss="..."
+   * @param {boolean} forStyle  - 
    */
-  parse: function parse(expr, prototype, identifiers, camelCase) {
+  parse: function parse(expr, prototype, identifiers, forStyle) {
     var group = {};
     var pieces = expr.split(STYLE_DELIMITER); 
     var result, piece, name, names, n, i, j, k;
@@ -57,18 +57,18 @@ export default {
       expr = piece.slice(k + 1).trim();
 
       if (!name || !CSS_NAME_REGEXP.test(name)) {
-        throwError('Illegal ' + (camelCase ? 'x:style' : 'x:class') + ' expression.', {
+        throwError('Illegal ' + (forStyle ? 'x:style' : 'x:class') + ' expression.', {
           code: 1001,
           expr: name || arguments[0]
         });
       }
-      if (camelCase) {
-        name = toCamelCase(name);
-      }
+      // if (forStyle && name.slice(0, 2) !== '--') { // not like --webkit-transform
+      //   name = toforStyle(name);
+      // }
 
       try {
         if (!TextBindingParser.like(expr)) {
-          group[name] = camelCase ? expr : PrimitiveLiteralParser.tryParse(expr);
+          group[name] = forStyle ? expr : PrimitiveLiteralParser.tryParse(expr);
           continue;
         }
         // if (SINGLE_BINDING_REGEXP.test(expr)) {
@@ -89,7 +89,7 @@ export default {
       if (result) {
         if (result.length === 1) {
           group[name] = new Expression(DataBinding, result[0]);
-        } else if (camelCase) {
+        } else if (forStyle) {
           group[name] = new Expression(TextBinding, result);
         } else {
           throwError('Illegal x:class expression.', {
@@ -98,7 +98,7 @@ export default {
           });
         }
       } else {
-        group[name] = camelCase ? expr : PrimitiveLiteralParser.tryParse(expr);
+        group[name] = forStyle ? expr : PrimitiveLiteralParser.tryParse(expr);
       }
     }
 

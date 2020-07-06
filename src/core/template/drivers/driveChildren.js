@@ -1,11 +1,14 @@
 // src/core/template/drivers/driveChildren.js
 
 import { 
-  NODE_IN_HTMX,
   TYPE_TEXT, 
+  EXTAG_VNODE,
   EMPTY_OBJECT, 
   EMPTY_ARRAY 
 } from 'src/share/constants'
+import {
+  assign
+} from 'src/share/functions'
 import Text from 'src/core/shells/Text'
 import Slot from 'src/core/shells/Slot'
 import Block from 'src/core/shells/Block'
@@ -24,7 +27,7 @@ import driveProps from './driveProps'
  */
 function matchChild(child, vnode) {
   var meta = child.$meta;
-  if (meta.type === TYPE_TEXT && !vnode.__extag_node__) {
+  if (meta.type === TYPE_TEXT && vnode.__extag_node__ !== EXTAG_VNODE) {
     return true;
   }
   return child.__extag_key__ === vnode.xkey && 
@@ -32,11 +35,21 @@ function matchChild(child, vnode) {
             (meta.tag === vnode.tag && meta.ns === vnode.ns));
 }
 
+// function withScopes(content, scopes) {
+//   content = assign({}, content);
+//   content.scopes = scopes;
+//   return content;
+// }
+
 export function driveContent(target, vnode, scopes) {
-  if (typeof vnode === 'object' && vnode.__extag_node__) {
+  if (isVNode(vnode)) {
     driveProps(target, scopes, vnode.props);
     driveEvents(target, scopes, vnode.events);
     driveChildren(target, scopes, vnode.children);
+    // if (target instanceof Component && target !== scopes[0]) {
+    // } else {
+
+    // }
   } else /*if (target instanceof Text)*/ {
     target.set('data', vnode);
   }
@@ -48,7 +61,7 @@ export function createContent(vnode, scopes) {
   }  
 
   var ctor, expr, content;
-  var useExpr = vnode.__extag_node__ === NODE_IN_HTMX;
+  var useExpr = vnode.useExpr;
 
   if (vnode.xif || vnode.xfor) {
     content = new Block(null, scopes, vnode);
@@ -213,7 +226,7 @@ function collectContents(children, scopes, target) {
 }
 
 function isVNode(child) {
-  return typeof child === 'object' && child.__extag_node__;
+  return typeof child === 'object' && child.__extag_node__ === EXTAG_VNODE;
 }
 
 function flattenVNodes(children, array, ns) {
@@ -249,9 +262,15 @@ function flattenVNodes(children, array, ns) {
   return array ? array : children;
 }
 
-// refer to Vue (https://vuejs.org/)
 function driveChildren(target, scopes, children, useExpr) { 
   var contents;
+
+  // if (target instanceof Component && target !== scopes[0]) {
+  //   contents = children.slice(0);
+  //   contents.scopes = scopes || [];
+  //   target.set('contents', contents);
+  //   return;
+  // }
 
   if (useExpr) {
     contents = createContents(children, scopes);

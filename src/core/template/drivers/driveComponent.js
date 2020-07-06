@@ -2,7 +2,6 @@
 
 import Cache from 'src/core/models/Cache'
 import Validator from 'src/base/Validator'
-import { NODE_IN_HTMX } from 'src/share/constants'
 import { assign } from 'src/share/functions'
 import driveChildren from './driveChildren'
 import driveEvents from "./driveEvents";
@@ -12,7 +11,7 @@ function driveComponent(target, scopes, vnode, props, template) {
   var useExpr;
 
   if (vnode && scopes) {
-    useExpr = vnode.__extag_node__ === NODE_IN_HTMX;
+    useExpr = vnode.useExpr;
     if (props && vnode.props) {
       props = assign({}, vnode.props, props);
     } else if (!props && vnode.props) {
@@ -53,7 +52,7 @@ function driveComponent(target, scopes, vnode, props, template) {
 
   var _scopes = [target];
 
-  useExpr = template.__extag_node__ === NODE_IN_HTMX;
+  useExpr = template.useExpr;
 
   if (template.events) {
     driveEvents(target, _scopes, template.events, useExpr);
@@ -78,6 +77,7 @@ function driveComponent(target, scopes, vnode, props, template) {
   }
   if (template.children) {
     driveChildren(target, _scopes, template.children, useExpr);
+    // TODO: check for <x:frag children@="render(_props)"></x:frag>
   }
 }
 

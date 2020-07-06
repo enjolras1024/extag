@@ -3,50 +3,68 @@
 import Cache from 'src/core/models/Cache'
 import DirtyMarker from 'src/base/DirtyMarker'
 import { toCamelCase } from 'src/share/functions'
-import { WHITE_SPACES_REGEXP } from 'src/share/constants'
+import { TYPE_TEXT, WHITE_SPACES_REGEXP } from 'src/share/constants'
 
-function toStyle(cssText) {
-  var style = {};
-  var pieces = cssText.split(';');
-  var piece, index, i, name, value;
-  for (i = pieces.length - 1; i >= 0; --i) {
-    piece = pieces[i];
-    index = piece.indexOf(':');
-    if (index > 0) {
-      name = piece.slice(0, index).trim();
-      value =  piece.slice(index + 1).trim();
-      style[toCamelCase(name)] = value;
-    }
+function toStyleObject(source) {
+  var type = typeof source;
+  if (type === 'object') {
+    return source;
   }
-  return style;
+  if (type === 'string') {
+    var style = {};
+    var pieces = source.split(';');
+    var piece, index, i, name, value;
+    for (i = pieces.length - 1; i >= 0; --i) {
+      piece = pieces[i];
+      index = piece.indexOf(':');
+      if (index > 0) {
+        name = piece.slice(0, index).trim();
+        value =  piece.slice(index + 1).trim();
+        style[toCamelCase(name)] = value;
+      }
+    }
+    return style;
+  } 
 }
 
-function toClasses(classList) {
-  if (typeof classList === 'string') {
-    classList = classList.trim().split(WHITE_SPACES_REGEXP);
+function toClassObject(source) {
+  var type = typeof source;
+  if (type === 'object') {
+    return source;
   }
-  if (Array.isArray(classList)) {
+  if (type === 'string') {
+    source = source.trim().split(WHITE_SPACES_REGEXP);
+  }
+  if (Array.isArray(source)) {
     var i, classes = {};
-    for (i = 0; i < classList.length; ++i) {
-      if (classList[i]) {
-        classes[classList[i]] = true;
+    for (i = 0; i < source.length; ++i) {
+      if (source[i]) {
+        classes[source[i]] = true;
       }
     }
     return classes;
   }
 }
 
+function getOrCreateCache(shell, name) {
+  var cache = shell[name];
+  if (!cache) {
+    cache = new Cache(shell);
+    shell[name] = cache;
+  }
+  return cache;
+}
+
 function transferProps(shell) {
-  if (!shell.$meta.tag) {
+  if (shell.$meta.type === TYPE_TEXT) {
     return;
   }
 
-  var _props = shell._props;
   var style, attrs, classes;
 
   if (shell.hasDirty('attrs')) {
     DirtyMarker.clean(shell, 'attrs');
-    attrs = _props.attrs;
+    attrs = shell.get('attrs');
     if (typeof attrs === 'object') {
       shell.attrs.reset(attrs);
     } else {
@@ -55,27 +73,13 @@ function transferProps(shell) {
   }
   if (shell.hasDirty('style')) {
     DirtyMarker.clean(shell, 'style');
-    style = _props.style;
-    if (typeof style === 'string') {
-      style = toStyle(style);
-    }
-    if (typeof style === 'object') {
-      shell.style.reset(style);
-    } else {
-      shell.style.reset(null);
-    }
+    style = toStyleObject(shell.get('style'));
+    shell.style.reset(style);
   }
-  if (shell.hasDirty('classes')) {
-    DirtyMarker.clean(shell, 'classes');
-    classes = _props.classes;
-    if (typeof classes !== 'object') {
-      classes = toClasses(classes);
-    }
-    if (typeof classes === 'object') {
-      shell.classes.reset(classes);
-    } else {
-      shell.classes.reset(null);
-    }
+  if (shell.hasDirty('class')) {
+    DirtyMarker.clean(shell, 'class');
+    classes = toClassObject(shell.get('class'));
+    shell.classes.reset(classes);
   }
 
   if (!shell.__props || !shell.constructor.__extag_component_class__) { 
@@ -85,11 +89,7 @@ function transferProps(shell) {
   var __props = shell.__props;
   
   if (__props.hasDirty('attrs')) {
-    var __attrs = shell.__attrs;
-    if (!__attrs) {
-      __attrs = new Cache(shell);
-      shell.__attrs = __attrs;
-    }
+    var __attrs = getOrCreateCache(shell, '__attrs');
     DirtyMarker.clean(__props, 'attrs');
     attrs = __props.get('attrs');
     if (typeof attrs === 'object') {
@@ -99,38 +99,18 @@ function transferProps(shell) {
     }
   }
   if (__props.hasDirty('style')) {
-    var __style = shell.__style;
-    if (!__style) {
-      __style = new Cache(shell);
-      shell.__style = __style;
-    }
+    var __style = getOrCreateCache(shell, '__style');
     DirtyMarker.clean(__props, 'style');
     style = __props.get('style');
-    if (typeof style === 'string') {
-      style = toStyle(style);
-    }
-    if (typeof style === 'object') {
-      __style.reset(style);
-    } else {
-      __style.reset(null);
-    }
+    style = toStyleObject(style);
+    __style.reset(style);
   }
-  if (__props.hasDirty('classes')) {
-    var __classes = shell.__classes;
-    if (!__classes) {
-      __classes = new Cache(shell);
-      shell.__classes = __classes;
-    }
-    DirtyMarker.clean(__props, 'classes');
-    classes = __props.get('classes');
-    if (typeof classes !== 'object') {
-      classes = toClasses(classes);
-    }
-    if (typeof classes === 'object') {
-      __classes.reset(classes);
-    } else {
-      __classes.reset(null);
-    }
+  if (__props.hasDirty('class')) {
+    var __classes = getOrCreateCache(shell, '__classes');
+    DirtyMarker.clean(__props, 'class');
+    classes = __props.get('class');
+    classes = toClassObject(classes);
+    __classes.reset(classes);
   }
 }
 

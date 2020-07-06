@@ -11,8 +11,7 @@ import DataBinding from 'src/core/bindings/DataBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import logger from 'src/share/logger'
 import { 
-  NODE_IN_JSX,
-  NODE_IN_HTMX,
+  EXTAG_VNODE,
   CAPITAL_REGEXP,
  } from 'src/share/constants'
 import { 
@@ -24,7 +23,7 @@ import {
 
  function getExprArgs(value) {
   var type = typeof value;
-  if (type === 'object' && value.__extag_expr__) {
+  if (type === 'object' && value.__extag_expr__ === Expression) {
     return value.args;
   } else if (type === 'string' || type === 'function') {
     return [value];
@@ -53,7 +52,7 @@ function parseJsxNode(node, prototype) {
     for (key in props) {
       value = props[key];
       if (typeof value === 'object') {
-        if (value.__extag_expr__) {
+        if (value.__extag_expr__ === Expression) {
           props[key] = parseJsxDataExpr(value.args, node, prototype);
         } else if (key === 'classes' || key === 'style' || key === 'attrs') {
           node[key] = value;
@@ -214,19 +213,20 @@ function parseJsxChildren(node, prototype) {
   for (i = children.length - 1; i >= 0; --i) {
     child = children[i];
     if (typeof child === 'object') {
-      if (child.__extag_node__) {
-        child.__extag_node__ = NODE_IN_HTMX;
+      if (child.__extag_node__ === EXTAG_VNODE) {
+        child.useExpr = true;
         child.identifiers = node.identifiers;
         parseJsxNode(child, prototype);
         parseJsxChildren(child, prototype);
         continue;
-      } else if (child.__extag_expr__) {
+      } else if (child.__extag_expr__ === Expression) {
         // children[i] = parseJsxDataExpr(child.args, node, prototype);
         children[i] = {
-          __extag_node__: NODE_IN_HTMX,
+          __extag_node__: EXTAG_VNODE,
+          useExpr: true,
           type: Expression,
           expr: parseJsxDataExpr(child.args, node, prototype)
-        }
+        };
       }
     }
   }
@@ -251,8 +251,9 @@ var RESERVED_PARAMS = {
  */
 function node(type, options, children) {
   var node = {
-    __extag_node__: NODE_IN_JSX
+    __extag_node__: EXTAG_VNODE
   };
+  var props, key;
 
   var t = typeof type;
   if (t === 'string') {
@@ -318,14 +319,14 @@ function node(type, options, children) {
       node.events = options.events;
     }
 
-    var props;
-     if (node.props) {
+    // var props;
+    if (node.props) {
       props = node.props;
     } else {
       props = node.props = {};
     }
 
-    for (var key in options) {
+    for (key in options) {
       if (!RESERVED_PARAMS[key] && hasOwnProp.call(options, key)) {
         props[key] = options[key];
       }
@@ -340,6 +341,17 @@ function node(type, options, children) {
       children = [children];
     }
     node.children = children;
+
+    // if (node.props) {
+    //   props = node.props;
+    // } else {
+    //   props = node.props = {};
+    // }
+    // if (node.type) {
+    //   props.contents = children;
+    // } else {
+    //   props.children = children;
+    // }
   }
 
   return node;
@@ -358,7 +370,7 @@ function node(type, options, children) {
 function expr() {
   return {
     args: slice.call(arguments, 0),
-    __extag_expr__: true
+    __extag_expr__: Expression
   };
 }
 

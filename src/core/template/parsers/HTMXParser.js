@@ -1,7 +1,7 @@
 // src/core/template/parsers/HTMXParser.js
 
 import { 
-  NODE_IN_HTMX,
+  EXTAG_VNODE,
   BINDING_FORMAT,
   CAPITAL_REGEXP,
   BINDING_OPERATORS,
@@ -81,7 +81,7 @@ var SELF_CLOSING_TAGS = {
 };
 
 var SPECIAL_CASES = {
-  'class': 'classes',
+  // 'class': 'classes',
   'inner-html': 'innerHTML'
 };
 
@@ -108,7 +108,7 @@ function getPropName(attrName) {
   if (attrName in SPECIAL_CASES) {
     return SPECIAL_CASES[attrName];
   }
-  return toCamelCase(attrName);
+  return attrName;// toCamelCase(attrName);
 }
 
 function isDirective(name) {
@@ -199,10 +199,10 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
   var index = attrName.indexOf(':');
   var result, group, key;
 
-  // :title => title
-  if (index === 0) {
-    attrName = attrName.slice(1);
-  }
+  // // :title => title
+  // if (index === 0) {
+  //   attrName = attrName.slice(1);
+  // }
 
   if (attrValue == null) {
     if (index < 0) {
@@ -215,8 +215,9 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
 
   if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
     group = getGroup(node, 'events');
-    attrName = attrName.slice(0, -1);
-    key = index < 0 ? toCamelCase(attrName) : attrName;
+    key = attrName.slice(0, -1);
+    // attrName = attrName.slice(0, -1);
+    // key = index < 0 ? toCamelCase(attrName) : attrName;
     result = EventBindingParser.parse(attrValue, prototype, identifiers);
     group[key] = new Expression(EventBinding, result);
   } else {
@@ -381,7 +382,8 @@ var LF_IN_BLANK_END = /\s*\n\s*$/;
 
 function createExprNode(binding, pattern) {
   return {
-    __extag_node__: NODE_IN_HTMX,
+    __extag_node__: EXTAG_VNODE,
+    useExpr: true,
     type: Expression,
     expr: new Expression(binding, pattern)
   }
@@ -484,7 +486,8 @@ function parseHTMX(htmx, prototype) {
    
         node = {};
         node.tag = tagName;
-        node.__extag_node__ = NODE_IN_HTMX;
+        node.useExpr = true;
+        node.__extag_node__ = EXTAG_VNODE;
 
         // eslint-disable-next-line no-undef
         if (__ENV__ === 'development') {
@@ -579,11 +582,21 @@ function parseHTMX(htmx, prototype) {
           stop = parseAttributes(htmx, start);
         }
 
+        // if (parent.children) {
+        //   var props = getGroup(parent, 'props');
+        //   if (node.type) {
+        //     props.contents = parent.children;
+        //   } else {
+        //     props.children = parent.children;
+        //   }
+        // }
+
         // start = stop = stop + 1;
 
         // tag closed
         if (parents.length > 1) {
           parents.pop();
+          // check <x:frag>@{{draw()^}}</x:frag>
         } else {
           // if (stop < end) {
           //   throw new Error('');
@@ -609,7 +622,7 @@ function parseHTMX(htmx, prototype) {
         node =  {
           tag: '!',
           comment: htmx.slice(start, stop),
-          __extag_node__: NODE_IN_HTMX
+          __extag_node__: EXTAG_VNODE
         };
         parent.children = parent.children || [];
         parent.children.push(node);
