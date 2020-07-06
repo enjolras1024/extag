@@ -3,43 +3,59 @@ import {
 } from 'src/share/functions'
 
 import { 
-  toKebabCase
+  toCamelCase,
+  // toKebabCase
  } from "./utils";
 
  
-var CSSVendorPrefix, CSSVendorPrefixes = ['webkit', 'Webkit', 'Moz', 'ms', 'O'];
+var cssVendorPrefix, cssVendorPrefixes = ['webkit', 'Webkit', 'Moz', 'ms', 'O'];
 
-function checkCSSVendorPrefix($style, keyCapitalized) {
-  for (var i = 0; i < CSSVendorPrefixes.length; ++i) {
-    if ((CSSVendorPrefixes[i] + keyCapitalized) in $style) {
-      return CSSVendorPrefixes[i];
+function checkCssVendorPrefix(name, $style) {
+  for (var i = 0; i < cssVendorPrefixes.length; ++i) {
+    if ((cssVendorPrefixes[i] + name) in $style) {
+      return cssVendorPrefixes[i];
     }
   }
 }
 
-var IMPORTANT_REGEXP = /\s*!important$/;
+var stylePropNameMap = {
+  'float': 'cssFloat'
+};
+
+function getStylePropName(key, $style) {
+  if (key in stylePropNameMap) {
+    return stylePropNameMap[key];
+  }
+
+  var name = toCamelCase(key);
+  if (name in $style) {
+    stylePropNameMap[key] = name;
+    return name;
+  }
+
+  name = name.charAt(0).toUpperCase() + name.slice(1); // capitalize
+  if (!cssVendorPrefix) {
+    cssVendorPrefix = checkCssVendorPrefix(name, $style);
+  }
+  if (cssVendorPrefix) {
+    name = cssVendorPrefix + name;
+    if (name in $style) {
+      stylePropNameMap[key] = name;
+      return name;
+    }
+  }
+}
 
 function renderStyle($skin, style, dirty) {
-  var key, value, $style = $skin.style;
-  //if (!dirty) { return; }
+  var key, name, $style = $skin.style;
   for (key in dirty) {
-    if (!hasOwnProp.call(dirty, key)) { continue; }
-
-    if (key in $style) {
-      $style[key] = style[key];
-    } else if (key.slice(0, 2) === '--') { // css var
-      $style.setProperty(key, style[key]);
-    } else {
-      value = style[key];
-      if (IMPORTANT_REGEXP.test(value)) {
-        $style.setProperty(toKebabCase(key), value.replace(IMPORTANT_REGEXP, ''), 'important')
+    if (hasOwnProp.call(dirty, key)) {
+      if (key.slice(0, 2) === '--') {
+        $style.setProperty(key, style[key]);
       } else {
-        var keyCapitalized = key.charAt(0).toUpperCase() + key.slice(1);
-        if (!CSSVendorPrefix) {
-          CSSVendorPrefix = checkCSSVendorPrefix($style, keyCapitalized);
-        }
-        if (CSSVendorPrefix) {
-          $style[CSSVendorPrefix + keyCapitalized] = value;
+        name = getStylePropName(key, $style);
+        if (name) {
+          $style[name] = style[key];
         }
       }
     }

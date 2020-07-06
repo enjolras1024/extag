@@ -56,8 +56,6 @@ function invokeCommands($skin, commands) {
   }
 }
 
-
-
 /**
  * attach a shell to the $skin
  * @required
@@ -173,8 +171,6 @@ function renderShell($skin, shell) {
     }        
     
     if (children && (shell.$flag & FLAG_CHANGED_CHILDREN)) {
-      // var $removed;
-
       if (!shadowMode || !$skin.attachShadow) {
         renderChildren($skin, shell, children);
       } else {

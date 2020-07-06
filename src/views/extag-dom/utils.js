@@ -1,7 +1,7 @@
 import {
   namespaceURIs,
-  HTML_TO_JS,
-  JS_TO_HTML
+  // HTML_TO_JS,
+  // JS_TO_HTML
 } from './config';
 
 import { 
@@ -21,9 +21,9 @@ var REPLACER_2 = function(match, char) {
 
 var camelCache = {};
 function toCamelCase(key) {
-  if (key in HTML_TO_JS) {
-    return HTML_TO_JS[key];
-  }
+  // if (key in HTML_TO_JS) {
+  //   return HTML_TO_JS[key];
+  // }
   if (key.indexOf('-') < 0) {
     return key;
   }
@@ -37,15 +37,36 @@ function toCamelCase(key) {
 
 var kebabCache = {};
 function toKebabCase(key) {
-  if (key in JS_TO_HTML) {
-    return JS_TO_HTML[key];
-  }
+  // if (key in JS_TO_HTML) {
+  //   return JS_TO_HTML[key];
+  // }
   if (key in kebabCache) {
     return kebabCache[key];
   }
   var name = REGEXP_2.test(key) ? key.replace(REGEXP_2, REPLACER_2) : key;
   kebabCache[key] = name;
   return name;
+}
+
+var WHITE_SPACES_REGEXP = /\s+/;
+
+function toClassList(classes) {
+  if (!classes) {
+    return;
+  }
+  var type = typeof classes;
+  if (type === 'string') {
+    return classes.trim().split(WHITE_SPACES_REGEXP);
+  }
+  if (type === 'object') {
+    var list = [];
+    for (var name in classes) {
+      if (classes[name]) {
+        list.push(name);
+      }
+    }
+    return list;
+  }
 }
 
 function getTagName($skin) {
@@ -147,5 +168,7 @@ export {
   toNameSpace,
   toCamelCase,
   toKebabCase,
+
+  toClassList
   
 }

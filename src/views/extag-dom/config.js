@@ -256,7 +256,7 @@ var DOM_PROPERTY_DESCRIPTORS = {
     }
     desc.propertyName = key;
     if (!desc.attributeName) {
-      desc.attributeName = key.toLocaleLowerCase();
+      desc.attributeName = key.toLowerCase();
     }
     if (desc.attributeName !== key) {
       map[desc.attributeName] = desc;
@@ -265,32 +265,32 @@ var DOM_PROPERTY_DESCRIPTORS = {
   assign(DOM_PROPERTY_DESCRIPTORS, map);
 })()
 
-var JS_TO_HTML = (function(map) {
-  var key, desc, cache = {};
-  for (key in map) {
-    desc = map[key];
-    if (!desc) {
-      desc = map[key] = {};
-    }
-    if (!desc.attributeName) {
-      desc.attributeName = key.toLowerCase();
-    }
-    cache[key] = desc.attributeName;
-  }
-  return cache;
-})(DOM_PROPERTY_DESCRIPTORS);
+// var JS_TO_HTML = (function(map) {
+//   var key, desc, cache = {};
+//   for (key in map) {
+//     desc = map[key];
+//     if (!desc) {
+//       desc = map[key] = {};
+//     }
+//     if (!desc.attributeName) {
+//       desc.attributeName = key.toLowerCase();
+//     }
+//     cache[key] = desc.attributeName;
+//   }
+//   return cache;
+// })(DOM_PROPERTY_DESCRIPTORS);
 
-JS_TO_HTML.cssFloat = 'float'; // TODO
+// JS_TO_HTML.cssFloat = 'float'; // TODO
 
-var HTML_TO_JS = (function(map) {
-  var key, cache = {};
-  for (key in map) {
-    if (hasOwnProp.call(map, key)){
-      cache[map[key]] = key;
-    }
-  }
-  return cache;
-})(JS_TO_HTML);
+// var HTML_TO_JS = (function(map) {
+//   var key, cache = {};
+//   for (key in map) {
+//     if (hasOwnProp.call(map, key)){
+//       cache[map[key]] = key;
+//     }
+//   }
+//   return cache;
+// })(JS_TO_HTML);
 
 var namespaceURIs = {
   html: 'http://www.w3.org/1999/xhtml',
@@ -302,7 +302,7 @@ var namespaceURIs = {
 export {
   DOM_PROPERTY_DESCRIPTORS,
   namespaceURIs,
-  HTML_TO_JS,
-  JS_TO_HTML,
+  // HTML_TO_JS,
+  // JS_TO_HTML,
 }
 // export namespaceURIs;
