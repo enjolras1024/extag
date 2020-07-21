@@ -106,7 +106,7 @@ var DOM_PROPERTY_DESCRIPTORS = {
   icon: null,
   id: null,
   innerHTML: {
-    attributeName: 'inner-html',
+    attributeName: '', // means no corresponding attribute
     mustUseProperty: true
   },
   inputMode: null, // ? no support for now
@@ -255,10 +255,10 @@ var DOM_PROPERTY_DESCRIPTORS = {
       desc = DOM_PROPERTY_DESCRIPTORS[key] = {};
     }
     desc.propertyName = key;
-    if (!desc.attributeName) {
+    if (desc.attributeName == null) {
       desc.attributeName = key.toLowerCase();
     }
-    if (desc.attributeName !== key) {
+    if (desc.attributeName && desc.attributeName !== key) {
       map[desc.attributeName] = desc;
     }
   }

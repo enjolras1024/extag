@@ -75,21 +75,21 @@ defineClass({
     defineMembers: function defineMembers(element) {
       var prototype = element.constructor.prototype;
       if (!('classes' in prototype)) {
-        defineProp(prototype, 'attrs', {
-          get: function() {
-            if (!this._attrs) {
-              this._attrs = new Cache(this);
-              // defineProp(this, '_attrs', {
-              //   value: new Cache(this), 
-              //   configurable: true
-              // });
-            }
-            return this._attrs;
-          }//,
-          // set: function(value) {
-          //   resetCache(this.attrs, value);
-          // }
-        });
+        // defineProp(prototype, 'attrs', {
+        //   get: function() {
+        //     if (!this._attrs) {
+        //       this._attrs = new Cache(this);
+        //       // defineProp(this, '_attrs', {
+        //       //   value: new Cache(this), 
+        //       //   configurable: true
+        //       // });
+        //     }
+        //     return this._attrs;
+        //   }//,
+        //   // set: function(value) {
+        //   //   resetCache(this.attrs, value);
+        //   // }
+        // });
         defineProp(prototype, 'style', {
           get: function() {
             if (!this._style) {
@@ -174,7 +174,7 @@ defineClass({
 
       DirtyMarker.clean(this);
   
-      this._attrs && DirtyMarker.clean(this._attrs);
+      // this._attrs && DirtyMarker.clean(this._attrs);
       this._style && DirtyMarker.clean(this._style);
       this._classes && DirtyMarker.clean(this._classes);
 

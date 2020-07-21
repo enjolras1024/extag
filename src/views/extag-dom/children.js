@@ -148,7 +148,7 @@ function renderChildren($skin, shell, children) {
     for (i = m - 1; i >= 0; --i) {
       $oldChild = $children[i];
       oldChild = getShell($oldChild);
-      if (oldChild && shell !== oldChild.getParent()) {
+      if (oldChild && shell !== oldChild.getParent(true)) {
         $skin.removeChild($oldChild);
         // $removed.push($oldChild);
       }

@@ -194,23 +194,91 @@ function parseDirective(name, expr, node, prototype, identifiers) {
   }
 }
 
+// function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
+//   var lastChar = attrName[attrName.length - 1];
+//   var index = attrName.indexOf(':');
+//   var result, group, key;
+
+//   // // :title => title
+//   // if (index === 0) {
+//   //   attrName = attrName.slice(1);
+//   // }
+
+//   if (attrValue == null) {
+//     if (index < 0) {
+//       key = getPropName(attrName);
+//       getGroup(node, 'props')[key] = true;
+//       return;
+//     }
+//     attrValue = '';
+//   }
+
+//   if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
+//     group = getGroup(node, 'events');
+//     key = attrName.slice(0, -1);
+//     // attrName = attrName.slice(0, -1);
+//     // key = index < 0 ? toCamelCase(attrName) : attrName;
+//     result = EventBindingParser.parse(attrValue, prototype, identifiers);
+//     group[key] = new Expression(EventBinding, result);
+//   } else {
+//     if (index < 0) {
+//       group = getGroup(node, 'props');
+//     } else {
+//       group = getGroup(node, 'attrs');
+//     }
+//     switch (lastChar) {
+//       case BINDING_OPERATORS.DATA: // last char is '@'
+//         attrName = attrName.slice(0, -1);
+//         key = index < 0 ? getPropName(attrName) : attrName;
+//         result = PrimitiveLiteralParser.tryParse(attrValue);
+//         if (result != null) {
+//           group[key] = result;
+//         } else {
+//           result = DataBindingParser.parse(attrValue, prototype, identifiers);
+//           group[key] = new Expression(DataBinding, result);
+//         }
+//         break;
+//       case BINDING_OPERATORS.TEXT: // last char is '#'
+//         attrName = attrName.slice(0, -1);
+//         key = index < 0 ? getPropName(attrName) : attrName;
+//         try {
+//           result = TextBindingParser.parse(attrValue, prototype, identifiers);
+//         } catch (e) {
+//           // eslint-disable-next-line no-undef
+//           if (__ENV__ === 'development') {
+//             if (e.code === 1001) {
+//               e.expr = BINDING_FORMAT.replace('0', e.expr);
+//             }
+//           }
+//           throw e;
+//         }
+//         if (result) {
+//           if (result.length === 1) {
+//             group[key] = new Expression(DataBinding, result[0]);
+//           } else {
+//             group[key] = new Expression(TextBinding, result);
+//           }
+//         } else {
+//           group[key] = attrValue;
+//         }
+//         break;
+//       default:
+//         key = index < 0 ? getPropName(attrName) : attrName;
+//         // group[key] = viewEngine.isBoolProp(key) || attrValue;
+//         group[key] = attrValue;
+//     }
+//   }
+// }
+
 function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
   var lastChar = attrName[attrName.length - 1];
-  var index = attrName.indexOf(':');
   var result, group, key;
 
-  // // :title => title
-  // if (index === 0) {
-  //   attrName = attrName.slice(1);
-  // }
-
   if (attrValue == null) {
-    if (index < 0) {
-      key = getPropName(attrName);
-      getGroup(node, 'props')[key] = true;
-      return;
-    }
-    attrValue = '';
+    key = getPropName(attrName);
+    group = getGroup(node, 'props');
+    group[key] = true;
+    return;
   }
 
   if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
@@ -221,15 +289,10 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
     result = EventBindingParser.parse(attrValue, prototype, identifiers);
     group[key] = new Expression(EventBinding, result);
   } else {
-    if (index < 0) {
-      group = getGroup(node, 'props');
-    } else {
-      group = getGroup(node, 'attrs');
-    }
+    group = getGroup(node, 'props');
     switch (lastChar) {
       case BINDING_OPERATORS.DATA: // last char is '@'
-        attrName = attrName.slice(0, -1);
-        key = index < 0 ? getPropName(attrName) : attrName;
+        key = getPropName(attrName.slice(0, -1));
         result = PrimitiveLiteralParser.tryParse(attrValue);
         if (result != null) {
           group[key] = result;
@@ -239,8 +302,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         }
         break;
       case BINDING_OPERATORS.TEXT: // last char is '#'
-        attrName = attrName.slice(0, -1);
-        key = index < 0 ? getPropName(attrName) : attrName;
+        key = getPropName(attrName.slice(0, -1));
         try {
           result = TextBindingParser.parse(attrValue, prototype, identifiers);
         } catch (e) {
@@ -263,8 +325,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         }
         break;
       default:
-        key = index < 0 ? getPropName(attrName) : attrName;
-        // group[key] = viewEngine.isBoolProp(key) || attrValue;
+        key = getPropName(attrName);
         group[key] = attrValue;
     }
   }

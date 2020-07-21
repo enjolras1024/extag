@@ -50,7 +50,7 @@ defineClass({
       var name = this.get('name') || '';
       for (i = 0, n = scopeContents.length; i < n; ++i) {
         content = scopeContents[i];
-        if (name === ((content._attrs && content.attrs.get('x:slot')) || '')) {
+        if (name === (content.get('x:slot') || '')) {
           fragment.push(content);
         }
       }

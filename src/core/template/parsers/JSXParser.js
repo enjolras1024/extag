@@ -54,10 +54,10 @@ function parseJsxNode(node, prototype) {
       if (typeof value === 'object') {
         if (value.__extag_expr__ === Expression) {
           props[key] = parseJsxDataExpr(value.args, node, prototype);
-        } else if (key === 'classes' || key === 'style' || key === 'attrs') {
+        } /*else if (key === 'classes' || key === 'style' || key === 'attrs') {
           node[key] = value;
           delete props[key];
-        }
+        }*/
       }
     }
   }

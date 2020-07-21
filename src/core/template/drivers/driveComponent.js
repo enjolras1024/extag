@@ -27,9 +27,9 @@ function driveComponent(target, scopes, vnode, props, template) {
       driveEvents(target, scopes, vnode.events, useExpr);
     }
     if (useExpr) {
-      if (vnode.attrs) {
-        driveProps(target.attrs, scopes, vnode.attrs, useExpr);
-      }
+      // if (vnode.attrs) {
+      //   driveProps(target.attrs, scopes, vnode.attrs, useExpr);
+      // }
       if (vnode.style) {
         driveProps(target.style, scopes, vnode.style, useExpr);
       }
@@ -62,10 +62,10 @@ function driveComponent(target, scopes, vnode, props, template) {
     driveProps(target.__props, _scopes, template.props, useExpr);
   }
   if (useExpr) {
-    if (template.attrs) {
-      target.__attrs = new Cache(target);
-      driveProps(target.__attrs, _scopes, template.attrs, useExpr);
-    }
+    // if (template.attrs) {
+    //   target.__attrs = new Cache(target);
+    //   driveProps(target.__attrs, _scopes, template.attrs, useExpr);
+    // }
     if (template.style) {
       target.__style = new Cache(target);
       driveProps(target.__style, _scopes, template.style, useExpr);

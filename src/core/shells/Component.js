@@ -35,8 +35,8 @@ var shellProto = Shell.prototype;
 
 var KEYS_PRESERVED = [
   '$meta', '$flag', '$skin', 
-  'attrs', 'style', 'classes', 'contents', 'children', 
-  '_dirty', '_props', '_attrs', '_style', '_classes', '_children'
+  'style', 'classes', 'contents', 'children', 
+  '_dirty', '_props', '_style', '_classes', '_children'
 ];
 var METHODS_PRESERVED = [
   'on', 'off', 'emit',
@@ -401,11 +401,11 @@ defineClass({
  
       DirtyMarker.clean(this);
   
-      this._attrs && DirtyMarker.clean(this._attrs);
+      // this._attrs && DirtyMarker.clean(this._attrs);
       this._style && DirtyMarker.clean(this._style);
       this._classes && DirtyMarker.clean(this._classes);
 
-      this.__attrs && DirtyMarker.clean(this.__attrs);
+      // this.__attrs && DirtyMarker.clean(this.__attrs);
       this.__style && DirtyMarker.clean(this.__style);
       this.__classes && DirtyMarker.clean(this.__classes);
 

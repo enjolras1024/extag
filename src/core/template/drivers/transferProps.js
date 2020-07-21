@@ -19,8 +19,9 @@ function toStyleObject(source) {
       index = piece.indexOf(':');
       if (index > 0) {
         name = piece.slice(0, index).trim();
-        value =  piece.slice(index + 1).trim();
-        style[toCamelCase(name)] = value;
+        value = piece.slice(index + 1).trim();
+        // style[toCamelCase(name)] = value;
+        style[name] = value;
       }
     }
     return style;
@@ -62,15 +63,15 @@ function transferProps(shell) {
 
   var style, attrs, classes;
 
-  if (shell.hasDirty('attrs')) {
-    DirtyMarker.clean(shell, 'attrs');
-    attrs = shell.get('attrs');
-    if (typeof attrs === 'object') {
-      shell.attrs.reset(attrs);
-    } else {
-      shell.attrs.reset(null);
-    }
-  }
+  // if (shell.hasDirty('attrs')) {
+  //   DirtyMarker.clean(shell, 'attrs');
+  //   attrs = shell.get('attrs');
+  //   if (typeof attrs === 'object') {
+  //     shell.attrs.reset(attrs);
+  //   } else {
+  //     shell.attrs.reset(null);
+  //   }
+  // }
   if (shell.hasDirty('style')) {
     DirtyMarker.clean(shell, 'style');
     style = toStyleObject(shell.get('style'));
@@ -88,16 +89,16 @@ function transferProps(shell) {
 
   var __props = shell.__props;
   
-  if (__props.hasDirty('attrs')) {
-    var __attrs = getOrCreateCache(shell, '__attrs');
-    DirtyMarker.clean(__props, 'attrs');
-    attrs = __props.get('attrs');
-    if (typeof attrs === 'object') {
-      __attrs.reset(attrs);
-    } else {
-      __attrs.reset(null);
-    }
-  }
+  // if (__props.hasDirty('attrs')) {
+  //   var __attrs = getOrCreateCache(shell, '__attrs');
+  //   DirtyMarker.clean(__props, 'attrs');
+  //   attrs = __props.get('attrs');
+  //   if (typeof attrs === 'object') {
+  //     __attrs.reset(attrs);
+  //   } else {
+  //     __attrs.reset(null);
+  //   }
+  // }
   if (__props.hasDirty('style')) {
     var __style = getOrCreateCache(shell, '__style');
     DirtyMarker.clean(__props, 'style');

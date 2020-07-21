@@ -120,25 +120,25 @@ function renderShell($skin, shell) {
 
     var shadowMode = props.shadowMode;
 
-    var attrs = shell._attrs;
+    // var attrs = shell._attrs;
     var style = shell._style;
     var classes = shell._classes;
     var children = shell._children;
 
-    if (attrs) {
-      props = attrs._props;
-      dirty = attrs._dirty;
-    } else {
-      props = null;
-      dirty = null;
-    }
-    if (shell.__attrs) {
-      props = mergeProps(props, shell.__attrs && shell.__attrs._props);
-      dirty = mergeDirty(dirty, shell.__attrs && shell.__attrs._dirty);
-    }
-    if (props && dirty) {
-      renderAttrs($skin, props, dirty);
-    }
+    // if (attrs) {
+    //   props = attrs._props;
+    //   dirty = attrs._dirty;
+    // } else {
+    //   props = null;
+    //   dirty = null;
+    // }
+    // if (shell.__attrs) {
+    //   props = mergeProps(props, shell.__attrs && shell.__attrs._props);
+    //   dirty = mergeDirty(dirty, shell.__attrs && shell.__attrs._dirty);
+    // }
+    // if (props && dirty) {
+    //   renderAttrs($skin, props, dirty);
+    // }
     
     if (style) {
       props = style._props;

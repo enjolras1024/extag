@@ -86,9 +86,9 @@ export function createContent(vnode, scopes) {
       if (vnode.props) {
         driveProps(content, scopes, vnode.props, useExpr)
       }
-      if (vnode.attrs) {
-        driveProps(content.attrs, scopes, vnode.attrs, useExpr);
-      }
+      // if (vnode.attrs) {
+      //   driveProps(content.attrs, scopes, vnode.attrs, useExpr);
+      // }
       if (vnode.style) {
         driveProps(content.style, scopes, vnode.style, useExpr);
       }

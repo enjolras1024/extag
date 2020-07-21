@@ -63,7 +63,7 @@ export default {
         });
       }
       // if (forStyle && name.slice(0, 2) !== '--') { // not like --webkit-transform
-      //   name = toforStyle(name);
+      //   name = toCamelCase(name);
       // }
 
       try {
