@@ -103,7 +103,7 @@ function renderShell($skin, shell) {
   var meta = shell.$meta;
   if (meta.type === TYPE_TEXT) {
     if (shell._dirty) {
-      $skin.nodeValue = shell._data;
+      $skin.nodeValue = shell._content;
     }
   } else if (meta.type === TYPE_ELEM) {
     var props, dirty;

@@ -137,15 +137,6 @@ defineClass({
 
     HTMXEngine.transferProps(this);
 
-    // if (this.hasDirty('children')) {
-    //   DirtyMarker.clean(this, 'children');
-    //   var children = this.get('children') || [];
-    //   if (!Array.isArray(children)) {
-    //     children = [children];
-    //   }
-    //   HTMXEngine.driveChildren(this, children.scopes, children);
-    // }
-
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       this.$flag |= FLAG_WAITING_DIGESTING;
       Schedule.insertDigestQueue(this);

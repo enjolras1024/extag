@@ -238,6 +238,7 @@ var RESERVED_PARAMS = {
   xfor: true,
   xkey: true,
   xname: true,
+  xslot: true,
   xtype: true,
   events: true
 };
@@ -304,6 +305,9 @@ function node(type, options, children) {
     }
     if (options.xname) {
       node.name = options.xname;
+    }
+    if (options.xslot) {
+      node.slot = options.xslot;
     }
     if (options.xtype) {
       if (!node.type) {

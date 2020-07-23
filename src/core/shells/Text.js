@@ -15,8 +15,8 @@ import {
 
 
 
-export default function Text(data) {
-  Text.initialize(this, data);
+export default function Text(content) {
+  Text.initialize(this, content);
 }
 
 defineClass({
@@ -25,18 +25,18 @@ defineClass({
   statics: {
     // /**
     //  * Create a text.
-    //  * @param {string} data - as text data
+    //  * @param {string} content - as text content
     //  */
-    // create: function(data) {
-    //   return new Text(data);
+    // create: function(content) {
+    //   return new Text(content);
     // },
 
     /**
-     * initialize the text with data.
+     * initialize the text with content.
      * @param {Text} text
-     * @param {string} data
+     * @param {string} content
      */
-    initialize: function(text, data) {
+    initialize: function(text, content) {
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         if (text.constructor !== Text) {
@@ -44,20 +44,20 @@ defineClass({
         }
       }
       Shell.initialize(text, TYPE_TEXT, '', '');
-      text.set('data', data || '');
+      text.set('content', content || '');
     }
   },
 
   get: function(key) {
-    if (key === 'data') {
-      return this._data;
+    if (key === 'content') {
+      return this._content;
     }
   },
 
   set: function(key, value) {
-    if (key === 'data' && value !== this._data) {
-      this._data = value;
+    if (key === 'content' && value !== this._content) {
       this._dirty = true;
+      this._content = value;
       this.invalidate(FLAG_CHANGED_CACHE);
     }
   },
@@ -112,12 +112,12 @@ defineClass({
   getParent: Parent.prototype.getParent,
 
   /**
-   * return text data snapshot and its guid.
+   * return text content snapshot and its guid.
    * @override
    */
   toString: function() {
-    var data = this.get('data');
-    data = data == null ? '' : data.toString();
-    return '"' + (data.length < 24 ? data : (data.slice(0, 21) + '...'))  + '"(' + this.$meta.guid +')';
+    var content = this._content;
+    content = content == null ? '' : content.toString();
+    return '"' + (content.length < 24 ? content : (content.slice(0, 21) + '...'))  + '"(' + this.$meta.guid +')';
   }
 });

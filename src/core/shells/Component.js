@@ -128,7 +128,7 @@ defineClass({
       if (!_template) {
         try {
           if (!constructor.template) {
-            constructor.template = '<x:frag children@="render(this._props) ^"></x:frag>';
+            constructor.template = '<x:frag></x:frag>';
           }
           if (typeof constructor.template === 'string') {
             _template = HTMXEngine.parseHTMX(constructor.template, prototype);
@@ -319,7 +319,7 @@ defineClass({
   // },
 
   /**
-   * Update this shell and append it to the schedule for rendering.
+   * Update this shell and append it to the schedule for digesting.
    */
   update: function update() {
     if ((this.$flag & FLAG_WAITING_UPDATING) === 0) {
@@ -341,18 +341,27 @@ defineClass({
       }
     } /*else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
       this._parent.invalidate(FLAG_CHANGED_CHILDREN);
-    }*/ else {
-      if (this.__props && this.__props.hasDirty('children')) {
-        var children = this.__props.get('children') || [];
-        DirtyMarker.clean(this.__props, 'children');
-        if (!Array.isArray(children)) {
-          children = [children];
-        }
-        HTMXEngine.driveChildren(this, [this], children, false);
+    }*/ 
+    // else {
+    //   if (this.__props && this.__props.hasDirty('children')) {
+    //     var children = this.__props.get('children') || [];
+    //     DirtyMarker.clean(this.__props, 'children');
+    //     if (!Array.isArray(children)) {
+    //       children = [children];
+    //     }
+    //     HTMXEngine.driveChildren(this, [this], children, false);
+    //   }
+    //   // if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+    //   //   this._parent.invalidate(FLAG_CHANGED_CHILDREN);
+    //   // }
+    // }
+
+    if (this.render && typeof this.render === 'function') {
+      var children = this.render(this._props) || [];
+      if (!Array.isArray(children)) {
+        children = [children];
       }
-      // if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-      //   this._parent.invalidate(FLAG_CHANGED_CHILDREN);
-      // }
+      HTMXEngine.driveChildren(this, [this], children, false, true);
     }
 
     // DirtyMarker.clean(this, 'children');
@@ -380,7 +389,7 @@ defineClass({
   },
 
   /**
-   * Render the dirty parts of this shell to the attached skin 
+   * Digest the dirty parts of this shell, and render to the attached skin 
    */
   digest: function digest() {
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
@@ -427,7 +436,7 @@ defineClass({
       } else if (this.$skin) {
         this.$flag |= FLAG_MOUNTED;
       }
-      if (actions && actions.rendered && (this.$flag & FLAG_MOUNTED)) {
+      if (actions && actions.mounted && (this.$flag & FLAG_MOUNTED)) {
         Schedule.pushCallbackQueue((function() {
           try {
             this.emit('mounted');

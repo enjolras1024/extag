@@ -91,6 +91,7 @@ var DIRECTIVES = {
   'x:for': true,
   'x:key': true,
   'x:name': true,
+  'x:slot': true,
   'x:type': true,
   'x:class': true,
   'x:style': true
@@ -155,6 +156,8 @@ function parseDirective(name, expr, node, prototype, identifiers) {
     node.type = ctor;
   } else if (name === 'x:name') {
     node.name = expr;
+  } else if (name === 'x:slot') {
+    node.slot = expr;
   } else if (name === 'x:key') {
     node.xkey = EvaluatorParser.parse(expr, prototype, identifiers);
   } else if (name === 'x:for') {

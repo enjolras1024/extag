@@ -6,11 +6,8 @@ import {
   EMPTY_OBJECT, 
   EMPTY_ARRAY 
 } from 'src/share/constants'
-import {
-  assign
-} from 'src/share/functions'
+
 import Text from 'src/core/shells/Text'
-import Slot from 'src/core/shells/Slot'
 import Block from 'src/core/shells/Block'
 import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
@@ -45,13 +42,13 @@ export function driveContent(target, vnode, scopes) {
   if (isVNode(vnode)) {
     driveProps(target, scopes, vnode.props);
     driveEvents(target, scopes, vnode.events);
-    driveChildren(target, scopes, vnode.children);
+    driveChildren(target, scopes, vnode.children, target instanceof Component);
     // if (target instanceof Component && target !== scopes[0]) {
     // } else {
 
     // }
   } else /*if (target instanceof Text)*/ {
-    target.set('data', vnode);
+    target.set('content', vnode);
   }
 }
 
@@ -71,7 +68,7 @@ export function createContent(vnode, scopes) {
       content = new Fragment(null, scopes, expr);
     } else {
       content = new Text('');
-      expr.connect('data', content, scopes);
+      expr.connect('content', content, scopes);
     }
   } else if (vnode.tag !== '!') {
     ctor = vnode.type;
@@ -126,15 +123,15 @@ function createContents(children, scopes) {
 function collectContents(children, scopes, target) {
   var oldShells, newVNodes;
 
-  if (target instanceof Component && target !== scopes[0]) {
-    oldShells = target._contents || EMPTY_ARRAY;
-    newVNodes = children || EMPTY_ARRAY;
-  } else if (!(target instanceof Slot)) {
+  // if (target instanceof Component && target !== scopes[0]) {
+  //   oldShells = target._contents || EMPTY_ARRAY;
+  //   newVNodes = children || EMPTY_ARRAY;
+  // } else if (!(target instanceof Slot)) {
     oldShells = target._children || EMPTY_ARRAY;
     newVNodes = children || EMPTY_ARRAY;
-  } else {
-    return;
-  }
+  // } else {
+  //   return;
+  // }
 
   if (newVNodes.length) {
     newVNodes = flattenVNodes(newVNodes, null, target.$meta.ns);
@@ -262,25 +259,35 @@ function flattenVNodes(children, array, ns) {
   return array ? array : children;
 }
 
-function driveChildren(target, scopes, children, useExpr) { 
-  var contents;
+// function driveChildren(target, scopes, children, useExpr) { 
+//   var contents;
 
-  // if (target instanceof Component && target !== scopes[0]) {
-  //   contents = children.slice(0);
-  //   contents.scopes = scopes || [];
-  //   target.set('contents', contents);
-  //   return;
-  // }
-
-  if (useExpr) {
-    contents = createContents(children, scopes);
-  } else {
-    contents = collectContents(children, scopes, target);
-  }
+//   if (useExpr) {
+//     contents = createContents(children, scopes);
+//   } else {
+//     contents = collectContents(children, scopes, target);
+//   }
   
-  if (target instanceof Component && target !== scopes[0]) {
-    target.setContents(contents);
+//   if (target instanceof Component && target !== scopes[0]) {
+//     target.setContents(contents);
+//   } else {
+//     target.setChildren(contents);
+//   }
+// }
+
+function driveChildren(target, scopes, children, useExpr, areContents) {
+  var contents;
+  if (areContents) {
+    // target.setContents(contents);
+    contents = children.slice(0);
+    contents.scopes = scopes;
+    target.set('contents', contents);
   } else {
+    if (useExpr) {
+      contents = createContents(children, scopes);
+    } else {
+      contents = collectContents(children, scopes, target);
+    }
     target.setChildren(contents);
   }
 }

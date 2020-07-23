@@ -1,10 +1,8 @@
 // src/core/shells/Slot.js
 
-// import config from 'src/share/config'
-// import Shell from 'src/core/shells/Shell'
+import { defineClass } from 'src/share/functions'
 import Component from 'src/core/shells/Component'
 import HTMXEngine from 'src/core/template/HTMXEngine'
-import { assign, defineClass } from 'src/share/functions'
 
 export default function Slot(props, scopes, template) {
   Slot.initialize(this, props, scopes, template);
@@ -12,9 +10,9 @@ export default function Slot(props, scopes, template) {
 
 defineClass({
   constructor: Slot, extends: Component,
+
   statics: {
     initialize: function initialize(slot, props, scopes, template) {
-      // Shell.initialize(slot, 0, 'x:slot', '');
       var name = template && template.props && template.props.name;
 
       Component.initialize(slot, props, scopes, {
@@ -23,53 +21,59 @@ defineClass({
         }
       });
       
-      slot.template = assign({}, template);
-      slot.template.props = assign({}, template.props);
-      if (name) {
-        delete slot.template.props.name;
+      scopes[0].on('updating', slot.onUpdating.bind(slot));
+
+      if (template.children) {
+        var contents = template.children.slice(0);
+        contents.scopes = scopes;
+        slot.set('contents', contents);
       }
 
       slot.scopes = scopes;
-
-      slot.invalidate();
-      slot.on('updating', slot.onUpdating.bind(slot));
-      // slot.invalidate = slot.invalidate.bind(slot);
-      scopes[0].on('changed', function(key) {
-        if (key !== 'contents') { return; }
-        slot.invalidate();
-      });
     },
     template: '<x:frag></x:frag>'
   },
 
   onUpdating: function onUpdating() {
-    var fragment = [], children, content, n, i;
-    var scopeContents = this.scopes[0].getContents();
-    var template = this.template, scopes = this.scopes;
+    var scopes = this.scopes;
+    var collection = [], content, n, i;
+    var selfContents = this.get('contents');
+
+    if (scopes[0].hasDirty('contents')) {
+      var scopeContents = scopes[0].get('contents');
+    }
+
     if (scopeContents && scopeContents.length > 0) {
       var name = this.get('name') || '';
       for (i = 0, n = scopeContents.length; i < n; ++i) {
         content = scopeContents[i];
-        if (name === (content.get('x:slot') || '')) {
-          fragment.push(content);
+        if (content != null && name === (content.slot || '')) {
+          collection.push(content);
         }
+      }
+      if (collection.length) {
+        scopes = scopeContents.scopes;
+        HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
       }
       this.useDefault = false;
     }
-    if (fragment.length === 0 && template.children) {
+
+    if (!collection.length && selfContents) {
       // use the default template to slot here
       if (this.useDefault) {
         return;
       }
-      children = template.children;
-      for (i = 0, n = children.length; i < n; ++i) {
-        content = HTMXEngine.createContent(children[i], scopes);
-        if (content) {
-          fragment.push(content);
+      for (i = 0, n = selfContents.length; i < n; ++i) {
+        content = selfContents[i];
+        if (content != null) {
+          collection.push(content);
         }
+      }
+      if (collection.length) {
+        scopes = selfContents.scopes;
+        HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
       }
       this.useDefault = true;
     }
-    this.setChildren(fragment);
   }
 });

@@ -38,7 +38,7 @@ function driveComponent(target, scopes, vnode, props, template) {
       }
     }
     if (vnode.children) {
-      driveChildren(target, scopes, vnode.children, useExpr);
+      driveChildren(target, scopes, vnode.children, useExpr, true);
     }
   } else if (props) {
     // eslint-disable-next-line no-undef
