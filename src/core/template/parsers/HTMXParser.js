@@ -10,13 +10,11 @@ import {
 import { 
   hasOwnProp,
   decodeHTML, 
-  throwError,
-  toCamelCase
+  throwError
 } from 'src/share/functions'
 import logger from 'src/share/logger'
 import Path from 'src/base/Path'
 import Slot from 'src/core/shells/Slot'
-import Output from 'src/core/shells/Output'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
@@ -128,32 +126,38 @@ function parseDirective(name, expr, node, prototype, identifiers) {
   } else if (name === 'x:style') {
     node.style = ClassStyleParser.parse(expr, prototype, identifiers, true);
   } else if (name === 'x:type') {
-    if (node.tag === 'x:output') {
-      // <x:output x:type="Buuton"/> just like <input type="button">
-      parseAttribute('xtype@', expr, node, prototype, identifiers);
-      return;
-    } else if (node.tag === 'x:slot') {
-      throwError('Unexpected x:type on <x:slot>', {
-        code: 1001,
-        expr: expr,
-        desc: 'Do not use x:type on <x:slot>'
-      });
-    }
+    // if (node.tag === 'x:output') {
+    //   // <x:output x:type="Buuton"/> just like <input type="button">
+    //   parseAttribute('xtype@', expr, node, prototype, identifiers);
+    //   return;
+    // } else if (node.tag === 'x:slot') {
+    //   throwError('Unexpected x:type on <x:slot>', {
+    //     code: 1001,
+    //     expr: expr,
+    //     desc: 'Do not use x:type on <x:slot>'
+    //   });
+    // }
     var ctor = Path.search(expr, prototype.constructor.resources);
-    if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
-      // if (__ENV__ === 'development') {
-      //   logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in static resources.');
-      // }
-      // throw new TypeError('Can not find such component type `' + expr + '`');
-      throwError('Illegal x:type="' + expr + '"', {
-        code: 1001,
-        expr: expr,
-        desc: 'Can not find such component type `' + expr 
-              + '`. Make sure it extends Component and please register `' + expr 
-              + '` in static resources.'
-      });
+    // if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
+    //   // if (__ENV__ === 'development') {
+    //   //   logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in static resources.');
+    //   // }
+    //   // throw new TypeError('Can not find such component type `' + expr + '`');
+    //   throwError('Illegal x:type="' + expr + '"', {
+    //     code: 1001,
+    //     expr: expr,
+    //     desc: 'Can not find such component type `' + expr 
+    //           + '`. Make sure it extends Component and please register `' + expr 
+    //           + '` in static resources.'
+    //   });
+    // }
+    // node.type = ctor;
+    if (typeof ctor === 'function' && ctor.__extag_component_class__) {
+      node.type = ctor;
+    } else {
+      result = DataBindingParser.parse(expr, prototype, identifiers);
+      node.xtype = new Expression(DataBinding, result);
     }
-    node.type = ctor;
   } else if (name === 'x:name') {
     node.name = expr;
   } else if (name === 'x:slot') {
@@ -389,7 +393,7 @@ function parseAttributes(htmx, from, node, prototype) {
               if (e.code === 1001) {
                 var snapshot = getSnapshot(htmx, e.expr, node, start);
                 logger.warn((e.desc || e.message) + ' In the template of component ' 
-                  + (prototype.constructor.fullName || prototype.constructor.name) + ':\n' 
+                  + (prototype.constructor.fullname || prototype.constructor.name) + ':\n' 
                   + snapshot[0], snapshot[1], snapshot[2]);
               }
             }
@@ -471,7 +475,7 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
         if (e.code === 1001) {
           var snapshot = getSnapshot(htmx, BINDING_FORMAT.replace('0', e.expr), parent, start);
           logger.warn((e.desc || e.message) + ' In the template of component ' 
-                  + (prototype.constructor.fullName || prototype.constructor.name) + ':\n' 
+                  + (prototype.constructor.fullname || prototype.constructor.name) + ':\n' 
                   + snapshot[0], snapshot[1], snapshot[2]);
         }
       }
@@ -587,9 +591,9 @@ function parseHTMX(htmx, prototype) {
             // case 'x:block':
             //   node.type = Block;
             //   break;
-            case 'x:ouput':
-              node.type = Output;
-              break;
+            // case 'x:ouput':
+            //   node.type = Output;
+            //   break;
           }
         }
 
@@ -635,7 +639,7 @@ function parseHTMX(htmx, prototype) {
           if (__ENV__ === 'development') {
             var snapshot = getSnapshot(htmx, tagName, parent, start);
             logger.warn('Unclosed tag `' + parent.tag + '`. In the template of component ' 
-                  + (prototype.constructor.fullName || prototype.constructor.name) + ':\n' 
+                  + (prototype.constructor.fullname || prototype.constructor.name) + ':\n' 
                   + snapshot[0], snapshot[1], snapshot[2]);
           }
           throwError('Unclosed tag ' + parent.tag);
@@ -716,7 +720,7 @@ var HTMXParser = {
     var root = children[0];
 
     if (children.length !== 1) {
-      throwError('The template of Component ' + (constructor.fullName || constructor.name) + ' must have only one root tag.')
+      throwError('The template of component ' + (constructor.fullname || constructor.name) + ' must have only one root tag.')
     }
     if (root.tag === '!' || root.tag === '#') {
       throwError('Component template root tag must be a DOM element, instead of: ' + htmx.slice(0, htmx.indexOf('>')));

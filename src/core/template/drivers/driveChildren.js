@@ -60,7 +60,7 @@ export function createContent(vnode, scopes) {
   var ctor, expr, content;
   var useExpr = vnode.useExpr;
 
-  if (vnode.xif || vnode.xfor) {
+  if (vnode.xif || vnode.xfor || vnode.xtype) {
     content = new Block(null, scopes, vnode);
   } else if (useExpr && vnode.type === Expression) {
     expr = vnode.expr;

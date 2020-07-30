@@ -1,7 +1,6 @@
 
 import {
-  assign,
-  hasOwnProp
+  assign
 } from 'src/share/functions'
 
 // Refer to React (https://facebook.github.io/react/)

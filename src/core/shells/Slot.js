@@ -21,7 +21,7 @@ defineClass({
         }
       });
       
-      scopes[0].on('updating', slot.onUpdating.bind(slot));
+      scopes[0].on('updating', slot.onScopeUpdating.bind(slot));
 
       if (template.children) {
         var contents = template.children.slice(0);
@@ -34,46 +34,81 @@ defineClass({
     template: '<x:frag></x:frag>'
   },
 
-  onUpdating: function onUpdating() {
+  update: function update() {
+    if (this.hasDirty('collection') || this.hasDirty('contents')) {
+      var scopes = this.scopes;
+      var contents = this.get('contents');
+      var collection = this.get('collection');
+      if (collection && collection.length) {
+        scopes = collection.scopes;
+        HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
+      } else if (contents && contents.length) {
+        scopes = contents.scopes;
+        collection = contents.slice(0);
+        HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
+      } else {
+        this.setChildern([]);
+      }
+      
+      Component.prototype.update.call(this);
+    }
+  },
+
+  onScopeUpdating: function onScopeUpdating() {
     var scopes = this.scopes;
-    var collection = [], content, n, i;
-    var selfContents = this.get('contents');
+    var content, name, n, i
+    var scopeContents;
+    var collection;
+    
+    // var selfContents = this.get('contents');
 
     if (scopes[0].hasDirty('contents')) {
-      var scopeContents = scopes[0].get('contents');
-    }
-
-    if (scopeContents && scopeContents.length > 0) {
-      var name = this.get('name') || '';
-      for (i = 0, n = scopeContents.length; i < n; ++i) {
-        content = scopeContents[i];
-        if (content != null && name === (content.slot || '')) {
-          collection.push(content);
+      collection = [];
+      scopeContents = scopes[0].get('contents');
+      if (scopeContents && scopeContents.length > 0) {
+        name = this.get('name') || '';
+        for (i = 0, n = scopeContents.length; i < n; ++i) {
+          content = scopeContents[i];
+          if (content != null && name === (content.slot || '')) {
+            collection.push(content);
+          }
         }
       }
-      if (collection.length) {
-        scopes = scopeContents.scopes;
-        HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
-      }
-      this.useDefault = false;
+      this.set('collection', collection);
     }
 
-    if (!collection.length && selfContents) {
-      // use the default template to slot here
-      if (this.useDefault) {
-        return;
-      }
-      for (i = 0, n = selfContents.length; i < n; ++i) {
-        content = selfContents[i];
-        if (content != null) {
-          collection.push(content);
-        }
-      }
-      if (collection.length) {
-        scopes = selfContents.scopes;
-        HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
-      }
-      this.useDefault = true;
-    }
+    // if (scopeContents && scopeContents.length > 0) {
+    //   var name = this.get('name') || '';
+    //   for (i = 0, n = scopeContents.length; i < n; ++i) {
+    //     content = scopeContents[i];
+    //     if (content != null && name === (content.slot || '')) {
+    //       collection.push(content);
+    //     }
+    //   }
+    //   this.set('collection', collection);
+    //   // if (collection.length) {
+    //   //   scopes = scopeContents.scopes;
+    //   //   HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
+    //   // }
+    //   // this.useDefault = false;
+    // }
+
+    // if (!collection.length && selfContents) {
+    //   // use the default template to slot here
+    //   if (this.useDefault) {
+    //     return;
+    //   }
+    //   for (i = 0, n = selfContents.length; i < n; ++i) {
+    //     content = selfContents[i];
+    //     if (content != null) {
+    //       collection.push(content);
+    //     }
+    //   }
+    //   if (collection.length) {
+    //     scopes = selfContents.scopes;
+    //     HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
+    //   }
+    //   this.useDefault = true;
+    // }
   }
 });

@@ -7,7 +7,7 @@ import logger from 'src/share/logger'
 function getType(value) {
   if (value instanceof Object) {
     var constructor = value.constructor;
-    return  constructor.fullName || constructor.name;
+    return  constructor.fullname || constructor.name;
   }
 
   return typeof value;
@@ -44,13 +44,13 @@ function validateType(target, key, value, type) {
     t = type;
     error = true;
   } else if (t === 'function' && !(value instanceof type)) {
-    t = type.fullName || type.name;
+    t = type.fullname || type.name;
     error = true;
   }
 
   if (error) {
     constructor = target.constructor;
-    return makeTypeError(constructor.fullName || constructor.name, key, t, getType(value));
+    return makeTypeError(constructor.fullname || constructor.name, key, t, getType(value));
   } else if (Array.isArray(type)) {
     for (var i = 0, n = type.length; i < n; ++i) {
       t = typeof type[i];
@@ -61,7 +61,7 @@ function validateType(target, key, value, type) {
 
     if (i === n) {
       constructor = target.constructor;
-      return makeTypesError(constructor.fullName || constructor.name, key, type, getType(value));
+      return makeTypesError(constructor.fullname || constructor.name, key, type, getType(value));
     }
   }
 }
@@ -159,7 +159,7 @@ export default {
     for (key in descriptors) {
       desc = descriptors[key];
       if (desc.required && (!props || !hasOwnProp.call(props, key))) {
-        logger.warn('Attribute Validation:', 'required `' + key + '` for ' + (target.constructor.fullName || target.constructor.name));
+        logger.warn('Attribute Validation:', 'required `' + key + '` for component ' + (target.constructor.fullname || target.constructor.name));
       }
     }
   },

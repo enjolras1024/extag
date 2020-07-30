@@ -18,7 +18,6 @@ import {
 } from './utils'
 
 import { renderProps } from "./props";
-import { renderAttrs } from "./attrs";
 import { renderStyle } from "./style";
 import { renderClasses } from "./classes";
 import { renderChildren } from "./children";

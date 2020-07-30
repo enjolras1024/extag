@@ -150,7 +150,7 @@ defineClass({
   toString: function toString() {
     var meta = this.$meta;
     var ctor = this.constructor;
-    return (ctor.fullName || ctor.name) + '<' + meta.tag + '>(' + meta.guid + ')';
+    return (ctor.fullname || ctor.name) + '<' + meta.tag + '>(' + meta.guid + ')';
   },
 
   /**

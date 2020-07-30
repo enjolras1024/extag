@@ -50,6 +50,7 @@ defineClass({
 
       block.scopes = scopes;
       block.template = assign({}, template);
+      delete block.template.xtype;
       delete block.template.xkey;
       delete block.template.xfor;
       delete block.template.xif;
@@ -74,6 +75,12 @@ defineClass({
         }
       }
 
+      if (template.xtype) {
+        block.xtype = true;
+        expression = template.xtype;
+        expression.connect('component', block, scopes);
+      }
+
       block.on('updating', block.onUpdating.bind(block));
     },
     template: '<x:frag></x:frag>'
@@ -85,6 +92,7 @@ defineClass({
     }
 
     var condition = this.get('condition');
+    var component = this.get('component');
     var template = this.template;
     var scopes = this.scopes;
     var contents = [];
@@ -92,6 +100,14 @@ defineClass({
     if (!condition) {
       this.setChildren(contents);
       return;
+    }
+
+    if (this.xtype) {
+      if (!component || !component.__extag_component_class__) {
+        this.setChildren(contents);
+        return;
+      }
+      template = assign({}, template, {type: component});
     }
 
     if (this.mode === 1) {

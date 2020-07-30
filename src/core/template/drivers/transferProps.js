@@ -2,7 +2,6 @@
 
 import Cache from 'src/core/models/Cache'
 import DirtyMarker from 'src/base/DirtyMarker'
-import { toCamelCase } from 'src/share/functions'
 import { TYPE_TEXT, WHITE_SPACES_REGEXP } from 'src/share/constants'
 
 function toStyleObject(source) {
@@ -61,7 +60,7 @@ function transferProps(shell) {
     return;
   }
 
-  var style, attrs, classes;
+  var style, classes;
 
   // if (shell.hasDirty('attrs')) {
   //   DirtyMarker.clean(shell, 'attrs');

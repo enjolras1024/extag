@@ -93,19 +93,19 @@ defineClass({
         if (!_template) {
           (function() {
             var i, keys;
-            var name = constructor.fullName || constructor.name;
+            var name = constructor.fullname || constructor.name;
             if (attributes) {
               keys = Array.isArray(attributes) ? attributes : Object.keys(attributes);
               for (i = 0; i < KEYS_PRESERVED.length; ++i) {
                 if (keys.indexOf(KEYS_PRESERVED[i]) >= 0) {
-                  logger.warn('`' + KEYS_PRESERVED[i] + '` is a preserved component property, cannot be an attribute of ' + name + '.');
+                  logger.warn('`' + KEYS_PRESERVED[i] + '` is a preserved component property, cannot be an attribute of component ' + name + '.');
                 }
               }
             }
             // check if some final methods are override
             for (i = 0; i < METHODS_PRESERVED.length; ++i) {
               if (prototype[METHODS_PRESERVED[i]] !== Component.prototype[METHODS_PRESERVED[i]]) {
-                logger.warn('`' + METHODS_PRESERVED[i] + '` is a preserved component method. You should be careful to override the method of ' + name + '.');
+                logger.warn('`' + METHODS_PRESERVED[i] + '` is a preserved component method. You should be careful to override the method of component ' + name + '.');
               }
             }
           })()

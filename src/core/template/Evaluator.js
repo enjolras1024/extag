@@ -34,7 +34,7 @@ defineClass({
       } catch (e) {
         var constructor = scopes[0].constructor;
         logger.warn('The expression `' + (this.expr || this.func.toString()) + 
-                    '` maybe illegal in the template of Component ' + (constructor.fullName || constructor.name));
+                    '` maybe illegal in the template of component ' + (constructor.fullname || constructor.name));
         throw e;
       }
     } else {

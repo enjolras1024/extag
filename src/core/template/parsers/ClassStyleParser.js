@@ -6,8 +6,7 @@ import TextBinding from 'src/core/bindings/TextBinding'
 import DataBinding from 'src/core/bindings/DataBinding'
 import Expression from 'src/core/template/Expression'
 import { 
-  throwError,
-  toCamelCase
+  throwError
 } from 'src/share/functions'
 import { 
   BINDING_FORMAT,
