@@ -597,7 +597,7 @@ function parseHTMX(htmx, prototype) {
           }
         }
 
-        if (node.type == null && CAPITAL_REGEXP.test(tagName)) {
+        if (node.type == null && node.xtype == null && CAPITAL_REGEXP.test(tagName)) {
           var ctor = Path.search(tagName, prototype.constructor.resources);
           if (typeof ctor === 'function' && ctor.__extag_component_class__) {
             node.type = ctor;

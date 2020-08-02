@@ -1,0 +1,24 @@
+{
+  "name": "extag-dom",
+  "version": "0.3.1",
+  "description": "Extag's default view engine for DOM operations",
+  "homepage": "https://enjolras1024.github.io/extag/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/enjolras1024/extag.git"
+  },
+  "keywords": ["extag", "extag-dom", "extag-dom.js"],
+  "main": "index.js",
+  "files": [
+    "dist/",
+    "index.js",
+    "LICENSE",
+    "README.md",
+    "package.json"
+  ],
+  "author": "enjolras.chen",
+  "license": "MIT",
+  "peerDependencies": {
+    "extag": "^0.3.1"
+  }
+}

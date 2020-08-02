@@ -1,8 +1,22 @@
 {
   "name": "extag",
-  "version": "0.2.3",
-  "description": "An Event-driven and Component-based JavaScript Library for Building User Interfaces",
-  "main": "dist/extag.js",
+  "version": "0.3.1",
+  "description": "A Component-based and Event-driven JavaScript MVVM Library",
+  "homepage": "https://enjolras1024.github.io/extag/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/enjolras1024/extag.git"
+  },
+  "keywords": ["extag", "extag.js"],
+  "main": "index.js",
+  "files": [
+    "dist/",
+    "index.js",
+    "LICENSE",
+    "README.md",
+    "package.json"
+  ],
+
   "scripts": {
     "karma-test": "./node_modules/.bin/karma start karma.conf.js",
     "rollup-extag": "gulp rollup-extag",
@@ -28,6 +42,5 @@
     "rollup-plugin-replace": "^2.0.0",
     "rollup-plugin-root-import": "^0.2.2",
     "rollup-plugin-uglify": "^6.0.4"
-  },
-  "dependencies": {}
+  }
 }
