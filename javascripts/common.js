@@ -171,7 +171,7 @@ var CodeTabs = Extag.defineClass({
   if (href.indexOf('enjolras1024.github.io') >= 0 || href.indexOf('enjolras1024.gitee.io') >= 0) {
     root = '/extag';
   }
-  Extag.Component.create(SideBar, {
+  new SideBar({
     menuCards: [
       {text: 'Extag', href: root + '/', menus: [
         {text: '快速开始', href: root + '/index.html#get-started'},

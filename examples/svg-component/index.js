@@ -94,5 +94,5 @@
     }
   });
 
-  Component.create(App).attach(ExtagDOM.query('#app'));
+  new App().attach(ExtagDOM.query('#app'));
 })();

@@ -95,5 +95,5 @@
     }
   });
 
-  Component.create(Palette).attach(ExtagDOM.query('#palette'));
+  new Palette().attach(ExtagDOM.query('#palette'));
 })();

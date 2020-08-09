@@ -31,13 +31,11 @@
     extends: Component,
 
     statics: {
-      fullName: 'TodoItem',
+      fullname: 'TodoItem',
       template: ExtagDOM.query('#todo-item-template').innerHTML,
       attributes: {
         completed: false,
-        // editing: false,
-        label: '',
-        // text: ''
+        label: ''
       }
     },
 
@@ -107,28 +105,7 @@
     extends: Component,
 
     statics: {
-      fullName: 'TodoApp',
-      // attributes: {
-      //   todos: Extag.anew(Array),
-      //   status: STATUS.ALL,
-      //   newTodo: '',
-      //   remainingCount: {
-      //     get: function() {
-      //       return this.todos.length - filter(this.todos, STATUS.COMPLETED).length;
-      //     }
-      //   },
-      //   allDone: {
-      //     get: function() {
-      //       return this.remainingCount === 0;
-      //     },
-      //     set: function(value) {
-      //       this.todos.forEach(function(todo) {
-      //         todo.completed = value;
-      //       });
-      //     }
-      //   }
-      // },
-
+      fullname: 'TodoApp',
       resources: {
         filter: filter,
         display: function(visible) {
@@ -210,8 +187,6 @@
       todos.splice(index, 1);
       todo.off('changed', this.onSave);
       this.state.todos = todos.slice(0);
-      // this.emit('changed.todos')
-      // this.invalidate();
       todo.off();
     },
 
@@ -244,9 +219,6 @@
     }
   });
 
-  var app = Component.create(ENJ.TodoApp);
-  // app.attach(ExtagDOM.query('#todoapp'));
-  setTimeout(function() {
-    app.attach(ExtagDOM.query('#todoapp'));
-  }, 2000)
+  var app = new ENJ.TodoApp();
+  app.attach(ExtagDOM.query('#todoapp'));
 })();

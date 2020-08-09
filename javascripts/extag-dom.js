@@ -132,7 +132,7 @@
     icon: null,
     id: null,
     innerHTML: {
-      attributeName: 'inner-html',
+      attributeName: '', // means no corresponding attribute
       mustUseProperty: true
     },
     inputMode: null, // ? no support for now
@@ -281,42 +281,42 @@
         desc = DOM_PROPERTY_DESCRIPTORS[key] = {};
       }
       desc.propertyName = key;
-      if (!desc.attributeName) {
-        desc.attributeName = key.toLocaleLowerCase();
+      if (desc.attributeName == null) {
+        desc.attributeName = key.toLowerCase();
       }
-      if (desc.attributeName !== key) {
+      if (desc.attributeName && desc.attributeName !== key) {
         map[desc.attributeName] = desc;
       }
     }
     assign(DOM_PROPERTY_DESCRIPTORS, map);
   })();
 
-  var JS_TO_HTML = (function(map) {
-    var key, desc, cache = {};
-    for (key in map) {
-      desc = map[key];
-      if (!desc) {
-        desc = map[key] = {};
-      }
-      if (!desc.attributeName) {
-        desc.attributeName = key.toLowerCase();
-      }
-      cache[key] = desc.attributeName;
-    }
-    return cache;
-  })(DOM_PROPERTY_DESCRIPTORS);
+  // var JS_TO_HTML = (function(map) {
+  //   var key, desc, cache = {};
+  //   for (key in map) {
+  //     desc = map[key];
+  //     if (!desc) {
+  //       desc = map[key] = {};
+  //     }
+  //     if (!desc.attributeName) {
+  //       desc.attributeName = key.toLowerCase();
+  //     }
+  //     cache[key] = desc.attributeName;
+  //   }
+  //   return cache;
+  // })(DOM_PROPERTY_DESCRIPTORS);
 
-  JS_TO_HTML.cssFloat = 'float'; // TODO
+  // JS_TO_HTML.cssFloat = 'float'; // TODO
 
-  var HTML_TO_JS = (function(map) {
-    var key, cache = {};
-    for (key in map) {
-      if (hasOwnProp.call(map, key)){
-        cache[map[key]] = key;
-      }
-    }
-    return cache;
-  })(JS_TO_HTML);
+  // var HTML_TO_JS = (function(map) {
+  //   var key, cache = {};
+  //   for (key in map) {
+  //     if (hasOwnProp.call(map, key)){
+  //       cache[map[key]] = key;
+  //     }
+  //   }
+  //   return cache;
+  // })(JS_TO_HTML);
 
   var namespaceURIs = {
     html: 'http://www.w3.org/1999/xhtml',
@@ -326,22 +326,46 @@
   };
   // export namespaceURIs;
 
-  var REGEXP_2 = /([A-Z])/g;
-  var REPLACER_2 = function(match, char) {
-    return '-' + char.toLowerCase();
+  var REGEXP_1 = /-([a-z])?/g;
+  var REPLACER_1 = function(match, char) {
+    return char ? char.toUpperCase() : '';
   };
 
-  var kebabCache = {};
-  function toKebabCase(key) {
-    if (key in JS_TO_HTML) {
-      return JS_TO_HTML[key];
+  var camelCache = {};
+  function toCamelCase(key) {
+    // if (key in HTML_TO_JS) {
+    //   return HTML_TO_JS[key];
+    // }
+    if (key.indexOf('-') < 0) {
+      return key;
     }
-    if (key in kebabCache) {
-      return kebabCache[key];
+    if (key in camelCache) {
+      return camelCache[key];
     }
-    var name = REGEXP_2.test(key) ? key.replace(REGEXP_2, REPLACER_2) : key;
-    kebabCache[key] = name;
+    var name = key.replace(REGEXP_1, REPLACER_1);
+    camelCache[key] = name;
     return name;
+  }
+
+  var WHITE_SPACES_REGEXP = /\s+/;
+
+  function toClassList(classes) {
+    if (!classes) {
+      return;
+    }
+    var type = typeof classes;
+    if (type === 'string') {
+      return classes.trim().split(WHITE_SPACES_REGEXP);
+    }
+    if (type === 'object') {
+      var list = [];
+      for (var name in classes) {
+        if (classes[name]) {
+          list.push(name);
+        }
+      }
+      return list;
+    }
   }
 
   function getTagName($skin) {
@@ -484,15 +508,18 @@
   var TYPE_TEXT = 3;
   var FLAG_CHANGED_CHILDREN = 2;
   var FLAG_CHANGED_COMMANDS = 4;
+
+  // symbols
+  var EXTAG_VNODE = Object.freeze({});
   var EMPTY_ARRAY = [];
 
   function renderProps($skin, props, dirty) {
-    var key, desc, value;
+    var key, desc, index, value, nsURI;
     //if (!dirty) { return; }
     for (key in dirty) {
       if (hasOwnProp.call(dirty, key)) { 
-        desc = DOM_PROPERTY_DESCRIPTORS[key];
         value = props[key];
+        desc = DOM_PROPERTY_DESCRIPTORS[key];
         if (desc) {
           if (desc.mustUseProperty) {
             $skin[desc.propertyName] = value;
@@ -501,78 +528,79 @@
           } else {
             $skin.removeAttribute(desc.attributeName);
           }
-        } else if (value != null) {
-          $skin.setAttribute(toKebabCase(key), value);
         } else {
-          $skin.removeAttribute(toKebabCase(key));
+          index = key.indexOf(':');
+          nsURI = index <= 0 ? null : 
+                  namespaceURIs[key.slice(0, index)];
+          if (nsURI) {
+            // xlink:href ...
+            key = key.slice(index + 1);
+            if (value != null) {
+              $skin.setAttributeNS(nsURI, key, value);
+            } else {
+              $skin.removeAttributeNS(nsURI, key);
+            }
+          } else if (index <= 0 || key.slice(0, index) !== 'x') {
+            // data-sth, aria-sth, svg attributes ...
+            if (value != null) {
+              $skin.setAttribute(key, value);
+            } else {
+              $skin.removeAttribute(key);
+            }
+          }
         }
       }
     }
   }
 
-  function renderAttrs($skin, attrs, dirty) {
-    var key, value, index, nsURI;
-    // if (!dirty) {  return; }
-    for (key in dirty) {
-      if (!hasOwnProp.call(dirty, key)) { continue; }
+  var cssVendorPrefix, cssVendorPrefixes = ['webkit', 'Webkit', 'Moz', 'ms', 'O'];
 
-      value = attrs[key];
-      index = key.indexOf(':');
-
-      if (index > 0) {
-        nsURI = namespaceURIs[key.slice(0, index)];
-      }
-
-      if (!nsURI) {
-        if (value != null) {
-          $skin.setAttribute(key, value);
-        } else {
-          $skin.removeAttribute(key);
-        }
-      } else {
-        key = key.slice(index + 1);
-        if (value != null) {
-          $skin.setAttributeNS(nsURI, key, value);
-        } else {
-          $skin.removeAttributeNS(nsURI, key);
-        }
+  function checkCssVendorPrefix(name, $style) {
+    for (var i = 0; i < cssVendorPrefixes.length; ++i) {
+      if ((cssVendorPrefixes[i] + name) in $style) {
+        return cssVendorPrefixes[i];
       }
     }
   }
 
-  var CSSVendorPrefix, CSSVendorPrefixes = ['webkit', 'Webkit', 'Moz', 'ms', 'O'];
+  var stylePropNameMap = {
+    'float': 'cssFloat'
+  };
 
-  function checkCSSVendorPrefix($style, keyCapitalized) {
-    for (var i = 0; i < CSSVendorPrefixes.length; ++i) {
-      if ((CSSVendorPrefixes[i] + keyCapitalized) in $style) {
-        return CSSVendorPrefixes[i];
+  function getStylePropName(key, $style) {
+    if (key in stylePropNameMap) {
+      return stylePropNameMap[key];
+    }
+
+    var name = toCamelCase(key);
+    if (name in $style) {
+      stylePropNameMap[key] = name;
+      return name;
+    }
+
+    name = name.charAt(0).toUpperCase() + name.slice(1); // capitalize
+    if (!cssVendorPrefix) {
+      cssVendorPrefix = checkCssVendorPrefix(name, $style);
+    }
+    if (cssVendorPrefix) {
+      name = cssVendorPrefix + name;
+      if (name in $style) {
+        stylePropNameMap[key] = name;
+        return name;
       }
     }
   }
-
-  var IMPORTANT_REGEXP = /\s*!important$/;
 
   function renderStyle($skin, style, dirty) {
-    var key, value, $style = $skin.style;
-    //if (!dirty) { return; }
+    var key, name, $style = $skin.style;
     for (key in dirty) {
-      if (!hasOwnProp.call(dirty, key)) { continue; }
-
-      if (key in $style) {
-        $style[key] = style[key];
-      } else if (key.slice(0, 2) === '--') { // css var
-        $style.setProperty(key, style[key]);
-      } else {
-        value = style[key];
-        if (IMPORTANT_REGEXP.test(value)) {
-          $style.setProperty(toKebabCase(key), value.replace(IMPORTANT_REGEXP, ''), 'important');
+      if (hasOwnProp.call(dirty, key)) {
+        if (key.slice(0, 2) === '--') {
+          $style.setProperty(key, style[key]);
         } else {
-          var keyCapitalized = key.charAt(0).toUpperCase() + key.slice(1);
-          if (!CSSVendorPrefix) {
-            CSSVendorPrefix = checkCSSVendorPrefix($style, keyCapitalized);
-          }
-          if (CSSVendorPrefix) {
-            $style[CSSVendorPrefix + keyCapitalized] = value;
+          name = getStylePropName(key, $style);
+          if (name) {
+            $style[name] = style[key];
           }
         }
       }
@@ -603,15 +631,103 @@
     }
   }
 
-  function getParent($skin) {
-    return $skin.parentNode;
-  }
+  // function getParent($skin) {
+  //   return $skin.parentNode;
+  // }
 
   function createChild(type, tag, ns) {
     return type === TYPE_TEXT ? 
             document.createTextNode('') :
             (!ns ? document.createElement(tag) : 
             document.createElementNS(namespaceURIs[ns], tag));
+  }
+
+  function hasSameId($skin, shell) {
+    var _props = shell._props;
+    var _id = _props && _props.id;
+    var $id = $skin.getAttribute('id');
+    return _id == $id; // not use ===
+  }
+
+  function hasSameType($skin, shell) {
+    var _props = shell._props;
+    var _type = (_props && _props.type) || 'text';
+    var $type = $skin.getAttribute('type') || 'text';
+    return _type === $type
+  }
+
+  function hasSameClass($skin, shell) {
+    var _classes = shell._classes;
+    var className = $skin.getAttribute('class');
+    var classObject = _classes && _classes._props;
+
+    if (className && !classObject) {
+      return false;
+    }
+
+    var list1 = toClassList(className) || EMPTY_ARRAY;
+    var list2 = toClassList(classObject) || EMPTY_ARRAY;
+
+    if (list1.length !== list2.length) {
+      return false;
+    }
+
+    if (list2.length === 1) {
+      return list1[0] === list2[0];
+    }
+
+    return list1.sort().join(' ') === list2.sort().join(' ');
+  }
+
+  /**
+   * can hydrate if $skin and shell has same tag name, namescape, id, class and type (just for `input` tag).
+   * @param $skin 
+   * @param shell 
+   */
+  function canHydrate($skin, shell) {
+    var $meta = shell.$meta;
+    if ($meta.type === TYPE_TEXT) {
+      return $skin.nodeType === 13;
+    }
+    // TODO: check x:key or not?
+    if ($meta.tag === getTagName($skin) && 
+        $meta.ns === getNameSpace($skin) && 
+        hasSameId($skin, shell) && 
+        hasSameClass($skin, shell) && 
+        ($meta.tag !== 'input' || hasSameType($skin, shell))) {
+      return true;
+    }
+  }
+
+  function resumeSomeAttributes($skin) {
+    var tagName = getTagName($skin);
+    var attributes = $skin.attributes;
+    for (var i = attributes.length - 1; i >= 0; --i) {
+      var attribute = attributes[i];
+      var name = attribute.name;
+
+      if (name === 'id' || name === 'class') {
+        continue;
+      }
+      if (name === 'type' && tagName === 'input') {
+        continue;
+      }
+
+      var desc = DOM_PROPERTY_DESCRIPTORS[name];
+      if (desc && desc.mustUseProperty) {
+        if (desc.isBoolProperty) {
+          $skin[name] = false; // desc.defaultValue
+        } else {
+          $skin[name] = '';
+        }
+      } else {
+        if (attribute.namespaceURI) {
+          $skin.removeAttributeNS(attribute.namespaceURI, name);
+        } else {
+          $skin.removeAttribute(name);
+        }
+      }
+    }
   }
 
   function flattenChildren(children, array) {
@@ -637,8 +753,8 @@
 
     var i, n, m;
     var newChild, oldChild;
-    var $newChild, $oldChild, $parent;
-    var $removed = [], $children = $skin.childNodes;
+    var $newChild, $oldChild;
+    var $children = $skin.childNodes;
 
     n = children.length;
     m = $children.length;
@@ -647,42 +763,51 @@
       for (i = m - 1; i >= 0; --i) {
         $oldChild = $children[i];
         oldChild = getShell($oldChild);
-        if (oldChild && !oldChild.getParent()) {
+        if (oldChild && shell !== oldChild.getParent(true)) {
           $skin.removeChild($oldChild);
-          $removed.push($oldChild);
+          // $removed.push($oldChild);
         }
       }
-      for (i = $removed.length - 1; i >= 0;  --i) {
-        $parent = getParent($removed[i]);
-        oldChild = getShell($removed[i]);
-        if (!$parent && oldChild) { 
-          oldChild.detach();
-        }
-      }
+      // for (i = $removed.length - 1; i >= 0;  --i) {
+      //   $parent = getParent($removed[i]);
+      //   oldChild = getShell($removed[i]);
+      //   if (!$parent && oldChild) { 
+      //     oldChild.detach();
+      //   }
+      // }
     }
 
     if (n) {
       for (i = 0; i < n; ++i) {
         newChild = children[i];
-        $newChild = newChild.$skin;
-        if ($newChild) {
-          $newChild.__extag_index__ = i;
+        if (newChild.$skin) {
+          newChild.__extag_index__ = i;
         }
       }
       for (i = 0; i < n; ++i) {
         newChild = children[i];
         $newChild = newChild.$skin;
         $oldChild = $children[i];
+        oldChild = $oldChild ? getShell($oldChild) : null;
         if (!$newChild) {
           var meta = newChild.$meta;
-          if (!$oldChild || 
-              meta.tag !== getTagName($oldChild) || 
-              meta.ns !== getNameSpace($oldChild) || 
-              ((oldChild = $oldChild ? getShell($oldChild) : null) && oldChild !== newChild)) {
-            $newChild = createChild(meta.type, meta.tag, meta.ns);
-          } else {
+          // if (!$oldChild || 
+          //     meta.tag !== getTagName($oldChild) || 
+          //     meta.ns !== getNameSpace($oldChild) || 
+          //     (oldChild && oldChild !== newChild)) {
+          //   $newChild = createChild(meta.type, meta.tag, meta.ns);
+          // } else {
+          //   $newChild = $oldChild;
+          // }
+
+          if ($oldChild && !oldChild && 
+              canHydrate($oldChild, newChild)) {
             $newChild = $oldChild;
+            resumeSomeAttributes($oldChild);
+          } else {
+            $newChild = createChild(meta.type, meta.tag, meta.ns);
           }
+
           newChild.attach($newChild);
         }
 
@@ -690,8 +815,10 @@
           $skin.appendChild($newChild);
         } else if ($newChild !== $oldChild) {
           $skin.insertBefore($newChild, $oldChild);
-          if ($oldChild.__extag_index__) {
-            $skin.insertBefore($oldChild, $children[$oldChild.__extag_index__] || null);
+          if (oldChild && oldChild.__extag_index__) {
+            $skin.insertBefore($oldChild, $children[oldChild.__extag_index__] || null);
+          } else {
+            $skin.removeChild($oldChild);
           }
         }
       }
@@ -730,8 +857,6 @@
       }
     }
   }
-
-
 
   /**
    * attach a shell to the $skin
@@ -780,7 +905,7 @@
     var meta = shell.$meta;
     if (meta.type === TYPE_TEXT) {
       if (shell._dirty) {
-        $skin.nodeValue = shell._data;
+        $skin.nodeValue = shell._content;
       }
     } else if (meta.type === TYPE_ELEM) {
       var props, dirty;
@@ -797,25 +922,25 @@
 
       var shadowMode = props.shadowMode;
 
-      var attrs = shell._attrs;
+      // var attrs = shell._attrs;
       var style = shell._style;
       var classes = shell._classes;
       var children = shell._children;
 
-      if (attrs) {
-        props = attrs._props;
-        dirty = attrs._dirty;
-      } else {
-        props = null;
-        dirty = null;
-      }
-      if (shell.__attrs) {
-        props = mergeProps(props, shell.__attrs && shell.__attrs._props);
-        dirty = mergeDirty(dirty, shell.__attrs && shell.__attrs._dirty);
-      }
-      if (props && dirty) {
-        renderAttrs($skin, props, dirty);
-      }
+      // if (attrs) {
+      //   props = attrs._props;
+      //   dirty = attrs._dirty;
+      // } else {
+      //   props = null;
+      //   dirty = null;
+      // }
+      // if (shell.__attrs) {
+      //   props = mergeProps(props, shell.__attrs && shell.__attrs._props);
+      //   dirty = mergeDirty(dirty, shell.__attrs && shell.__attrs._dirty);
+      // }
+      // if (props && dirty) {
+      //   renderAttrs($skin, props, dirty);
+      // }
       
       if (style) {
         props = style._props;
@@ -848,8 +973,6 @@
       }        
       
       if (children && (shell.$flag & FLAG_CHANGED_CHILDREN)) {
-        // var $removed;
-
         if (!shadowMode || !$skin.attachShadow) {
           renderChildren($skin, shell, children);
         } else {

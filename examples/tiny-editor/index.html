@@ -7,7 +7,7 @@
 </head>
 <body>
 <div id="editor"></div>
-<div class="template" style="display: none;">
+<script type="text/template" id="tiny-editor-template">
   <div class="tiny-editor" x:style="width: @{width}px; height: @{height}px;">
     <div class="tiny-head">
       <a href="javascript:void(0);" class="tiny-button"
@@ -29,7 +29,7 @@
     </div>
     <div class="tiny-body" contenteditable="true" spellcheck="false"
          x:name="body" x:style="color: @{fontColor}; width: @{width - 20}px; height: @{height - 50}px; padding: 10px;"></div>
-  </div>
+  </script>
 </div>
 <script src="../../javascripts/extag-dom.js"></script>
 <script src="../../javascripts/extag.js"></script>

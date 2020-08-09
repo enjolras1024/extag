@@ -1,7 +1,7 @@
 var TinyEditor = Extag.defineClass({
   extends: Extag.Component,
   statics: {
-    template: ExtagDOM.query('.template .tiny-editor').outerHTML,
+    template: ExtagDOM.query('#tiny-editor-template').innerHTML,
     attributes: {
       fontColor: 'black',
       height: 300,
@@ -90,6 +90,6 @@ function filterText(text) {
   return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/[ ]/g, '&nbsp;').replace(/\n/g, '<br>');
 }
 
-var editor = Extag.Component.create(TinyEditor, {fontColor: '#666'});
+var editor = new TinyEditor({fontColor: '#666'});
 editor.setData('text', 'This editor should work well in IE9~11.');
 editor.attach(ExtagDOM.query('#editor'));

@@ -93,6 +93,57 @@
     },
   };
 
+  // src/share/constants.js 
+
+  // shell type
+  var TYPE_FRAG = 0;
+  var TYPE_ELEM = 1;
+  var TYPE_TEXT = 3;
+
+  // event flags
+  var FLAG_NONE = 0;
+  var FLAG_ONCE = 4;
+  var FLAG_PASSIVE = 2;
+  var FLAG_CAPTURE = 1;
+
+  // change flags
+  var FLAG_CHANGED_CACHE = 1;
+  var FLAG_CHANGED_CHILDREN = 2;
+  var FLAG_CHANGED_COMMANDS = 4;
+  var FLAG_WAITING_UPDATING = 8;
+  var FLAG_WAITING_DIGESTING = 16;
+  var FLAG_SHOULD_RENDER_TO_VIEW = (FLAG_CHANGED_CACHE | FLAG_CHANGED_CHILDREN | FLAG_CHANGED_COMMANDS);
+  var FLAG_MOUNTED = 32;
+  var FLAG_DESTROYED = 64;
+
+  // symbols
+  var EXTAG_VNODE = Object.freeze({});
+
+  var VIEW_ENGINE = 'view-engine';
+  var EMPTY_OBJECT = {};
+  var EMPTY_ARRAY = [];
+  var BINDING_FORMAT = '@{0}';
+  var BINDING_BRACKETS = '{}';
+  var BINDING_OPERATORS = {
+    DATA: '@', 
+    TEXT: '#', 
+    EVENT: '+', 
+    MODIFIER: '::',
+    CONVERTER: '|=', 
+    // SCOPE_EVENT: '@', 
+    ASSIGN: '!',
+    TWO_WAY: '@',  
+    ANY_WAY: '^', 
+    ONE_TIME: '?'
+  };
+
+  // regex
+  var WHITE_SPACES_REGEXP = /\s+/;
+  var WHITE_SPACE_REGEXP = /\s/g;
+  var CAPITAL_REGEXP = /^[A-Z]/;
+  var CONTEXT_REGEXP = /^this\./;
+  var HANDLER_REGEXP = /^(this\.)?[\w$_]+$/;
+
   // src/share/functions.js 
 
   var slice = Array.prototype.slice;
@@ -272,23 +323,6 @@
                 .replace(/&amp;/g, '&');
   }
 
-  var KEBAB_CASE_REGEXP = /-([a-z])?/g;
-  var KEBAB_CASE_REPLACER = function(match, char) {
-    return char ? char.toUpperCase() : '';
-  };
-  var camelCache = {};
-  function toCamelCase(key) {
-    if (key.indexOf('-') < 0) {
-      return key;
-    }
-    if (key in camelCache) {
-      return camelCache[key];
-    }
-    var name = key.replace(KEBAB_CASE_REGEXP, KEBAB_CASE_REPLACER);
-    camelCache[key] = name;
-    return name;
-  }
-
   function throwError(err, opts) {
     var error = err instanceof Error ? err : new Error(err);
     if (opts) {
@@ -296,333 +330,6 @@
     }
     throw error;
   }
-
-  // src/share/constants.js 
-
-  // shell type
-  var TYPE_FRAG = 0;
-  var TYPE_ELEM = 1;
-  var TYPE_TEXT = 3;
-
-  // event flags
-  var FLAG_NONE = 0;
-  var FLAG_ONCE = 4;
-  var FLAG_PASSIVE = 2;
-  var FLAG_CAPTURE = 1;
-
-  // change flags
-  var FLAG_NORMAL = 0;
-  var FLAG_CHANGED_CACHE = 1;
-  var FLAG_CHANGED_CHILDREN = 2;
-  var FLAG_CHANGED_COMMANDS = 4;
-  var FLAG_WAITING_UPDATING = 8;
-  var FLAG_WAITING_RENDERING = 16;
-  var FLAG_SHOULD_RENDER_TO_VIEW = (FLAG_CHANGED_CACHE | FLAG_CHANGED_CHILDREN | FLAG_CHANGED_COMMANDS);
-
-  var VIEW_ENGINE = 'view-engine';
-  var EMPTY_OBJECT = {};
-  var EMPTY_ARRAY = [];
-  var BINDING_FORMAT = '@{0}';
-  var BINDING_BRACKETS = '{}';
-  var BINDING_OPERATORS = {
-    DATA: '@', 
-    TEXT: '#', 
-    EVENT: '+', 
-    MODIFIER: '::',
-    CONVERTER: '|=', 
-    // SCOPE_EVENT: '@', 
-    ASSIGN: '!',
-    TWO_WAY: '@',  
-    ANY_WAY: '^', 
-    ONE_TIME: '?'
-  };
-
-  // regex
-  var WHITE_SPACES_REGEXP = /\s+/;
-  var WHITE_SPACE_REGEXP = /\s/g;
-  var CAPITAL_REGEXP = /^[A-Z]/;
-  var CONTEXT_REGEXP = /^this\./;
-  var HANDLER_REGEXP = /^(this\.)?[\w$_]+$/;
-
-  // src/base/Parent.js
-
-  /**
-   * Parent is in charge of its children.
-   * @class
-   * @constructor
-   */
-  function Parent() {
-    throwError('Parent is a base class and can not be instantiated!');
-  }
-
-  function findParent(shell) {
-    var temp = shell._parent;
-    while (temp && temp.$meta.type === TYPE_FRAG) {
-      temp = temp._parent;
-    }
-    return temp;
-  }
-
-  function flattenChildren(shell, array) {
-    var children = shell._children;
-    var i, n = children.length, child;
-    array = array || [];
-    for (i = 0; i < n; ++i) {
-      child = children[i];
-      if (child.$meta.type === TYPE_FRAG) {
-        flattenChildren(child, array);
-      } else {
-        array.push(child);
-      }
-    }
-    return array;
-  }
-
-  defineClass({
-    constructor: Parent, // mixins: [Watcher.prototype],
-
-    statics: {
-      /**
-       * Clean the parent.
-       * @param {Parent} parent
-       */
-      clean: function(parent) {
-        if (parent._children) {
-          parent._children.isInvalidated = false;
-        }
-      },
-
-      // invalidate: function invalidate(parent) {
-      //   if (parent._children) {
-      //     parent._children.isInvalidated = true;
-      //     parent.invalidate(FLAG_CHANGED_CHILDREN);
-      //   }
-      // },
-
-      findParent: findParent,
-      flattenChildren: flattenChildren
-    },
-
-    getParent: function (actual) {
-      return actual ? findParent(this) : this._parent;
-    },
-
-    getChildren: function getChildren(actual) {
-      if (actual) {
-        return flattenChildren(this);
-      }
-      return this._children ? this._children.slice(0) : [];
-    },
-
-    /**
-     * Reset this parent. Clear old items, push new items.
-     * @param {Array} items
-     */
-    setChildren: function setChildren(children) {
-      var i;
-      var _children = this._children;
-      var n = children ? children.length : 0;
-      var m = _children ? _children.length : 0;
-
-      if (m === n) {
-        for (i = 0; i < n; ++i) {
-          if (_children[i] !== children[i]) {
-            break;
-          }
-        }
-        if (i === n) { // nothing change
-          return this;
-        }
-      }
-   
-      if (m) {
-        for (i = 0; i < m; ++i) {
-          _children[i]._parent = null;
-        }
-        _children.length = 0;
-      }
-      if (n) {
-        for (i = 0; i < n; ++i) {
-          this.insertChild(children[i], null);
-        }
-      } else if (m) {
-        this.invalidate(FLAG_CHANGED_CHILDREN);
-      }
-
-      return this;
-    },
-
-    /**
-     * Insert child before another one which must be in this parent or be null, 
-     * like `insertBofore` and `appendChild`.
-     * @param {Shell} child     - child to be inserted into this parent
-     * @param {Shell} brefore  - child that already exists in this parent. If null, child is appended.
-     */
-    insertChild: function insertChild(child, before) {
-      if (child == null) {
-        throwError('The new child to be inserted into this parent must not be null!');
-      }
-      // if (child.$guid <= this.$guid) {
-      //   throwError('The child must be created after its parent for rendering top-down (parent to child)!')
-      // }
-      var i, j, n, children = this._children;
-
-      if (!children) {
-        children = [];
-        this._children = children;
-        // defineProp(this, '_children', {
-        //   value: children, writable: false, enumerable: false, configurable: true
-        // });
-      }
-
-      n = children.length;
-
-      if (before != null) {
-        for (i = 0; i < n; ++i) {
-          if (children[i] === before && this === before._parent) {
-            break;
-          }
-        }
-        if (i === n) {
-          throwError('The child before which the new child is to be inserted is not a child of this parent!');
-        }
-        if (before === child) { 
-          return this; 
-        }
-      } else {
-        i = n;
-      }
-
-      // if ("development" === 'development') {
-      //   if (child.guid < this.guid) {
-      //     logger.warn('Do not insert the child ' + child.toString() + ' into ' + this.toString() + '. The parent\'s guid should be less than the child\'s for ordered updating from parent to child.');
-      //   }
-      // }
-
-      if (child._parent) {
-        if (child._parent === this) {
-          for (j = 0; j < n; ++j) {
-            if (children[j] === child) {
-              if (j === i) {
-                return this;
-              }
-              children.splice(j, 1);
-              i = j < i ? i - 1 : i;
-              n = children.length;
-              break;
-            }
-          }
-        } else {
-          child._parent.removeChild(child);
-        }
-      } 
-
-      if (i < n) {
-        children.splice(i, 0, child);
-      } else {
-        children.push(child);
-      }
-
-      child._parent = this;
-
-      this.invalidate(FLAG_CHANGED_CHILDREN);
-
-      return this;
-    },
-
-    appendChild: function appendChild(child) {
-      this.insertChild(child, null);
-    },
-
-    /**
-     * Revome an child from this parent, like `removeChild`.
-     * @param {Shell} child - an child that already exists in this parent
-     */
-    removeChild: function removeChild(child) {
-      if (child == null) {
-        throwError('The new child to be removed from this parent must not be null!');
-      }
-
-      var i = 0, n = 0, children = this._children;
-
-      if (children) {
-        for (i = 0, n = children.length; i < n; ++i) {
-          if (children[i] === child && this === child._parent) {
-            break;
-          }
-        }
-      }
-
-      if (i === n) { 
-        throwError('The child to be removed is not a child of this parent!');
-      }
-
-      if (i < n -1) {
-        children.splice(i, 1);
-      } else {
-        children.pop();
-      }
-
-      child._parent = null;
-      this.invalidate(FLAG_CHANGED_CHILDREN);
-
-      return this;
-    },
-
-    /**
-     * Replace the exsited child with new one, like `replaceChild`.
-     * @param {Object} child     - a new child as replacement
-     * @param {Object} existed  - the exsited child in this parent
-     */
-    replaceChild: function replaceChild(child, existed) {
-      if (child == null) {
-        throwError('The new child to be inserted into this parent must not be null!');
-      }
-      
-      // if (child === existed) { return /*this*/; }
-
-      var i = 0, j = 0, n = 0, children = this._children;
-
-      if (children) {
-        for (i = 0, n = children.length; i < n; ++i) {
-          if (children[i] === existed && this === existed._parent) {
-            break;
-          }
-        }
-      }
-
-      if (i === n) {
-        throwError('The child to be replaced is not a child of this parent!');
-      }
-
-      if (child === existed) { 
-        return this; 
-      }
-
-      if (child._parent) {
-        if (child._parent === this) {
-          for (j = 0; j < n; ++j) {
-            if (children[j] === child) {
-              children.splice(j, 1);
-              i = j < i ? i - 1 : i;
-              n = children.length;
-              break;
-            }
-          }
-        } else {
-          child._parent.removeChild(child);
-        }
-      }
-
-      existed._parent = null;
-      child._parent = this;
-      children[i] = child;
-
-      this.invalidate(FLAG_CHANGED_CHILDREN);
-
-      return this;
-    }
-  });
 
   // src/base/Watcher.js
 
@@ -887,7 +594,7 @@
       var actions = this._actions;
       if (!actions) { return; }
       var action = actions[type];
-      if (action) {
+      if (action && action.head) {
         var flag = action.listeners ? arguments[2] : 0;
         var handler, handlers;
         handler = action.head;
@@ -1188,7 +895,7 @@
   function getType(value) {
     if (value instanceof Object) {
       var constructor = value.constructor;
-      return  constructor.fullName || constructor.name;
+      return  constructor.fullname || constructor.name;
     }
 
     return typeof value;
@@ -1225,13 +932,13 @@
       t = type;
       error = true;
     } else if (t === 'function' && !(value instanceof type)) {
-      t = type.fullName || type.name;
+      t = type.fullname || type.name;
       error = true;
     }
 
     if (error) {
       constructor = target.constructor;
-      return makeTypeError(constructor.fullName || constructor.name, key, t, getType(value));
+      return makeTypeError(constructor.fullname || constructor.name, key, t, getType(value));
     } else if (Array.isArray(type)) {
       for (var i = 0, n = type.length; i < n; ++i) {
         t = typeof type[i];
@@ -1242,7 +949,7 @@
 
       if (i === n) {
         constructor = target.constructor;
-        return makeTypesError(constructor.fullName || constructor.name, key, type, getType(value));
+        return makeTypesError(constructor.fullname || constructor.name, key, type, getType(value));
       }
     }
   }
@@ -1340,7 +1047,7 @@
       for (key in descriptors) {
         desc = descriptors[key];
         if (desc.required && (!props || !hasOwnProp.call(props, key))) {
-          logger.warn('Attribute Validation:', 'required `' + key + '` for ' + (target.constructor.fullName || target.constructor.name));
+          logger.warn('Attribute Validation:', 'required `' + key + '` for component ' + (target.constructor.fullname || target.constructor.name));
         }
       }
     },
@@ -1412,10 +1119,12 @@
        * @param {string} key
        */
       clean: function clean(object, key) {
-        if (!key) {
-          object._dirty = null;
-        } else {
-          delete object._dirty[key];
+        if (object._dirty) {
+          if (!key) {
+            object._dirty = null;
+          } else {
+            delete object._dirty[key];
+          }
         }
       }
     },
@@ -1495,80 +1204,63 @@
   );
 
   var updateQueue = []; 
-  var renderQueue = [];
+  var digestQueue = [];
   var callbackQueue = [];
   var updateQueueCursor = 0;
-  var renderQueueCursor = 0;
-  var turn = 0;
-  // var 
+  var digestQueueCursor = 0;
   var waiting = false;
-  var updating = false;
-  var rendering = false;
+  var turn = 0;
 
   function flushQueues() {
-    if (updating || !waiting) {
-      return;
-    }
     try {
       turn++;
-      updating = true;
       updateQueueCursor = 0;
 
-      var shell, i, n;
+      var shell, i;
     
       // quene may be lengthen if the method `invalidate` is called when updating
       while (updateQueueCursor < updateQueue.length) {
-        // if (updateQueueCursor > 999) {
-        //   throw new Error('too much things to update');
-        // }
         shell = updateQueue[updateQueueCursor];
         shell.update();
         ++updateQueueCursor;
       }
     
       updateQueue.length = 0;
-      updateQueueCursor = 0;
-      updating = false;
-      waiting = false;
-    
-      rendering = true;
-      renderQueueCursor = 0;
-      while (renderQueueCursor < renderQueue.length) {
-        // if (updateQueueCursor > 999) {
-        //   throw new Error('too much things to update');
-        // }
-        shell = renderQueue[renderQueueCursor];
-        shell.render();
-        ++renderQueueCursor;
+      updateQueueCursor = -1;
+
+      digestQueueCursor = 0;
+      while (digestQueueCursor < digestQueue.length) {
+        shell = digestQueue[digestQueueCursor];
+        shell.digest();
+        ++digestQueueCursor;
       }
 
-      renderQueue.length = 0;
-      renderQueueCursor = 0;
-      rendering = false;
+      digestQueue.length = 0;
+      digestQueueCursor = -1;
     
       for (i = callbackQueue.length - 1; i >= 0; --i) {
           callbackQueue[i]();
       }
 
       callbackQueue.length = 0;
+
+      waiting = false;
     } catch (e) {
-      updateQueueCursor = 0;
-      renderQueueCursor = 0;
+      updateQueueCursor = -1;
+      digestQueueCursor = -1;
       updateQueue.length = 0;
-      renderQueue.length = 0;
+      digestQueue.length = 0;
       callbackQueue.length = 0;
-      rendering = false;
-      updating = false;
       waiting = false;
       throw e;
     }
   }
 
-  function binarySearch(id) {
-    var i = updateQueueCursor + 1, j = updateQueue.length - 1;
+  function binarySearch(id, i, j, queue) {
+    var m, guid;
     while (i <= j) {
-      var m = (i + j) >> 1;
-      var guid = updateQueue[m].$meta.guid;
+      m = (i + j) >> 1;
+      guid = queue[m].$meta.guid;
       if (id > guid) {
         i = m + 1;
       } else if (id < guid) {
@@ -1594,10 +1286,10 @@
 
     if (n > 0 && id > updateQueue[n-1].$meta.guid) {
       i = n;
-    } else if (n === 0) {
+    } /*else if (n === 0) {
       i = n;
-    } else {
-      var index = binarySearch(id);
+    }*/ else {
+      var index = binarySearch(id, updateQueueCursor + 1, updateQueue.length - 1, updateQueue);
       if (index < 0) {
         i = - index - 1;
       } else {
@@ -1618,29 +1310,29 @@
   }
 
   /**
-     * Insert a shell into the renderQueue.
+     * Insert a shell into the digestQueue.
      * @param {Shell} shell 
      */
-    function insertRenderQueue(shell) {
-      var i, n = renderQueue.length, id = shell.$meta.guid;
+    function insertDigestQueue(shell) {
+      var i, n = digestQueue.length, id = shell.$meta.guid;
 
-      if (!rendering) {
-        i = n - 1;
-        while (i >= 0 && id < renderQueue[i].$meta.guid) {
-          --i;
-        }
-        ++i;
-      } else {
-        i = renderQueueCursor + 1;
-        while (i < n && id >= renderQueue[i].$meta.guid) {
-          ++i;
+      if (n > 0 && id > digestQueue[n-1].$meta.guid) {
+        i = n;
+      } /*else if (n === 0) {
+        i = n;
+      }*/ else {
+        var index = binarySearch(id, digestQueueCursor + 1, digestQueue.length - 1, digestQueue);
+        if (index < 0) {
+          i = - index - 1;
+        } else {
+          return;
         }
       }
 
       if (i === n) {
-        renderQueue.push(shell);
+        digestQueue.push(shell);
       } else {
-        renderQueue.splice(i, 0, shell);
+        digestQueue.splice(i, 0, shell);
       }
 
       if (!waiting) {
@@ -1661,7 +1353,7 @@
   var Schedule = {
     setImmediate: setImmediate,
     insertUpdateQueue: insertUpdateQueue,
-    insertRenderQueue: insertRenderQueue,
+    insertDigestQueue: insertDigestQueue,
     pushCallbackQueue: pushCallbackQueue
   };
 
@@ -1911,26 +1603,14 @@
 
   // src/share/config.js 
 
-  var _custom = {};
+  var _configuration = {};
 
   var config = {
-    JS_ENV: '',
-    JSXEngine: null,
-    HTMEngine: null,
-    HTMXParser: null,
-    // EVENT_SYMBOL: 'event',
-    // CAPTURE_SYMBOL: '!',
-    // CONTEXT_SYMBOL: 'this',
-    // ONE_WAY_BINDING_BRACKETS: '{}',
-    // TWO_WAY_BINDING_BRACKETS: '[]',
-    // BINDING_OPERATORS: {
-    //   DATA: '@', TEXT: '#', EVENT: '+', CONVERTER: '::', SCOPE_EVENT: '@', TWO_WAY: '@',  ANY_WAY: '^', ONE_TIME: '?', ASSIGN: '!'
-    // },
     get: function get(name) {
-      return _custom[name];
+      return _configuration[name];
     },
     set: function set(name, value) {
-      _custom[name] = value;
+      _configuration[name] = value;
     }
   };
 
@@ -1967,8 +1647,8 @@
       throw new Error('The method `update` must be implemented by sub-class');
     },
 
-    render: function() {
-      throw new Error('The method `render` must be implemented by sub-class');
+    digest: function() {
+      throw new Error('The method `digest` must be implemented by sub-class');
     },
 
     /**
@@ -1980,7 +1660,7 @@
      */
     attach: function attach($skin) {
       if (this.$meta.type === 0) {
-        return false;
+        throw new Error('Fragment and component using <x:frag> as root tag, can not attach a skin.')
       }
       
       var viewEngine = Shell.getViewEngine(this);
@@ -2017,24 +1697,22 @@
         }
       }
 
-      if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
-        this.$flag |= FLAG_WAITING_RENDERING;
-        Schedule.insertRenderQueue(this);
+      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
+        this.$flag |= FLAG_WAITING_DIGESTING;
+        Schedule.insertDigestQueue(this);
       }
-
-      return true;
     },
 
     /**
      * detach the skin from this shell, and destroy itself firstly.
      */
     detach: function detach() {
-      var parent = this._parent;
-      if (parent && !parent._parent) {
-        this._parent = null;
-        parent.detach();
-        return;
-      }
+      // var parent = this._parent;
+      // if (parent && !parent._parent) {
+      //   this._parent = null;
+      //   parent.detach();
+      //   return;
+      // }
 
       if (this.$owner) {
         this.$owner = null;
@@ -2042,7 +1720,12 @@
 
       this.constructor.destroy(this);
 
-      return true;
+      var $skin = this.$skin;
+      if ($skin) {
+        var viewEngine = Shell.getViewEngine(this);
+        viewEngine.detachShell($skin, this);
+        this.$skin = null;
+      }
     },
 
     // getSkin: function getSkin() {
@@ -2060,7 +1743,7 @@
     toString: function toString() {
       var meta = this.$meta;
       var ctor = this.constructor;
-      return (ctor.fullName || ctor.name) + '<' + meta.tag + '>(' + meta.guid + ')';
+      return (ctor.fullname || ctor.name) + '<' + meta.tag + '>(' + meta.guid + ')';
     },
 
     /**
@@ -2113,7 +1796,7 @@
           shell._props = {};
         }
 
-        shell.$flag = FLAG_NORMAL;
+        shell.$flag = 0;
         
         shell.$meta = {
           guid: shellGuid++,
@@ -2134,6 +1817,7 @@
        * @param {Shell} shell
        */
       destroy: function(shell) {
+        if (shell.$flag & FLAG_DESTROYED) { return; }
         var i;
         // removing event linsteners and handlers
         shell.off();
@@ -2153,18 +1837,19 @@
         if (children) {
           for (i = children.length - 1; i >= 0; --i) {
             child = children[i];
+            child.constructor.destroy(child);
             child._parent = null;
-            child.detach();
           }
           shell._children.length = 0;
         }
         // detaching
-        var $skin = shell.$skin;
-        if ($skin) {
-          var viewEngine = Shell.getViewEngine(shell);
-          viewEngine.detachShell($skin, shell);
-          shell.$skin = null;
-        }
+        // var $skin = shell.$skin;
+        // if ($skin) {
+        //   var viewEngine = Shell.getViewEngine(shell);
+        //   viewEngine.detachShell($skin, shell);
+        //   shell.$skin = null;
+        // }
+        shell.$flag |= FLAG_DESTROYED;
       },
 
       getViewEngine: function(shell) {
@@ -2236,8 +1921,277 @@
             listeners[flag] = null;
           }
         }
-        
       }
+    }
+  });
+
+  // src/base/Parent.js
+
+  /**
+   * Parent is in charge of its children.
+   * @class
+   * @constructor
+   */
+  function Parent() {
+    throwError('Parent is a base class and can not be instantiated!');
+  }
+
+  function findParent(shell) {
+    var temp = shell._parent;
+    while (temp && temp.$meta.type === TYPE_FRAG) {
+      temp = temp._parent;
+    }
+    return temp;
+  }
+
+  function flattenChildren(shell, array) {
+    var children = shell._children;
+    var i, n = children.length, child;
+    array = array || [];
+    for (i = 0; i < n; ++i) {
+      child = children[i];
+      if (child.$meta.type === TYPE_FRAG) {
+        flattenChildren(child, array);
+      } else {
+        array.push(child);
+      }
+    }
+    return array;
+  }
+
+  var removed = [];
+  var inQueue = false;
+  function collectRemovedChild(child) {
+    removed.push(child);
+    if (!inQueue) {
+      inQueue = true;
+      Schedule.pushCallbackQueue(cleanRemovedChildren);
+    }
+  }
+  function cleanRemovedChildren() {
+    for (var i = 0; i < removed.length; ++i) {
+      var child = removed[i];
+      if (!child._parent) {
+        child.detach();
+      }
+    }
+    removed.length = 0;
+    inQueue = false;
+  }
+
+  defineClass({
+    constructor: Parent, // mixins: [Watcher.prototype],
+
+    statics: {
+      findParent: findParent,
+      flattenChildren: flattenChildren
+    },
+
+    getParent: function (actual) {
+      return actual ? findParent(this) : this._parent;
+    },
+
+    getChildren: function getChildren(actual) {
+      if (actual) {
+        return flattenChildren(this);
+      }
+      return this._children ? this._children.slice(0) : [];
+    },
+
+    /**
+     * Reset this parent. Clear old items, push new items.
+     * @param {Array} items
+     */
+    setChildren: function setChildren(children) {
+      var i;
+      var _children = this._children;
+      var n = children ? children.length : 0;
+      var m = _children ? _children.length : 0;
+
+      if (m === n) {
+        for (i = 0; i < n; ++i) {
+          if (_children[i] !== children[i]) {
+            break;
+          }
+        }
+        if (i === n) { // nothing change
+          return;
+        }
+      }
+   
+      if (m) {
+        for (i = 0; i < m; ++i) {
+          _children[i]._parent = null;
+          collectRemovedChild(_children[i]);
+        }
+        _children.length = 0;
+      }
+      if (n) {
+        for (i = 0; i < n; ++i) {
+          this.insertChild(children[i], null);
+        }
+      } else if (m) {
+        this.invalidate(FLAG_CHANGED_CHILDREN);
+      }
+    },
+
+    /**
+     * Insert child before another one which must be in this parent or be null, 
+     * like `insertBofore` and `appendChild`.
+     * @param {Shell} child     - child to be inserted into this parent
+     * @param {Shell} brefore  - child that already exists in this parent. If null, child is appended.
+     */
+    insertChild: function insertChild(child, before) {
+      if (child == null) {
+        throwError('The new child to be inserted into this parent must not be null!');
+      }
+
+      var i, j, n, children = this._children;
+
+      if (!children) {
+        children = [];
+        this._children = children;
+        // defineProp(this, '_children', {
+        //   value: children, writable: false, enumerable: false, configurable: true
+        // });
+      }
+
+      n = children.length;
+
+      if (before != null) {
+        for (i = 0; i < n; ++i) {
+          if (children[i] === before && this === before._parent) {
+            break;
+          }
+        }
+        if (i === n) {
+          throwError('The child before which the new child is to be inserted is not a child of this parent!');
+        }
+        if (before === child) { 
+          return; 
+        }
+      } else {
+        i = n;
+      }
+
+      if (child._parent) {
+        if (child._parent === this) {
+          for (j = 0; j < n; ++j) {
+            if (children[j] === child) {
+              if (j === i) {
+                return;
+              }
+              children.splice(j, 1);
+              i = j < i ? i - 1 : i;
+              n = children.length;
+              break;
+            }
+          }
+        } else {
+          child._parent.removeChild(child);
+        }
+      } 
+
+      if (i < n) {
+        children.splice(i, 0, child);
+      } else {
+        children.push(child);
+      }
+
+      child._parent = this;
+
+      this.invalidate(FLAG_CHANGED_CHILDREN);
+    },
+
+    appendChild: function appendChild(child) {
+      this.insertChild(child, null);
+    },
+
+    /**
+     * Revome an child from this parent, like `removeChild`.
+     * @param {Shell} child - an child that already exists in this parent
+     */
+    removeChild: function removeChild(child) {
+      if (child == null) {
+        throwError('The new child to be removed from this parent must not be null!');
+      }
+
+      var i = 0, n = 0, children = this._children;
+
+      if (children) {
+        for (i = 0, n = children.length; i < n; ++i) {
+          if (children[i] === child && this === child._parent) {
+            break;
+          }
+        }
+      }
+
+      if (i === n) { 
+        throwError('The child to be removed is not a child of this parent!');
+      }
+
+      if (i < n -1) {
+        children.splice(i, 1);
+      } else {
+        children.pop();
+      }
+
+      child._parent = null;
+      collectRemovedChild(child);
+      this.invalidate(FLAG_CHANGED_CHILDREN);
+    },
+
+    /**
+     * Replace the exsited child with new one, like `replaceChild`.
+     * @param {Object} child     - a new child as replacement
+     * @param {Object} existed  - the exsited child in this parent
+     */
+    replaceChild: function replaceChild(child, existed) {
+      if (child == null) {
+        throwError('The new child to be inserted into this parent must not be null!');
+      }
+      
+      // if (child === existed) { return /*this*/; }
+
+      var i = 0, j = 0, n = 0, children = this._children;
+
+      if (children) {
+        for (i = 0, n = children.length; i < n; ++i) {
+          if (children[i] === existed && this === existed._parent) {
+            break;
+          }
+        }
+      }
+
+      if (i === n) {
+        throwError('The child to be replaced is not a child of this parent!');
+      }
+
+      if (child === existed) { 
+        return; 
+      }
+
+      if (child._parent) {
+        if (child._parent === this) {
+          for (j = 0; j < n; ++j) {
+            if (children[j] === child) {
+              children.splice(j, 1);
+              i = j < i ? i - 1 : i;
+              n = children.length;
+              break;
+            }
+          }
+        } else {
+          child._parent.removeChild(child);
+        }
+      }
+
+      collectRemovedChild(existed);
+      existed._parent = null;
+      child._parent = this;
+      children[i] = child;
+
+      this.invalidate(FLAG_CHANGED_CHILDREN);
     }
   });
 
@@ -2245,28 +2199,28 @@
 
 
 
-  function Text(data) {
-    Text.initialize(this, data);
+  function Text(content) {
+    Text.initialize(this, content);
   }
 
   defineClass({
     constructor: Text, extends: Shell,
 
     statics: {
-      /**
-       * Create a text.
-       * @param {string} data - as text data
-       */
-      create: function(data) {
-        return new Text(data);
-      },
+      // /**
+      //  * Create a text.
+      //  * @param {string} content - as text content
+      //  */
+      // create: function(content) {
+      //   return new Text(content);
+      // },
 
       /**
-       * initialize the text with data.
+       * initialize the text with content.
        * @param {Text} text
-       * @param {string} data
+       * @param {string} content
        */
-      initialize: function(text, data) {
+      initialize: function(text, content) {
         // eslint-disable-next-line no-undef
         {
           if (text.constructor !== Text) {
@@ -2274,20 +2228,20 @@
           }
         }
         Shell.initialize(text, TYPE_TEXT, '', '');
-        text.set('data', data || '');
+        text.set('content', content || '');
       }
     },
 
     get: function(key) {
-      if (key === 'data') {
-        return this._data;
+      if (key === 'content') {
+        return this._content;
       }
     },
 
     set: function(key, value) {
-      if (key === 'data' && value !== this._data) {
-        this._data = value;
+      if (key === 'content' && value !== this._content) {
         this._dirty = true;
+        this._content = value;
         this.invalidate(FLAG_CHANGED_CACHE);
       }
     },
@@ -2303,20 +2257,19 @@
       // if (this.$flag === FLAG_NORMAL) {
       //   return false;
       // }
-      if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
-        this.$flag |= FLAG_WAITING_RENDERING;
-        Schedule.insertRenderQueue(this);
+      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
+        this.$flag |= FLAG_WAITING_DIGESTING;
+        Schedule.insertDigestQueue(this);
       }
       // this.$flag ^= FLAG_WAITING_UPDATING;
-      // this.render();
-      return true;
+      // this.digest();
     },
 
     /**
      * Render the dirty parts of this shell to the attached skin 
      */
-    render: function render() {
-      if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+    digest: function digest() {
+      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
         return false;
       }
       // if (this.$flag === FLAG_NORMAL) {
@@ -2332,26 +2285,40 @@
         this._dirty = false;
       }
 
-      this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
-      // this.$flag = FLAG_NORMAL;
+      if (this.$skin && (this.$flag & FLAG_MOUNTED === 0)) {
+        this.$flag |= FLAG_MOUNTED;
+      }
 
-      return true;
+      this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
+      // this.$flag = FLAG_NORMAL;
     },
 
     getParent: Parent.prototype.getParent,
 
     /**
-     * return text data snapshot and its guid.
+     * return text content snapshot and its guid.
      * @override
      */
     toString: function() {
-      var data = this.get('data');
-      data = data == null ? '' : data.toString();
-      return '"' + (data.length < 24 ? data : (data.slice(0, 21) + '...'))  + '"(' + this.$meta.guid +')';
+      var content = this._content;
+      content = content == null ? '' : content.toString();
+      return '"' + (content.length < 24 ? content : (content.slice(0, 21) + '...'))  + '"(' + this.$meta.guid +')';
     }
   });
 
+  // src/core/template/HTMXEngine.js
+
+  var HTMXEngine = {
+    driveComponent: null,
+    transferProps: null,
+    createContent: null,
+    makeContent: null,
+    parseHTMX: null,
+    parseJSX: null
+  };
+
   // src/core/shells/Element.js
+  // import config from 'src/share/config'
 
   // function buildCache(element) {
   //   var cache = new Cache(element);
@@ -2395,14 +2362,14 @@
           element.assign(props);
         }
       },
-      /**
-       * 
-       * @param {string} tag      - tag name, maybe with a namespace as prefix, e.g. 'svg:rect'
-       * @param {Object} props    - DOM properties
-       */
-      create: function create(tag, props) {
-        return new Element(tag, props);
-      },
+      // /**
+      //  * 
+      //  * @param {string} tag      - tag name, maybe with a namespace as prefix, e.g. 'svg:rect'
+      //  * @param {Object} props    - DOM properties
+      //  */
+      // create: function create(tag, props) {
+      //   return new Element(tag, props);
+      // },
 
       /**
        * Define getter/setter for attrs, style and classes
@@ -2411,21 +2378,21 @@
       defineMembers: function defineMembers(element) {
         var prototype = element.constructor.prototype;
         if (!('classes' in prototype)) {
-          defineProp(prototype, 'attrs', {
-            get: function() {
-              if (!this._attrs) {
-                this._attrs = new Cache(this);
-                // defineProp(this, '_attrs', {
-                //   value: new Cache(this), 
-                //   configurable: true
-                // });
-              }
-              return this._attrs;
-            }//,
-            // set: function(value) {
-            //   resetCache(this.attrs, value);
-            // }
-          });
+          // defineProp(prototype, 'attrs', {
+          //   get: function() {
+          //     if (!this._attrs) {
+          //       this._attrs = new Cache(this);
+          //       // defineProp(this, '_attrs', {
+          //       //   value: new Cache(this), 
+          //       //   configurable: true
+          //       // });
+          //     }
+          //     return this._attrs;
+          //   }//,
+          //   // set: function(value) {
+          //   //   resetCache(this.attrs, value);
+          //   // }
+          // });
           defineProp(prototype, 'style', {
             get: function() {
               if (!this._style) {
@@ -2471,23 +2438,22 @@
       //   return false;
       // }
 
-      config.HTMXEngine.transferProperties(this);
+      HTMXEngine.transferProps(this);
 
-      if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
-        this.$flag |= FLAG_WAITING_RENDERING;
-        Schedule.insertRenderQueue(this);
+      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
+        this.$flag |= FLAG_WAITING_DIGESTING;
+        Schedule.insertDigestQueue(this);
       }
 
       // this.$flag ^= FLAG_WAITING_UPDATING;
-      // this.render();
-      return true;
+      // this.digest();
     },
 
     /**
      * Render the dirty parts of this element to the attached skin 
      */
-    render: function render() {
-      if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+    digest: function digest() {
+      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
         return false;
       }
 
@@ -2499,10 +2465,10 @@
         var viewEngine = Shell.getViewEngine(this);
 
         viewEngine.renderShell(this.$skin, this);
-        this._children && Parent.clean(this);
+
         DirtyMarker.clean(this);
     
-        this._attrs && DirtyMarker.clean(this._attrs);
+        // this._attrs && DirtyMarker.clean(this._attrs);
         this._style && DirtyMarker.clean(this._style);
         this._classes && DirtyMarker.clean(this._classes);
 
@@ -2512,10 +2478,12 @@
 
         this.$flag &= ~FLAG_SHOULD_RENDER_TO_VIEW;
       }
+      
+      if (this.$skin && (this.$flag & FLAG_MOUNTED === 0)) {
+        this.$flag |= FLAG_MOUNTED;
+      }
 
-      this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
-
-      return true;
+      this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
     }
   });
 
@@ -2655,7 +2623,7 @@
     var targets = [target];
     while (component) {
       if (!_stop) {
-        component.emit('captured', {
+        component.emit('throwed', {
           targets: targets.slice(0),
           target: target,
           phase: phase,
@@ -2679,7 +2647,7 @@
           error: error
         });
         if (!solver) {
-          logger.error('Unsolved error in phase `' + phase + '` from ' + target.toString(), target);
+          logger.error('Unsolved error in phase `' + phase + '` from ', target);
           throw error;
         }
         break;
@@ -2693,14 +2661,14 @@
 
   var KEYS_PRESERVED = [
     '$meta', '$flag', '$skin', 
-    'attrs', 'style', 'classes',
-    '_dirty', '_props', '_attrs', '_style', '_classes'
+    'style', 'classes', 'contents', 'children', 
+    '_dirty', '_props', '_style', '_classes', '_children'
   ];
   var METHODS_PRESERVED = [
     'on', 'off', 'emit',
     'appendChild', 'insertChild', 'removeChild', 'replaceChild', 
     'getParent', 'getChildren', 'setChildren', 'getContents', 'setContents',
-    'get', 'set', 'cmd', 'bind', 'assign', 'update', 'render', 'attach', 'detach', 'invalidate'
+    'get', 'set', 'cmd', 'bind', 'assign', 'update', 'digest', 'attach', 'detach', 'invalidate'
   ];
 
   /**
@@ -2720,15 +2688,21 @@
       
       __extag_component_class__: true,
 
-      /**
-       * Creating a component
-       *
-       * @param {Function}  ctor        - component constructor or class
-       * @param {Object}    props       - component attributes and DOM properties
-       * @returns {Component}
-       */
-      create: function create(ctor, props) {
-        return new ctor(props);
+      // /**
+      //  * Creating a component
+      //  *
+      //  * @param {Function}  ctor        - component constructor or class
+      //  * @param {Object}    props       - component attributes and DOM properties
+      //  * @returns {Component}
+      //  */
+      // create: function create(ctor, props) {
+      //   return new ctor(props);
+      // },
+
+      destroy: function destroy(component) {
+        if (component.$flag & FLAG_DESTROYED) { return; }
+        component.emit('destroying');
+        Shell.destroy(component);
       },
 
       /**
@@ -2745,19 +2719,19 @@
           if (!_template) {
             (function() {
               var i, keys;
-              var name = constructor.fullName || constructor.name;
+              var name = constructor.fullname || constructor.name;
               if (attributes) {
                 keys = Array.isArray(attributes) ? attributes : Object.keys(attributes);
                 for (i = 0; i < KEYS_PRESERVED.length; ++i) {
                   if (keys.indexOf(KEYS_PRESERVED[i]) >= 0) {
-                    logger.warn('`' + KEYS_PRESERVED[i] + '` is a preserved component property, cannot be an attribute of ' + name + '.');
+                    logger.warn('`' + KEYS_PRESERVED[i] + '` is a preserved component property, cannot be an attribute of component ' + name + '.');
                   }
                 }
               }
               // check if some final methods are override
               for (i = 0; i < METHODS_PRESERVED.length; ++i) {
                 if (prototype[METHODS_PRESERVED[i]] !== Component.prototype[METHODS_PRESERVED[i]]) {
-                  logger.warn('`' + METHODS_PRESERVED[i] + '` is a preserved component method. You should be careful to override the method of ' + name + '.');
+                  logger.warn('`' + METHODS_PRESERVED[i] + '` is a preserved component method. You should be careful to override the method of component ' + name + '.');
                 }
               }
             })();
@@ -2779,12 +2753,13 @@
         // parsing template once and only once.
         if (!_template) {
           try {
+            if (!constructor.template) {
+              constructor.template = '<x:frag></x:frag>';
+            }
             if (typeof constructor.template === 'string') {
-              var HTMXParser = config.HTMXParser;
-              _template = HTMXParser.parse(constructor.template, prototype);
+              _template = HTMXEngine.parseHTMX(constructor.template, prototype);
             } else if (typeof constructor.template === 'function') {
-              var JSXParser = config.JSXParser;
-              _template = JSXParser.parse(constructor.template, prototype);
+              _template = HTMXEngine.parseJSX(constructor.template, prototype);
             } else {
               throw new TypeError('The static template must be string or function');
             }
@@ -2831,9 +2806,8 @@
         }
 
         // building
-        var HTMXEngine = config.HTMXEngine;
         try {
-          HTMXEngine.driveComponent(component, _template, scopes, template, props);
+          HTMXEngine.driveComponent(component, scopes, template, props, _template);
         } catch (e) {
           captureError(e, component, 'building');
         }
@@ -2924,54 +2898,54 @@
       }
     },
 
-    /**
-     * attach a skin to this shell.
-     * You should use this method for a root component in browser. 
-     * For the child texts, elements and components, the viewEngine (ExtagSkin as default) help them attach the skins.
-     * On the server-side, the shell do not need to attach some skin, since there is no skin on server-side actually.
-     * @param {HTMLElement} $skin
-     */
-    attach: function attach($skin) {
-      if (shellProto.attach.call(this, $skin)) {
-        try {
-          this.emit('attached', $skin);
-        } catch (e) {
-          captureError(e, this, 'attached');
-        }
-        // if (this.onAttached) {
-        //   this.onAttached($skin);
-        // }
-        return true;
-      }
-      return false;
-    },
+    // /**
+    //  * attach a skin to this shell.
+    //  * You should use this method for a root component in browser. 
+    //  * For the child texts, elements and components, the viewEngine (ExtagSkin as default) help them attach the skins.
+    //  * On the server-side, the shell do not need to attach some skin, since there is no skin on server-side actually.
+    //  * @param {HTMLElement} $skin
+    //  */
+    // attach: function attach($skin) {
+    //   if (shellProto.attach.call(this, $skin)) {
+    //     try {
+    //       this.emit('attached', $skin);
+    //     } catch (e) {
+    //       captureError(e, this, 'attached');
+    //     }
+    //     // if (this.onAttached) {
+    //     //   this.onAttached($skin);
+    //     // }
+    //     return true;
+    //   }
+    //   return false;
+    // },
+
+    // /**
+    //  * detach the skin from this shell, and destroy itself firstly.
+    //  * You can config('prevent-detach', true) to prevent detaching and destroying.
+    //  * @param {boolean} force - if not, detaching can be prevented, so this shell and the skin can be reused.
+    //  */
+    // detach: function detach(force) {
+    //   if (Shell.prototype.detach.call(this, force)) {
+    //     if (this.$skin) {
+    //       try {
+    //         this.emit('detached', this.$skin);
+    //       } catch (e) {
+    //         captureError(e, this, 'detached');
+    //       }
+    //     }
+    //     try {
+    //       this.emit('destroyed');
+    //     } catch (e) {
+    //       captureError(e, this, 'destroyed');
+    //     }
+    //     return true;
+    //   }
+    //   return false;
+    // },
 
     /**
-     * detach the skin from this shell, and destroy itself firstly.
-     * You can config('prevent-detach', true) to prevent detaching and destroying.
-     * @param {boolean} force - if not, detaching can be prevented, so this shell and the skin can be reused.
-     */
-    detach: function detach(force) {
-      if (Shell.prototype.detach.call(this, force)) {
-        if (this.$skin) {
-          try {
-            this.emit('detached', this.$skin);
-          } catch (e) {
-            captureError(e, this, 'detached');
-          }
-        }
-        try {
-          this.emit('destroyed');
-        } catch (e) {
-          captureError(e, this, 'destroyed');
-        }
-        return true;
-      }
-      return false;
-    },
-
-    /**
-     * Update this shell and append it to the schedule for rendering.
+     * Update this shell and append it to the schedule for digesting.
      */
     update: function update() {
       if ((this.$flag & FLAG_WAITING_UPDATING) === 0) {
@@ -2980,7 +2954,6 @@
       // if (this.$flag === FLAG_NORMAL) {
       //   return false;
       // }
-
       try {
         this.emit('updating');
       } catch (e) {
@@ -2990,62 +2963,84 @@
       var type = this.$meta.type;
       if (type !== 0) {
         if ((this.$flag & FLAG_CHANGED_CACHE)) {
-          config.HTMXEngine.transferProperties(this);
+          HTMXEngine.transferProps(this);
         }
-      } else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+      } /*else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
         this._parent.invalidate(FLAG_CHANGED_CHILDREN);
+      }*/ 
+      // else {
+      //   if (this.__props && this.__props.hasDirty('children')) {
+      //     var children = this.__props.get('children') || [];
+      //     DirtyMarker.clean(this.__props, 'children');
+      //     if (!Array.isArray(children)) {
+      //       children = [children];
+      //     }
+      //     HTMXEngine.driveChildren(this, [this], children, false);
+      //   }
+      //   // if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+      //   //   this._parent.invalidate(FLAG_CHANGED_CHILDREN);
+      //   // }
+      // }
+
+      if (this.render && typeof this.render === 'function') {
+        var children = this.render(this._props) || [];
+        if (!Array.isArray(children)) {
+          children = [children];
+        }
+        HTMXEngine.driveChildren(this, [this], children, false, true);
       }
 
-      if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+      // DirtyMarker.clean(this, 'children');
+      DirtyMarker.clean(this, 'contents');
+
+      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
         // If this type is 0, we should ask its parent to render parent's children,
         // since its children are belong to its parent actually.
         if (type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
           // this._parent.invalidate(2); 
           var parent = this.getParent(true);
           parent.$flag |= FLAG_CHANGED_CHILDREN;
-          if ((parent.$flag & FLAG_WAITING_RENDERING) === 0) {
-            parent.$flag |= FLAG_WAITING_RENDERING;
-            Schedule.insertRenderQueue(parent);
+          if ((parent.$flag & FLAG_WAITING_DIGESTING) === 0) {
+            parent.$flag |= FLAG_WAITING_DIGESTING;
+            Schedule.insertDigestQueue(parent);
           }
         }
-        this.$flag |= FLAG_WAITING_RENDERING;
-        Schedule.insertRenderQueue(this);
-        // this.render();
+        this.$flag |= FLAG_WAITING_DIGESTING;
+        Schedule.insertDigestQueue(this);
+        // this.digest();
       }
 
       // this.$flag ^= FLAG_WAITING_UPDATING;
-      // this.render();
-      
-      return true;
+      // this.digest();
     },
 
     /**
-     * Render the dirty parts of this shell to the attached skin 
+     * Digest the dirty parts of this shell, and render to the attached skin 
      */
-    render: function render() {
-      if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+    digest: function digest() {
+      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
         return;
       }
       // if (this.$flag === FLAG_NORMAL) {
       //   return false;
       // }
       // if (this.$meta.type !== 0) {
-      //   elementPropto.render.call(this);
+      //   elementPropto.digest.call(this);
       // } else {
-      //   fragmentProto.render.call(this);
+      //   fragmentProto.digest.call(this);
       // }
       if (this.$skin && this.$meta.type !== 0 && (this.$flag & FLAG_SHOULD_RENDER_TO_VIEW)) {
         var viewEngine = Shell.getViewEngine(this);
 
         viewEngine.renderShell(this.$skin, this);
-        this._children && Parent.clean(this);
+   
         DirtyMarker.clean(this);
     
-        this._attrs && DirtyMarker.clean(this._attrs);
+        // this._attrs && DirtyMarker.clean(this._attrs);
         this._style && DirtyMarker.clean(this._style);
         this._classes && DirtyMarker.clean(this._classes);
 
-        this.__attrs && DirtyMarker.clean(this.__attrs);
+        // this.__attrs && DirtyMarker.clean(this.__attrs);
         this.__style && DirtyMarker.clean(this.__style);
         this.__classes && DirtyMarker.clean(this.__classes);
 
@@ -3057,19 +3052,38 @@
       }
 
       var actions = this._actions;
-      if (actions && actions.rendered && this.$skin) {
+
+      if (this.$flag & FLAG_MOUNTED === 0) {
+        if (this.$meta.type === 0) {
+          var parent = Parent.findParent(true);
+          if (parent && parent.$skin) {
+            this.$flag |= FLAG_MOUNTED;
+          }
+        } else if (this.$skin) {
+          this.$flag |= FLAG_MOUNTED;
+        }
+        if (actions && actions.mounted && (this.$flag & FLAG_MOUNTED)) {
+          Schedule.pushCallbackQueue((function() {
+            try {
+              this.emit('mounted');
+            } catch (e) {
+              captureError(e, this, 'mounted');
+            }
+          }).bind(this));
+        }
+      }
+      
+      if (actions && actions.updated) {
         Schedule.pushCallbackQueue((function() {
           try {
-            this.emit('rendered', this.$skin);
+            this.emit('updated');
           } catch (e) {
-            captureError(e, this, 'rendered');
+            captureError(e, this, 'updated');
           }
         }).bind(this));
       }
 
-      this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
-      
-      return true;
+      this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
     },
 
     getContents: function getContents() {
@@ -3092,146 +3106,217 @@
     }
   });
 
-  // src/core/shells/Block.js
+  // src/core/shells/Slot.js
 
-  function replaceScopes(content, newScopes) {
-    var bindings = content._bindings;
-    var numScopes = newScopes.length;
-    if (bindings) {
-      for (var i = 0; i < bindings.length; ++i) {
-        var binding = bindings[i];
-        var oldScopes = binding.scopes;
-        if (oldScopes && oldScopes.length === numScopes && 
-            oldScopes[numScopes - 1] !== newScopes[numScopes - 1]) {
-          binding.replace(newScopes);
-        }
-      }
-    }
-  }
-
-  /**
-   * Block for x:if and x:for
-   * @param {Object} props 
-   * @param {Array} scopes 
-   * @param {Object} template 
-   */
-  function Block(props, scopes, template) {
-    Block.initialize(this, props, scopes, template);
+  function Slot(props, scopes, template) {
+    Slot.initialize(this, props, scopes, template);
   }
 
   defineClass({
-    constructor: Block, extends: Component,
+    constructor: Slot, extends: Component,
 
     statics: {
-      initialize: function initialize(block, props, scopes, template) {
-        Component.initialize(block, props);
+      initialize: function initialize(slot, props, scopes, template) {
+        var name = template && template.props && template.props.name;
 
-        block.mode = 0;
-
-        if (!template) {
-          return;
-        }
-
-        block.scopes = scopes;
-        block.template = assign({}, template);
-        delete block.template.xkey;
-        delete block.template.xfor;
-        delete block.template.xif;
-        
-        block.set('condition', true);
-
-        // var ctrls = template.ctrls || {};
-        var expression;
-
-        if (template.xif) {
-          block.mode = 1;
-          expression = template.xif;
-          expression.connect('condition', block, scopes);
-        }
-
-        if (template.xfor) {
-          block.mode = 2;
-          expression = template.xfor[1];
-          expression.connect('iterable', block, scopes);
-          if (template.xkey) {
-            block.keyEval = template.xkey;//.evaluator;
+        Component.initialize(slot, props, scopes, {
+          props: {
+            name: name || ''
           }
+        });
+        
+        scopes[0].on('updating', slot.onScopeUpdating.bind(slot));
+
+        if (template.children) {
+          var contents = template.children.slice(0);
+          contents.scopes = scopes;
+          slot.set('contents', contents);
         }
 
-        block.on('updating', block.onUpdating.bind(block));
+        slot.scopes = scopes;
       },
       template: '<x:frag></x:frag>'
     },
 
-    onUpdating: function onUpdating() {
-      if (!this.mode) {
-        return;
+    update: function update() {
+      if (this.hasDirty('collection') || this.hasDirty('contents')) {
+        var scopes = this.scopes;
+        var contents = this.get('contents');
+        var collection = this.get('collection');
+        if (collection && collection.length) {
+          scopes = collection.scopes;
+          HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
+        } else if (contents && contents.length) {
+          scopes = contents.scopes;
+          collection = contents.slice(0);
+          HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
+        } else {
+          this.setChildern([]);
+        }
+        
+        Component.prototype.update.call(this);
       }
+    },
 
-      var condition = this.get('condition');
-      var template = this.template;
+    onScopeUpdating: function onScopeUpdating() {
       var scopes = this.scopes;
-      var contents = [];
+      var content, name, n, i;
+      var scopeContents;
+      var collection;
+      
+      // var selfContents = this.get('contents');
 
-      if (!condition) {
-        this.setChildren(contents);
-        return;
-      }
-
-      var HTMXEngine = config.HTMXEngine;
-
-      if (this.mode === 1) {
-        content = HTMXEngine.makeContent(template, scopes);
-        if (content) {
-          contents.push(content);
-        }
-        this.setChildren(contents);
-        return;
-      }
-
-      var indices = {}, index, content, item, key, n, i;
-      var iterable = this.get('iterable') || [];
-      var children = this._children || [];
-      var keyEval = this.keyEval;
-      var newScopes;
-    
-      for (i = 0, n = children.length; i < n; ++i) {
-        key = children[i].__key__;
-        if (key) {
-          indices[key] = i;
-        }
-      }
-
-      for (i = 0, n = iterable.length; i < n; ++i) {
-        key = null;
-        content = null;
-        item = iterable[i];
-        newScopes = scopes.concat([item]);
-
-        if (keyEval) {
-          key = keyEval.execute(newScopes);
-          index = indices[key];
-          if (index != null) {
-            content = children[index];
+      if (scopes[0].hasDirty('contents')) {
+        collection = [];
+        scopeContents = scopes[0].get('contents');
+        if (scopeContents && scopeContents.length > 0) {
+          name = this.get('name') || '';
+          for (i = 0, n = scopeContents.length; i < n; ++i) {
+            content = scopeContents[i];
+            if (content != null && name === (content.slot || '')) {
+              collection.push(content);
+            }
           }
         }
-    
-        if (!content) {
-          content = HTMXEngine.makeContent(template, newScopes);
-          content.__key__ = key;
-        } else {
-          replaceScopes(content, newScopes);
-          // content.__key__ = key;
-        }
-    
-        contents.push(content);
+        this.set('collection', collection);
       }
 
-      this.setChildren(contents);
+      // if (scopeContents && scopeContents.length > 0) {
+      //   var name = this.get('name') || '';
+      //   for (i = 0, n = scopeContents.length; i < n; ++i) {
+      //     content = scopeContents[i];
+      //     if (content != null && name === (content.slot || '')) {
+      //       collection.push(content);
+      //     }
+      //   }
+      //   this.set('collection', collection);
+      //   // if (collection.length) {
+      //   //   scopes = scopeContents.scopes;
+      //   //   HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
+      //   // }
+      //   // this.useDefault = false;
+      // }
+
+      // if (!collection.length && selfContents) {
+      //   // use the default template to slot here
+      //   if (this.useDefault) {
+      //     return;
+      //   }
+      //   for (i = 0, n = selfContents.length; i < n; ++i) {
+      //     content = selfContents[i];
+      //     if (content != null) {
+      //       collection.push(content);
+      //     }
+      //   }
+      //   if (collection.length) {
+      //     scopes = selfContents.scopes;
+      //     HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
+      //   }
+      //   this.useDefault = true;
+      // }
     }
   });
 
+  // import config from 'src/share/config'
+  /**
+   * Output dynamic component, <x:output x:type="Button"/>, just like <input type="button">
+   * @param {Object} props 
+   * @param {Array} scopes 
+   * @param {Object} template 
+   */
+  function Output(props, scopes, template) {
+    Output.initialize(this, props, scopes, template);
+  }
+
+  defineClass({
+      constructor: Output,
+      extends: Component,
+      statics: {
+        template: '<x:frag></x:frag>',
+        initialize: function initialize(output, props, scopes, template) {
+          var xtype = template && template.props && template.props.xtype;
+
+          Component.initialize(output, props, scopes, {
+            props: {
+              xtype: xtype
+            }
+          });
+
+          output.cache = new Cache(output);
+
+          output.template = assign({}, template);
+          output.template.props = assign({}, template.props);
+          delete output.template.props.xtype;
+
+          output.scopes = scopes;
+          
+          output.invalidate();
+          output.on('updating', output.onUpdating.bind(output));
+        }
+      },
+      onUpdating: function onUpdating() {
+        var child, ctor, type;
+        var cache = this.cache;
+        var scopes = this.scopes;
+        var template = this.template;
+
+        if (this.hasDirty('xtype')) {
+          type = this.get('xtype');
+          if (typeof type === 'function') {
+            if (type.__extag_component_class__) {
+              cache.set('xctor', ctor);
+            } else {
+              var output = this;
+              var promise = type();
+              if (typeof promise === 'object' && promise instanceof Promise) {
+                // cache.set('sign', sign);
+                promise.then(function(ctor) {
+                  cache.set('xctor', ctor);
+                }).catch(function(error) {
+                  cache.set('xctor', null);
+                  output.emitError(error);
+                });
+              } else {
+                cache.set('xctor', null);
+                output.emitError();
+              }
+            }
+          } else {
+            cache.set('xctor', null);
+            output.emitError();
+          }
+        }
+        if (cache.hasDirty('xctor')) {
+          ctor = cache.get('xctor');
+          if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
+            this.setChildren([]);
+            return;
+          }
+          try {
+            template.tag = '?';
+            template.type = ctor;
+            child = HTMXEngine.createContent(template, scopes);
+            this.setChildren([child]);
+          } catch (e) {
+            this.setChildren([]);
+            this.emitError(e);
+          }
+        }
+        DirtyMarker.clean(cache);
+      },
+      emitError: function(error) {
+        if (!error) {
+          error = new TypeError('`' + this.get('xtype') + '` is not a component class, constructor or a function that returns promise!');
+        }
+        if (error instanceof Error) {
+          this.emit('error', error);
+        }
+      }
+  });
+
   // src/core/shells/Fragment.js
+
+  // import config from 'src/share/config'
 
   function Fragment(props, scopes, template) {
     Fragment.initialize(this, props, scopes, template);
@@ -3256,16 +3341,16 @@
         fragment.scopes = scopes;
         
         if (scopes && template) {
-          template.connect('contents', fragment, scopes);
+          template.connect('children', fragment, scopes);
           
         }
 
         
-      },
-
-      create: function create(props, scopes, template) {
-        return new Fragment(props, scopes, template);
       }
+
+      // create: function create(props, scopes, template) {
+      //   return new Fragment(props, scopes, template);
+      // }
     },
     /**
      * Update this shell and insert it into the schedule for rendering.
@@ -3282,75 +3367,44 @@
       //   this.onUpdating();
       // }
 
-      if (this.scopes && this.hasDirty('contents')) {
-        var JSXEngine = config.JSXEngine;
-        var contents = this._props.contents;
-        if (!contents) {
-          contents = [];
-        } else if (!Array.isArray(contents)) {
-          contents= [contents];
+      if (this.scopes && this.hasDirty('children')) {
+        // var JSXEngine = config.JSXEngine;
+        DirtyMarker.clean(this, 'children');
+        var children = this.get('children') || [];
+        if (!Array.isArray(children)) {
+          children = [children];
         }
-        JSXEngine.reflow(this.scopes[0], this, contents);
+        // JSXEngine.reflow(this.scopes[0], this, contents);
+        HTMXEngine.driveChildren(this, this.scopes, children, false);
       }
 
-      if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
         if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
           var parent = this.getParent(true);
           parent.$flag |= FLAG_CHANGED_CHILDREN;
-          if ((parent.$flag & FLAG_WAITING_RENDERING) === 0) {
-            parent.$flag |= FLAG_WAITING_RENDERING;
-            Schedule.insertRenderQueue(parent);
+          if ((parent.$flag & FLAG_WAITING_DIGESTING) === 0) {
+            parent.$flag |= FLAG_WAITING_DIGESTING;
+            Schedule.insertDigestQueue(parent);
           }
         }
-        this.$flag |= FLAG_WAITING_RENDERING;
-        Schedule.insertRenderQueue(this);
+        this.$flag |= FLAG_WAITING_DIGESTING;
+        Schedule.insertDigestQueue(this);
       }
 
       // this.$flag ^= FLAG_WAITING_UPDATING;
-      // this.render();
-      
-      return true;
+      // this.digest();
     },
 
-    render: function render() {
-      if ((this.$flag & FLAG_WAITING_RENDERING) === 0) {
+    digest: function digest() {
+      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
         return false;
       }
-      this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_RENDERING);
+      this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
       // if (this.$flag === FLAG_NORMAL) {
       //   return false;
       // }
       // this.$flag = FLAG_NORMAL;
-      return true;
-    }
-  });
-
-  // src/template/Expression.js
-
-  /**
-   * Expression parsed from some piece, like 'title@="title"' or '@{label}', in the component template.
-   * 
-   * @class
-   * @constructor
-   * @param {Object} binding  One of DataBinding, EventBinding or FragmentBinding
-   * @param {Object} pattern  will be used by different type of binding
-   */
-  function Expression(binding, pattern) {
-    this.binding = binding;
-    this.pattern = pattern;
-  }
-
-  defineClass({
-    constructor: Expression,
-    /**
-     * Connect this expression to the target in the scopes.
-     * @param {Object} property - the target property or event
-     * @param {Object} target   - the target related to this expression
-     * @param {Object} scopes   - the scopes where this expression is located
-     */
-    connect: function(property, target, scopes) {
-      var binding = this.binding.create(this.pattern);
-      binding.connect(property, target, scopes);
+      DirtyMarker.clean(this);
     }
   });
 
@@ -3509,480 +3563,6 @@
     }
   });
 
-  // src/core/template/HTMXEngine.js
-
-
-  function toStyle(cssText) {
-    var style = {};
-    var pieces = cssText.split(';');
-    var piece, index, i, name, value;
-    for (i = pieces.length - 1; i >= 0; --i) {
-      piece = pieces[i];
-      index = piece.indexOf(':');
-      if (index > 0) {
-        name = piece.slice(0, index).trim();
-        value =  piece.slice(index + 1).trim();
-        style[toCamelCase(name)] = value;
-      }
-    }
-    return style;
-  }
-
-  function toClasses(classList) {
-    if (typeof classList === 'string') {
-      classList = classList.trim().split(WHITE_SPACES_REGEXP);
-    }
-    if (Array.isArray(classList)) {
-      var i, classes = {};
-      for (i = 0; i < classList.length; ++i) {
-        if (classList[i]) {
-          classes[classList[i]] = true;
-        }
-      }
-      return classes;
-    }
-  }
-
-  function driveProps(target, props, scopes) {
-    if (props) {
-      var key, value;
-      for (key in props) {
-        value = props[key];
-        if (typeof value === 'object' && value instanceof Expression) {
-          value.connect(key, target, scopes);
-        } else {
-          target.set(key, value);
-        }
-      }
-    }
-  }
-
-  function driveEvents(target, events, scopes) {
-    if (events) {
-      var type, value;
-      for (type in events) {
-        value = events[type];
-        if (typeof value === 'object' && value instanceof Expression) {
-          value.connect(type, target, scopes);
-        } else if (typeof value === 'function') {
-          target.on(type, value);
-        }
-      }
-    }
-  }
-
-  function driveChildren(target, children, scopes) {
-    var contents = makeContents(children, scopes);
-    target.setChildren(contents);
-  }
-
-  function driveContents(target, children, scopes) {
-    var contents = makeContents(children, scopes);
-    target.setContents(contents);
-  }
-
-  function makeContents(children, scopes) {
-    var i, n, content, contents = [];
-
-    if (!children || !children.length) { return; }
-
-    for (i = 0, n = children.length; i < n; ++i) {
-      content = makeContent(children[i], scopes);
-      if (content) {
-        contents.push(content);
-      }
-    }
-
-    return contents;
-  }
-
-
-  function makeContent(node, scopes) {
-    var tag = node.tag, ctor, content;
-
-    if (typeof node === 'string') {
-      content = new Text(node);
-    } else if (node instanceof Expression) { // like "hello, @{name}..." or "@{{drawSelect()}}"
-      if (node.binding === DataBinding && node.pattern.target === 'frag') {
-        content = new Fragment(null, scopes, node);
-      } else {
-        content = new Text('');
-        node.connect('data', content, scopes);
-      }
-    } else if (node.xif || node.xfor) {
-      content = new Block(null, scopes, node);
-    } else if (node.tag !== '!') {
-      ctor = node.type;
-      if (ctor) {
-        content = new ctor(null, scopes, node);
-      } else {
-        content = new Element(node.ns ? node.ns + ':' + tag : tag);
-        if (node.events) {
-          driveEvents(content, node.events, scopes);
-        }
-        if (node.props) {
-          driveProps(content, node.props, scopes);
-        }
-        if (node.attrs) {
-          driveProps(content.attrs, node.attrs, scopes);
-        }
-        if (node.style) {
-          driveProps(content.style, node.style, scopes);
-        }
-        if (node.classes) {
-          driveProps(content.classes, node.classes, scopes);
-        }
-        if (node.children) {
-          driveChildren(content, node.children, scopes);
-        }
-      }
-
-      if (content && node.name) {
-        scopes[0].addNamedPart(node.name, content); // TODO: removeNamedPart
-        // defineProp(content, '$owner', {
-        //   configurable: true,
-        //   enumarable: false,
-        //   writable: false,
-        //   value: scopes[0]
-        // });
-        content.$owner = scopes[0];
-      }
-    }
-
-    return content;
-  }
-
-  function driveComponent(target, _template, scopes, template, props) {
-    var _scopes = [target];
-
-    if (template && scopes) {
-      if (props && template.props) {
-        props = assign({}, template.props, props);
-      } else if (!props && template.props) {
-        props = template.props;
-      }
-      // eslint-disable-next-line no-undef
-      {
-        Validator.validate0(target, props);
-      }
-      driveProps(target, props, scopes);
-
-      if (template.events) {
-        driveEvents(target, template.events, scopes);
-      }
-      if (template.attrs) {
-        driveProps(target.attrs, template.attrs, scopes);
-      }
-      if (template.style) {
-        driveProps(target.style, template.style, scopes);
-      }
-      if (template.classes) {
-        driveProps(target.classes, template.classes, scopes);
-      }
-      if (template.children) {
-        driveContents(target, template.children, scopes);
-      }
-    } else if (props) {
-      // eslint-disable-next-line no-undef
-      {
-        Validator.validate0(target, props);
-      }
-      driveProps(target, props, scopes);
-    }
-    
-    if (_template.events) {
-      driveEvents(target, _template.events, _scopes);
-    }
-    if (_template.props) {
-      target.__props = new Cache(target);
-      // defineProp(target, '__props', {
-      //   value: new Cache(target), 
-      //   configurable: true
-      // });
-      driveProps(target.__props, _template.props, _scopes);
-    }
-    if (_template.attrs) {
-      target.__attrs = new Cache(target);
-      // defineProp(target, '__attrs', {
-      //   value: new Cache(target), 
-      //   configurable: true
-      // });
-      driveProps(target.__attrs, _template.attrs, _scopes);
-    }
-    if (_template.style) {
-      target.__style = new Cache(target);
-      // defineProp(target, '__style', {
-      //   value: new Cache(target), 
-      //   configurable: true
-      // });
-      driveProps(target.__style, _template.style, _scopes);
-    }
-    if (_template.classes) {
-      target.__classes = new Cache(target);
-      // defineProp(target, '__classes', {
-      //   value: new Cache(target), 
-      //   configurable: true
-      // });
-      driveProps(target.__classes, _template.classes, _scopes);
-    }
-    if (_template.children) {
-      driveChildren(target, _template.children, _scopes);
-    }
-  }
-
-  function transferProperties(shell) {
-    if (!shell.$meta.tag) {
-      return;
-    }
-
-    var _props = shell._props;
-    var type, style, classes;
-      
-    if (shell.hasDirty('style')) {
-      DirtyMarker.clean(shell, 'style');
-      style = _props.style;
-      type = typeof style;
-      if (type === 'object') {
-        shell.style.reset(style);
-      } else if (type === 'string') {
-        style = toStyle(style);
-        shell.style.reset(style);
-      }
-    }
-    if (shell.hasDirty('classes')) {
-      DirtyMarker.clean(shell, 'classes');
-      classes = _props.classes;
-      if (typeof classes !== 'object') {
-        classes = toClasses(classes);
-      }
-      shell.classes.reset(classes);
-    }
-
-    if (!shell.__props || !shell.constructor.__extag_component_class__) { 
-        return; 
-    }
-
-    var __props = shell.__props;
-    
-    if (__props && __props.hasDirty('style')) {
-      var __style = shell.__style;
-      if (!__style) {
-        __style = new Cache(shell);
-        shell.__style = __style;
-        // defineProp(shell, '__style', {
-        //   value: __style, 
-        //   configurable: true
-        // });
-      }
-      DirtyMarker.clean(__props, 'style');
-      style = __props.get('style');
-      type = typeof style;
-      if (type === 'object') {
-        __style.reset(style);
-      } else if (type === 'string') {
-        style = toStyle(style);
-        __style.reset(style);
-      }
-    }
-    if (__props && __props.hasDirty('classes')) {
-      var __classes = shell.__classes;
-      if (!__classes) {
-        __classes = new Cache(shell);
-        shell.__classes = __classes;
-        // defineProp(shell, '__classes', {
-        //   value: __classes, 
-        //   configurable: true
-        // });
-      }
-      DirtyMarker.clean(__props, 'classes');
-      classes = __props.get('classes');
-      if (typeof classes !== 'object') {
-        classes = toClasses(classes);
-      }
-      __classes.reset(classes);
-    }
-  }
-
-  var HTMXEngine = {
-    driveProps: driveProps,
-    driveEvents: driveEvents,
-    driveContents: driveContents,
-    driveChildren: driveChildren,
-    driveComponent: driveComponent,
-    transferProperties: transferProperties,
-    buildContent: makeContent,
-    makeContent: makeContent,
-    makeContents: makeContents
-  };
-
-  config.HTMXEngine = HTMXEngine;
-
-  // src/core/shells/Slot.js
-
-  function Slot(props, scopes, template) {
-    Slot.initialize(this, props, scopes, template);
-  }
-
-  defineClass({
-    constructor: Slot, extends: Component,
-    statics: {
-      initialize: function initialize(slot, props, scopes, template) {
-        // Shell.initialize(slot, 0, 'x:slot', '');
-        var name = template && template.props && template.props.name;
-
-        Component.initialize(slot, props, scopes, {
-          props: {
-            name: name || ''
-          }
-        });
-        
-        slot.template = assign({}, template);
-        slot.template.props = assign({}, template.props);
-        if (name) {
-          delete slot.template.props.name;
-        }
-
-        slot.scopes = scopes;
-
-        slot.invalidate();
-        slot.on('updating', slot.onUpdating.bind(slot));
-        // slot.invalidate = slot.invalidate.bind(slot);
-        scopes[0].on('changed', function(key) {
-          if (key !== 'contents') { return; }
-          slot.invalidate();
-        });
-      },
-      template: '<x:frag></x:frag>'
-    },
-
-    onUpdating: function onUpdating() {
-      var fragment = [], children, content, n, i;
-      var scopeContents = this.scopes[0].getContents();
-      var template = this.template, scopes = this.scopes;
-      if (scopeContents && scopeContents.length > 0) {
-        var name = this.get('name') || '';
-        for (i = 0, n = scopeContents.length; i < n; ++i) {
-          content = scopeContents[i];
-          if (name === ((content._attrs && content.attrs.get('x:slot')) || '')) {
-            fragment.push(content);
-          }
-        }
-        this.useDefault = false;
-      }
-      if (fragment.length === 0 && template.children) {
-        // use the default template to slot here
-        if (this.useDefault) {
-          return;
-        }
-        children = template.children;
-        for (i = 0, n = children.length; i < n; ++i) {
-          content = HTMXEngine.makeContent(children[i], scopes);
-          if (content) {
-            fragment.push(content);
-          }
-        }
-        this.useDefault = true;
-      }
-      this.setChildren(fragment);
-    }
-  });
-
-  /**
-   * Output dynamic component, <x:output x:type="Button"/>, just like <input type="button">
-   * @param {Object} props 
-   * @param {Array} scopes 
-   * @param {Object} template 
-   */
-  function Output(props, scopes, template) {
-    Output.initialize(this, props, scopes, template);
-  }
-
-  defineClass({
-      constructor: Output,
-      extends: Component,
-      statics: {
-        template: '<x:frag></x:frag>',
-        initialize: function initialize(output, props, scopes, template) {
-          var xtype = template && template.props && template.props.xtype;
-
-          Component.initialize(output, props, scopes, {
-            props: {
-              xtype: xtype
-            }
-          });
-
-          output.cache = new Cache(output);
-
-          output.template = assign({}, template);
-          output.template.props = assign({}, template.props);
-          delete output.template.props.xtype;
-
-          output.scopes = scopes;
-          
-          output.invalidate();
-          output.on('updating', output.onUpdating.bind(output));
-        }
-      },
-      onUpdating: function onUpdating() {
-        var child, ctor, type;
-        var cache = this.cache;
-        var scopes = this.scopes;
-        var template = this.template;
-
-        if (this.hasDirty('xtype')) {
-          type = this.get('xtype');
-          if (typeof type === 'function') {
-            if (type.__extag_component_class__) {
-              cache.set('xctor', ctor);
-            } else {
-              var output = this;
-              var promise = type();
-              if (typeof promise === 'object' && promise instanceof Promise) {
-                // cache.set('sign', sign);
-                promise.then(function(ctor) {
-                  cache.set('xctor', ctor);
-                }).catch(function(error) {
-                  cache.set('xctor', null);
-                  output.emitError(error);
-                });
-              } else {
-                cache.set('xctor', null);
-                output.emitError();
-              }
-            }
-          } else {
-            cache.set('xctor', null);
-            output.emitError();
-          }
-        }
-        if (cache.hasDirty('xctor')) {
-          ctor = cache.get('xctor');
-          if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
-            this.setChildren([]);
-            return;
-          }
-          try {
-            template.tag = '?';
-            template.type = ctor;
-            child = config.HTMXEngine.makeContent(template, scopes);
-            this.setChildren([child]);
-          } catch (e) {
-            this.setChildren([]);
-            this.emitError(e);
-          }
-        }
-        DirtyMarker.clean(cache);
-      },
-      emitError: function(error) {
-        if (!error) {
-          error = new TypeError('`' + this.get('xtype') + '` is not a component class, constructor or a function that returns promise!');
-        }
-        if (error instanceof Error) {
-          this.emit('error', error);
-        }
-      }
-  });
-
   // src/core/bindings/EventBinding.js
 
   function EventBinding(pattern) {
@@ -4111,6 +3691,35 @@
     }
   }
 
+  // src/template/Expression.js
+
+  /**
+   * Expression parsed from some piece, like 'title@="title"' or '@{label}', in the component template.
+   * 
+   * @class
+   * @constructor
+   * @param {Object} binding  One of DataBinding, EventBinding or FragmentBinding
+   * @param {Object} pattern  will be used by different type of binding
+   */
+  function Expression(binding, pattern) {
+    this.binding = binding;
+    this.pattern = pattern;
+  }
+
+  defineClass({
+    constructor: Expression,
+    /**
+     * Connect this expression to the target in the scopes.
+     * @param {Object} property - the target property or event
+     * @param {Object} target   - the target related to this expression
+     * @param {Object} scopes   - the scopes where this expression is located
+     */
+    connect: function(property, target, scopes) {
+      var binding = this.binding.create(this.pattern);
+      binding.connect(property, target, scopes);
+    }
+  });
+
   // src/core/bindings/TextBinding.js
 
   function TextBinding(pattern) {
@@ -4236,101 +3845,206 @@
         } catch (e) {
           var constructor = scopes[0].constructor;
           logger.warn('The expression `' + (this.expr || this.func.toString()) + 
-                      '` maybe illegal in the template of Component ' + (constructor.fullName || constructor.name));
+                      '` maybe illegal in the template of component ' + (constructor.fullname || constructor.name));
           throw e;
         }
       }
     }
   });
 
-  // src/core/template/JSXEngine.js
+  // src/core/shells/Block.js
+  // import config from 'src/share/config'
 
-  // function slot(name, children) {
-  //   return {
-  //     tag: 'x-slot',
-  //     type: Slot,
-  //     directs: {
-  //       name: name || ''
-  //     },
-  //     children: children
-  //   }
-  // }
-
-  /**
-   * Check if the node matches the child element or child component.
-   * @param {Shell} oldChild  - text, element or component
-   * @param {Object} newChild - node
-   */
-  function matchesChild(oldChild, newChild) {
-    var meta = oldChild.$meta;
-    if (!meta.tag && !newChild.__extag_node__) {
-      return true;
+  function replaceScopes(content, newScopes) {
+    var bindings = content._bindings;
+    var numScopes = newScopes.length;
+    if (bindings) {
+      for (var i = 0; i < bindings.length; ++i) {
+        var binding = bindings[i];
+        var oldScopes = binding.scopes;
+        if (oldScopes && oldScopes.length === numScopes && 
+            oldScopes[numScopes - 1] !== newScopes[numScopes - 1]) {
+          binding.replace(newScopes);
+        }
+      }
     }
-    return oldChild.__extag_key__ === newChild.xkey && 
-            (newChild.type ? oldChild.constructor === newChild.type : 
-              (meta.tag === newChild.tag && meta.ns === newChild.ns));
   }
 
   /**
-   * Create a child from node.
-   * @param {Object} node 
-   * @param {Shell} target      - parent element or component
-   * @param {Component} scope   - scope component
+   * Block for x:if and x:for
+   * @param {Object} props 
+   * @param {Array} scopes 
+   * @param {Object} template 
    */
-  function createChild(node, target, scope) {
-    var child, ctor, ns;
-    if (node == null) {
-      child = new Text('');
-      return child;
-    } else if (node.type) {
-      ctor = node.type;
-      child = new ctor(
-        node.props, 
-        [scope]//, node
-      );
-    } else if (node.tag) {
-      ns = node.ns || target.ns;
-      child = new Element(
-        ns ? ns + ':' + node.tag : node.tag, 
-        node.props, 
-        [scope]//, node
-      );
-    } else {
-      child = new Text(node);
-      return child;
-    }
-
-    if (node.name) {
-      // console.log('x:name=' + node.name);
-      // scope[node.xName] = child; // TODO: addNamedPart
-      scope.addNamedPart(node.name, child);
-      // defineProp(child, '$owner', {
-      //   configurable: true,
-      //   enumarable: false,
-      //   writable: false,
-      //   value: scope
-      // });
-      child.$owner = scope;
-    }
-
-    if (node.xkey) {
-      child.__extag_key__ = node.xkey;
-    }
-
-    return child;
+  function Block(props, scopes, template) {
+    Block.initialize(this, props, scopes, template);
   }
 
-  // eslint-disable-next-line no-unused-vars
-  function updatePropsAndEvents(node, target, scope) {
-    var name, desc;
-    var newProps = node.props;
-    var newEvents = node.events;
-    var oldProps = target._props;
+  defineClass({
+    constructor: Block, extends: Component,
+
+    statics: {
+      initialize: function initialize(block, props, scopes, template) {
+        Component.initialize(block, props);
+
+        block.mode = 0;
+
+        if (!template) {
+          return;
+        }
+
+        block.scopes = scopes;
+        block.template = assign({}, template);
+        delete block.template.xtype;
+        delete block.template.xkey;
+        delete block.template.xfor;
+        delete block.template.xif;
+        
+        block.set('condition', true);
+
+        // var ctrls = template.ctrls || {};
+        var expression;
+
+        if (template.xif) {
+          block.mode = 1;
+          expression = template.xif;
+          expression.connect('condition', block, scopes);
+        }
+
+        if (template.xfor) {
+          block.mode = 2;
+          expression = template.xfor[1];
+          expression.connect('iterable', block, scopes);
+          if (template.xkey) {
+            block.keyEval = template.xkey;//.evaluator;
+          }
+        }
+
+        if (template.xtype) {
+          block.xtype = true;
+          expression = template.xtype;
+          expression.connect('component', block, scopes);
+        }
+
+        block.on('updating', block.onUpdating.bind(block));
+      },
+      template: '<x:frag></x:frag>'
+    },
+
+    onUpdating: function onUpdating() {
+      if (!this.mode) {
+        return;
+      }
+
+      var condition = this.get('condition');
+      var component = this.get('component');
+      var template = this.template;
+      var scopes = this.scopes;
+      var contents = [];
+
+      if (!condition) {
+        this.setChildren(contents);
+        return;
+      }
+
+      if (this.xtype) {
+        if (!component || !component.__extag_component_class__) {
+          this.setChildren(contents);
+          return;
+        }
+        template = assign({}, template, {type: component});
+      }
+
+      if (this.mode === 1) {
+        content = HTMXEngine.createContent(template, scopes, true);
+        if (content) {
+          contents.push(content);
+        }
+        this.setChildren(contents);
+        return;
+      }
+
+      var indices = {}, index, content, item, key, n, i;
+      var iterable = this.get('iterable') || [];
+      var children = this._children || [];
+      var keyEval = this.keyEval;
+      var newScopes;
+    
+      for (i = 0, n = children.length; i < n; ++i) {
+        key = children[i].__key__;
+        if (key) {
+          indices[key] = i;
+        }
+      }
+
+      for (i = 0, n = iterable.length; i < n; ++i) {
+        key = null;
+        content = null;
+        item = iterable[i];
+        newScopes = scopes.concat([item]);
+
+        if (keyEval) {
+          key = keyEval.execute(newScopes);
+          index = indices[key];
+          if (index != null) {
+            content = children[index];
+          }
+        }
+    
+        if (!content) {
+          content = HTMXEngine.makeContent(template, newScopes);
+          content.__key__ = key;
+        } else {
+          replaceScopes(content, newScopes);
+          // content.__key__ = key;
+        }
+    
+        contents.push(content);
+      }
+
+      this.setChildren(contents);
+    }
+  });
+
+  // src/core/template/drivers/driveEvents.js
+
+  function driveEvents(target, scopes, newEvents, useExpr) {
     var oldEvents = target._events;
+    var type, value;
+    // firstly, remove old event handlers
+    if (oldEvents) {
+      for (type in oldEvents) {
+        value = oldEvents[type];
+        if (typeof value === 'function') {
+          target.off(name, value);
+        } else if (Array.isArray(value)) {
+          target.off(type, value[0], value[1]);
+        }
+      }
+    }
+    // add new event handlers
+    if (newEvents) {
+      for (type in newEvents) {
+        value = newEvents[type];
+        if (useExpr && value instanceof Expression) {
+          value.connect(type, target, scopes);
+        } else if (typeof value === 'function') {
+          target.on(type, value);
+        } else if (Array.isArray(value)) {
+          target.on(type, value[0], value[1]);
+        }
+      }
+    }
+    target._events = newEvents;
+  }
 
-    // update props
-    if (oldProps) {
-      // firstly, remove redundant properties, or reset default property values.
+  // src/core/template/drivers/driveProps.js
+
+  function driveProps(target, scopes, newProps, useExpr) {
+    var oldProps = target._props;
+    var name, desc, value;
+    // firstly, remove redundant properties, or reset default property values.
+    if (oldProps) { 
       if (target instanceof Component) {
         for (name in oldProps) {
           if (!newProps || !(name in newProps)) {
@@ -4350,164 +4064,493 @@
         }
       }
     }
+    // assign new property values
     if (newProps) {
-      // assign new property values.
-      target.assign(newProps);
-    }
-
-    // update events
-    if (oldEvents) {
-      // firstly, remove old event handlers
-      for (name in oldEvents) {
-        if (oldEvents[name]) {
-          target.off(name, oldEvents[name]);
+      for (name in newProps) {
+        value = newProps[name];
+        if (useExpr && value instanceof Expression) {
+          value.connect(name, target, scopes);
+        } else {
+          target.set(name, value);
         }
       }
-    }
-    if (newEvents) {
-      // add new event handlers
-      for (name in newEvents) {
-        if (newEvents[name]) {
-          target.on(name, newEvents[name]);
-        }
-      }
-      target._events = newEvents;
     }
   }
 
-  // refer to Vue (https://vuejs.org/)
-  function updateChildrenOrContents(node, target, scope) { 
-    var oldChildren, newChildren;
+  // src/core/template/drivers/driveChildren.js
 
-    if (target instanceof Component && target !== scope) {
-      oldChildren = target._contents || EMPTY_ARRAY;
-      newChildren = node.children || EMPTY_ARRAY;
-    } else if (!(target instanceof Slot)) {
-      oldChildren = target._children || EMPTY_ARRAY;
-      newChildren = node.children || EMPTY_ARRAY;
-    } else {
-      return;
+  /**
+   * Check if the node matches the child text, element or component.
+   * @param {Shell} child  - text, element or component
+   * @param {string | Object} vnode - vnode
+   */
+  function matchChild(child, vnode) {
+    var meta = child.$meta;
+    if (meta.type === TYPE_TEXT && vnode.__extag_node__ !== EXTAG_VNODE) {
+      return true;
+    }
+    return child.__extag_key__ === vnode.xkey && 
+            (vnode.type ? child.constructor === vnode.type : 
+              (meta.tag === vnode.tag && meta.ns === vnode.ns));
+  }
+
+  // function withScopes(content, scopes) {
+  //   content = assign({}, content);
+  //   content.scopes = scopes;
+  //   return content;
+  // }
+
+  function driveContent(target, vnode, scopes) {
+    if (isVNode(vnode)) {
+      driveProps(target, scopes, vnode.props);
+      driveEvents(target, scopes, vnode.events);
+      driveChildren(target, scopes, vnode.children, target instanceof Component);
+      // if (target instanceof Component && target !== scopes[0]) {
+      // } else {
+
+      // }
+    } else /*if (target instanceof Text)*/ {
+      target.set('content', vnode);
+    }
+  }
+
+  function createContent(vnode, scopes) {
+    if (!isVNode(vnode)) {
+      return new Text(vnode);
+    }  
+
+    var ctor, expr, content;
+    var useExpr = vnode.useExpr;
+
+    if (vnode.xif || vnode.xfor || vnode.xtype) {
+      content = new Block(null, scopes, vnode);
+    } else if (useExpr && vnode.type === Expression) {
+      expr = vnode.expr;
+      if (expr.binding === DataBinding && expr.pattern.target === 'frag') {
+        content = new Fragment(null, scopes, expr);
+      } else {
+        content = new Text('');
+        expr.connect('content', content, scopes);
+      }
+    } else if (vnode.tag !== '!') {
+      ctor = vnode.type;
+      if (ctor) {
+        content = new ctor(null, scopes, vnode);
+      } else {
+        content = new Element(vnode.ns ? vnode.ns + ':' + vnode.tag : vnode.tag);
+        
+        if (vnode.events) {
+          driveEvents(content, scopes, vnode.events, useExpr);
+        }
+        if (vnode.props) {
+          driveProps(content, scopes, vnode.props, useExpr);
+        }
+        // if (vnode.attrs) {
+        //   driveProps(content.attrs, scopes, vnode.attrs, useExpr);
+        // }
+        if (vnode.style) {
+          driveProps(content.style, scopes, vnode.style, useExpr);
+        }
+        if (vnode.classes) {
+          driveProps(content.classes, scopes, vnode.classes, useExpr);
+        }
+        if (vnode.children) {
+          driveChildren(content, scopes, vnode.children, useExpr);
+        }
+      }
+
+      if (content && vnode.name) {
+        content.$owner = scopes[0];
+        scopes[0].addNamedPart(vnode.name, content); // TODO: removeNamedPart
+      }
     }
 
-    var contents = new Array(newChildren.length), indices, key, i;
+    return content;
+  }
 
-    var oldBeginIndex = 0, oldEndIndex = oldChildren.length - 1;
-    var newBeginIndex = 0, newEndIndex = newChildren.length - 1;
+  function createContents(children, scopes) {
+    var i, n, child, content, contents = [];
+    if (children && children.length) { 
+      for (i = 0, n = children.length; i < n; ++i) {
+        child = children[i];
+        content = createContent(child, scopes);
+        if (content) {
+          contents.push(content);
+        }
+      }
+    }
+    return contents;
+  }
 
-    var oldBeginChild = oldChildren[oldBeginIndex];
-    var oldEndChild = oldChildren[oldEndIndex];
-    var newBeginChild = newChildren[newBeginIndex];
-    var newEndChild = newChildren[newEndIndex];
-    // console.log(oldBeginIndex, oldEndIndex, newBeginIndex, newEndIndex)
+  function collectContents(children, scopes, target) {
+    var oldShells, newVNodes;
+
+    // if (target instanceof Component && target !== scopes[0]) {
+    //   oldShells = target._contents || EMPTY_ARRAY;
+    //   newVNodes = children || EMPTY_ARRAY;
+    // } else if (!(target instanceof Slot)) {
+      oldShells = target._children || EMPTY_ARRAY;
+      newVNodes = children || EMPTY_ARRAY;
+    // } else {
+    //   return;
+    // }
+
+    if (newVNodes.length) {
+      newVNodes = flattenVNodes(newVNodes, null, target.$meta.ns);
+    }
+
+    var contents = new Array(newVNodes.length);
+    var content, indices, key, i;
+
+    var oldBeginIndex = 0, oldEndIndex = oldShells.length - 1;
+    var newBeginIndex = 0, newEndIndex = newVNodes.length - 1;
+
+    var oldBeginShell = oldShells[oldBeginIndex];
+    var oldEndShell = oldShells[oldEndIndex];
+    var newBeginVNode = newVNodes[newBeginIndex];
+    var newEndVNode = newVNodes[newEndIndex];
+
+    // refer to Vue (https://vuejs.org/)
     while (oldBeginIndex <= oldEndIndex && newBeginIndex <= newEndIndex) {
-      
-      if (oldBeginChild == null) {
-        oldBeginChild = oldChildren[++oldBeginIndex];
-      } else if (oldEndChild == null) {
-        oldEndChild = oldChildren[--oldEndIndex];
-      } else if (matchesChild(oldBeginChild, newBeginChild)) {
-        contents[newBeginIndex] = oldBeginChild; 
-        updateShell(newBeginChild, oldBeginChild, scope);
-        oldBeginChild = oldChildren[++oldBeginIndex];
-        newBeginChild = newChildren[++newBeginIndex];
-      } else if (matchesChild(oldEndChild, newEndChild)) {
-        contents[newEndIndex] = oldEndChild;
-        updateShell(newEndChild, oldEndChild, scope);
-        oldEndChild = oldChildren[--oldEndIndex];
-        newEndChild = newChildren[--newEndIndex];
-      } else if (matchesChild(oldBeginChild, newEndChild)) {
-        contents[newEndIndex] = oldBeginChild;
-        updateShell(newEndChild, oldBeginChild, scope);
-        oldBeginChild = oldChildren[++oldBeginIndex];
-        newEndChild = newChildren[--newEndIndex];
-      } else if (matchesChild(oldEndChild, newBeginChild)) {
-        contents[newBeginIndex] = oldEndChild;
-        updateShell(newBeginChild, oldEndChild, scope);
-        oldEndChild = oldChildren[--oldEndIndex];
-        newBeginChild = newChildren[++newBeginIndex];
+      if (oldBeginShell == null) {
+        oldBeginShell = oldShells[++oldBeginIndex];
+      } else if (oldEndShell == null) {
+        oldEndShell = oldShells[--oldEndIndex];
+      } else if (matchChild(oldBeginShell, newBeginVNode)) {
+        contents[newBeginIndex] = oldBeginShell; 
+        driveContent(oldBeginShell, newBeginVNode, scopes);
+        oldBeginShell = oldShells[++oldBeginIndex];
+        newBeginVNode = newVNodes[++newBeginIndex];
+      } else if (matchChild(oldEndShell, newEndVNode)) {
+        contents[newEndIndex] = oldEndShell;
+        driveContent(oldEndShell, newEndVNode, scopes);
+        oldEndShell = oldShells[--oldEndIndex];
+        newEndVNode = newVNodes[--newEndIndex];
+      } else if (matchChild(oldBeginShell, newEndVNode)) {
+        contents[newEndIndex] = oldBeginShell;
+        driveContent(oldBeginShell, newEndVNode, scopes);
+        oldBeginShell = oldShells[++oldBeginIndex];
+        newEndVNode = newVNodes[--newEndIndex];
+      } else if (matchChild(oldEndShell, newBeginVNode)) {
+        contents[newBeginIndex] = oldEndShell;
+        driveContent(oldEndShell, newBeginVNode, scopes);
+        oldEndShell = oldShells[--oldEndIndex];
+        newBeginVNode = newVNodes[++newBeginIndex];
       } else  {
         if (!indices) {
           indices = {};
           for (i = oldBeginIndex; i <= oldEndIndex; ++i) {
-            key = oldChildren[oldBeginIndex].__key__;
+            key = oldShells[oldBeginIndex].__key__;
             if (key) {
               indices[key] = i;
             }
           }
         }
 
-        key = newBeginChild.xkey;
+        key = newBeginVNode.xkey;
         i = key && indices[key];
 
-        if (i != null && matchesChild(oldChildren[i] || EMPTY_OBJECT, newBeginChild)) {
-          contents[newBeginIndex] = oldChildren[i];
+        if (i != null && matchChild(oldShells[i] || EMPTY_OBJECT, newBeginVNode)) {
+          contents[newBeginIndex] = oldShells[i];
         } else {
-          // child = createChild(newBeginChild, scope);
-          contents[newBeginIndex] = createChild(newBeginChild, target, scope);
+          content = createContent(newBeginVNode, scopes);
+          if (content) {
+            contents[newBeginIndex] = content;
+          } else {
+            throw new Error('Can not create content from ', newBeginVNode);
+          }
+          
         }
 
-        updateShell(newBeginChild, contents[newBeginIndex], scope);
+        // driveContent(contents[newBeginIndex], newBeginVNode, scopes);
 
-        newBeginChild = newChildren[++newBeginIndex];
+        newBeginVNode = newVNodes[++newBeginIndex];
       }
-      // console.log(oldBeginIndex, oldEndIndex, newBeginIndex, newEndIndex)
     }
 
     if (oldBeginIndex > oldEndIndex) {
       while (newBeginIndex <= newEndIndex) {
-        contents[newBeginIndex] = createChild(newBeginChild, target, scope);
-        updateShell(newBeginChild, contents[newBeginIndex], scope);
-        newBeginChild = newChildren[++newBeginIndex];
+        content = createContent(newBeginVNode, scopes);
+        if (content) {
+          contents[newBeginIndex] = content;
+        } else {
+          throw new Error('Can not create content from ', newBeginVNode);
+        }
+        // driveContent(contents[newBeginIndex], newBeginVNode, scopes);
+        newBeginVNode = newVNodes[++newBeginIndex];
       }
     }
-    
-    if (target instanceof Component && target !== scope) {
-      target.setContents(contents);
+
+    return contents;
+  }
+
+  function isVNode(child) {
+    return typeof child === 'object' && child.__extag_node__ === EXTAG_VNODE;
+  }
+
+  function flattenVNodes(children, array, ns) {
+    var i, n = children.length, child;
+    if (!array) {
+      for (i = 0; i < n; ++i) {
+        if (Array.isArray(children[i])) {
+          array = [];
+          break;
+        }
+      }
+    }
+    if (array) {
+      for (i = 0; i < n; ++i) {
+        child = children[i];
+        if (Array.isArray(child)) {
+          flattenVNodes(child, array, ns);
+        } else {
+          array.push(child);
+          if (ns && isVNode(child) && !child.ns) {
+            child.ns = ns;
+          }
+        }
+      }
     } else {
+      for (i = 0; i < n; ++i) {
+        child = children[i];
+        if (ns && isVNode(child) && !child.ns) {
+          child.ns = ns;
+        }
+      }
+    }
+    return array ? array : children;
+  }
+
+  // function driveChildren(target, scopes, children, useExpr) { 
+  //   var contents;
+
+  //   if (useExpr) {
+  //     contents = createContents(children, scopes);
+  //   } else {
+  //     contents = collectContents(children, scopes, target);
+  //   }
+    
+  //   if (target instanceof Component && target !== scopes[0]) {
+  //     target.setContents(contents);
+  //   } else {
+  //     target.setChildren(contents);
+  //   }
+  // }
+
+  function driveChildren(target, scopes, children, useExpr, areContents) {
+    var contents;
+    if (areContents) {
+      // target.setContents(contents);
+      contents = children.slice(0);
+      contents.scopes = scopes;
+      target.set('contents', contents);
+    } else {
+      if (useExpr) {
+        contents = createContents(children, scopes);
+      } else {
+        contents = collectContents(children, scopes, target);
+      }
       target.setChildren(contents);
     }
   }
 
-  function updateShell(node, target, scope) {
-    if (typeof node === 'object' && node.__extag_node__) {
-      // updateSelf(node, target, scope);
-      // updateProps(node.props, target, scope);
-      // updateStyle(node.style, target, scope);
-      // updateEvents(node.events, target, scope);
-      updatePropsAndEvents(node, target);
-      updateChildrenOrContents(node, target, scope);
-    } else /*if (target instanceof Text)*/ {
-      target.set('data', node);
+  // src/core/template/drivers/transferProps.js
+
+  function toStyleObject(source) {
+    var type = typeof source;
+    if (type === 'object') {
+      return source;
+    }
+    if (type === 'string') {
+      var style = {};
+      var pieces = source.split(';');
+      var piece, index, i, name, value;
+      for (i = pieces.length - 1; i >= 0; --i) {
+        piece = pieces[i];
+        index = piece.indexOf(':');
+        if (index > 0) {
+          name = piece.slice(0, index).trim();
+          value = piece.slice(index + 1).trim();
+          // style[toCamelCase(name)] = value;
+          style[name] = value;
+        }
+      }
+      return style;
+    } 
+  }
+
+  function toClassObject(source) {
+    var type = typeof source;
+    if (type === 'object') {
+      return source;
+    }
+    if (type === 'string') {
+      source = source.trim().split(WHITE_SPACES_REGEXP);
+    }
+    if (Array.isArray(source)) {
+      var i, classes = {};
+      for (i = 0; i < source.length; ++i) {
+        if (source[i]) {
+          classes[source[i]] = true;
+        }
+      }
+      return classes;
     }
   }
 
-  // function reflow(nodes, target, scope) {
-  //   if (target instanceof Component && target !== scope) {
-  //     updateChildrenOrContents({contents: nodes}, target, scope);
-  //   } else {
-  //     updateChildrenOrContents({children: nodes}, target, scope);
-  //   }
-  // }
-
-  function reflow(scope, target, nodes) {
-    if (arguments.length === 2) {
-      nodes = target;
-      target = scope;
-    } 
-    // if (target instanceof Component && target !== scope) {
-    //   updateChildrenOrContents({contents: flatten(nodes)}, target, scope);
-    // } else {
-      updateChildrenOrContents({children: flatten(nodes)}, target, scope);
-    // }
+  function getOrCreateCache(shell, name) {
+    var cache = shell[name];
+    if (!cache) {
+      cache = new Cache(shell);
+      shell[name] = cache;
+    }
+    return cache;
   }
 
-  var JSXEngine = {
-    // node: node,
-    // slot: slot,
-    reflow: reflow
-  };
+  function transferProps(shell) {
+    if (shell.$meta.type === TYPE_TEXT) {
+      return;
+    }
 
-  config.JSXEngine = JSXEngine;
+    var style, classes;
+
+    // if (shell.hasDirty('attrs')) {
+    //   DirtyMarker.clean(shell, 'attrs');
+    //   attrs = shell.get('attrs');
+    //   if (typeof attrs === 'object') {
+    //     shell.attrs.reset(attrs);
+    //   } else {
+    //     shell.attrs.reset(null);
+    //   }
+    // }
+    if (shell.hasDirty('style')) {
+      DirtyMarker.clean(shell, 'style');
+      style = toStyleObject(shell.get('style'));
+      shell.style.reset(style);
+    }
+    if (shell.hasDirty('class')) {
+      DirtyMarker.clean(shell, 'class');
+      classes = toClassObject(shell.get('class'));
+      shell.classes.reset(classes);
+    }
+
+    if (!shell.__props || !shell.constructor.__extag_component_class__) { 
+        return; 
+    }
+
+    var __props = shell.__props;
+    
+    // if (__props.hasDirty('attrs')) {
+    //   var __attrs = getOrCreateCache(shell, '__attrs');
+    //   DirtyMarker.clean(__props, 'attrs');
+    //   attrs = __props.get('attrs');
+    //   if (typeof attrs === 'object') {
+    //     __attrs.reset(attrs);
+    //   } else {
+    //     __attrs.reset(null);
+    //   }
+    // }
+    if (__props.hasDirty('style')) {
+      var __style = getOrCreateCache(shell, '__style');
+      DirtyMarker.clean(__props, 'style');
+      style = __props.get('style');
+      style = toStyleObject(style);
+      __style.reset(style);
+    }
+    if (__props.hasDirty('class')) {
+      var __classes = getOrCreateCache(shell, '__classes');
+      DirtyMarker.clean(__props, 'class');
+      classes = __props.get('class');
+      classes = toClassObject(classes);
+      __classes.reset(classes);
+    }
+  }
+
+  // src/core/template/drivers/driveComponent.js
+
+  function driveComponent(target, scopes, vnode, props, template) {
+    var useExpr;
+
+    if (vnode && scopes) {
+      useExpr = vnode.useExpr;
+      if (props && vnode.props) {
+        props = assign({}, vnode.props, props);
+      } else if (!props && vnode.props) {
+        props = vnode.props;
+      }
+      // eslint-disable-next-line no-undef
+      {
+        Validator.validate0(target, props);
+      }
+      driveProps(target, scopes, props, useExpr);
+
+      if (vnode.events) {
+        driveEvents(target, scopes, vnode.events, useExpr);
+      }
+      if (useExpr) {
+        // if (vnode.attrs) {
+        //   driveProps(target.attrs, scopes, vnode.attrs, useExpr);
+        // }
+        if (vnode.style) {
+          driveProps(target.style, scopes, vnode.style, useExpr);
+        }
+        if (vnode.classes) {
+          driveProps(target.classes, scopes, vnode.classes, useExpr);
+        }
+      }
+      if (vnode.children) {
+        driveChildren(target, scopes, vnode.children, useExpr, true);
+      }
+    } else if (props) {
+      // eslint-disable-next-line no-undef
+      {
+        Validator.validate0(target, props);
+      }
+      driveProps(target, scopes, props);
+    }
+    
+    if (!template) { return; }
+
+    var _scopes = [target];
+
+    useExpr = template.useExpr;
+
+    if (template.events) {
+      driveEvents(target, _scopes, template.events, useExpr);
+    }
+    if (template.props) {
+      target.__props = new Cache(target);
+      driveProps(target.__props, _scopes, template.props, useExpr);
+    }
+    if (useExpr) {
+      // if (template.attrs) {
+      //   target.__attrs = new Cache(target);
+      //   driveProps(target.__attrs, _scopes, template.attrs, useExpr);
+      // }
+      if (template.style) {
+        target.__style = new Cache(target);
+        driveProps(target.__style, _scopes, template.style, useExpr);
+      }
+      if (template.classes) {
+        target.__classes = new Cache(target);
+        driveProps(target.__classes, _scopes, template.classes, useExpr);
+      }
+    }
+    if (template.children) {
+      driveChildren(target, _scopes, template.children, useExpr);
+      // TODO: check for <x:frag children@="render(_props)"></x:frag>
+    }
+  }
+
+  HTMXEngine.makeContent = createContent;
+  HTMXEngine.createContent = createContent;
+  HTMXEngine.driveChildren = driveChildren;
+  // HTMXEngine.driveContent = driveContent;
+  HTMXEngine.driveEvents = driveEvents;
+  HTMXEngine.driveProps = driveProps;
+  HTMXEngine.driveComponent = driveComponent;
+  HTMXEngine.transferProps = transferProps;
+  HTMXEngine.transferProperties = transferProps;
 
   // src/core/template/parsers/EvaluatorParser.js
 
@@ -4677,7 +4720,7 @@
 
       try {
         var func = Function.apply(null, args);
-        return new Evaluator(func, expr);
+        return new Evaluator(func, arguments[0]);
       } catch (e) {
         throwError(e, {
           code: 1001,
@@ -4837,7 +4880,7 @@
 
   function getExprArgs(value) {
     var type = typeof value;
-    if (type === 'object' && value.__extag_expr__) {
+    if (type === 'object' && value.__extag_expr__ === Expression) {
       return value.args;
     } else if (type === 'string' || type === 'function') {
       return [value];
@@ -4866,12 +4909,12 @@
       for (key in props) {
         value = props[key];
         if (typeof value === 'object') {
-          if (value.__extag_expr__) {
+          if (value.__extag_expr__ === Expression) {
             props[key] = parseJsxDataExpr(value.args, node, prototype);
-          } else if (key === 'classes' || key === 'style' || key === 'attrs') {
+          } /*else if (key === 'classes' || key === 'style' || key === 'attrs') {
             node[key] = value;
             delete props[key];
-          }
+          }*/
         }
       }
     }
@@ -5023,17 +5066,24 @@
     if (!children || !children.length) {
       return;
     }
-    var i, args, child;
+    var i, child;
     for (i = children.length - 1; i >= 0; --i) {
       child = children[i];
       if (typeof child === 'object') {
-        if (child.__extag_node__) {
+        if (child.__extag_node__ === EXTAG_VNODE) {
+          child.useExpr = true;
           child.identifiers = node.identifiers;
           parseJsxNode(child, prototype);
           parseJsxChildren(child, prototype);
           continue;
-        } else if (child.__extag_expr__) {
-          children[i] = parseJsxDataExpr(args, node, prototype);
+        } else if (child.__extag_expr__ === Expression) {
+          // children[i] = parseJsxDataExpr(child.args, node, prototype);
+          children[i] = {
+            __extag_node__: EXTAG_VNODE,
+            useExpr: true,
+            type: Expression,
+            expr: parseJsxDataExpr(child.args, node, prototype)
+          };
         }
       }
     }
@@ -5045,6 +5095,7 @@
     xfor: true,
     xkey: true,
     xname: true,
+    xslot: true,
     xtype: true,
     events: true
   };
@@ -5058,8 +5109,9 @@
    */
   function node(type, options, children) {
     var node = {
-      __extag_node__: true
+      __extag_node__: EXTAG_VNODE
     };
+    var props, key;
 
     var t = typeof type;
     if (t === 'string') {
@@ -5111,6 +5163,9 @@
       if (options.xname) {
         node.name = options.xname;
       }
+      if (options.xslot) {
+        node.slot = options.xslot;
+      }
       if (options.xtype) {
         if (!node.type) {
           node.type = options.xtype;
@@ -5125,14 +5180,14 @@
         node.events = options.events;
       }
 
-      var props;
-       if (node.props) {
+      // var props;
+      if (node.props) {
         props = node.props;
       } else {
         props = node.props = {};
       }
 
-      for (var key in options) {
+      for (key in options) {
         if (!RESERVED_PARAMS[key] && hasOwnProp.call(options, key)) {
           props[key] = options[key];
         }
@@ -5147,6 +5202,17 @@
         children = [children];
       }
       node.children = children;
+
+      // if (node.props) {
+      //   props = node.props;
+      // } else {
+      //   props = node.props = {};
+      // }
+      // if (node.type) {
+      //   props.contents = children;
+      // } else {
+      //   props.children = children;
+      // }
     }
 
     return node;
@@ -5165,7 +5231,7 @@
   function expr() {
     return {
       args: slice.call(arguments, 0),
-      __extag_expr__: true
+      __extag_expr__: Expression
     };
   }
 
@@ -5199,7 +5265,7 @@
     }
   };
 
-  config.JSXParser = JSXParser;
+  HTMXEngine.parseJSX = JSXParser.parse;
 
   // src/core/template/parsers/PrimaryLiteralParser.js
 
@@ -5321,9 +5387,9 @@
      *                              and "display: none; font-size#:@{fontSize}px;" for x:style
      * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
      * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
-     * @param {boolean} camelCase  - using camel case for x:style="...", not for x:calss="..."
+     * @param {boolean} forStyle  - 
      */
-    parse: function parse(expr, prototype, identifiers, camelCase) {
+    parse: function parse(expr, prototype, identifiers, forStyle) {
       var group = {};
       var pieces = expr.split(STYLE_DELIMITER); 
       var result, piece, name, names, n, i, j, k;
@@ -5348,18 +5414,18 @@
         expr = piece.slice(k + 1).trim();
 
         if (!name || !CSS_NAME_REGEXP.test(name)) {
-          throwError('Illegal ' + (camelCase ? 'x:style' : 'x:class') + ' expression.', {
+          throwError('Illegal ' + (forStyle ? 'x:style' : 'x:class') + ' expression.', {
             code: 1001,
             expr: name || arguments[0]
           });
         }
-        if (camelCase) {
-          name = toCamelCase(name);
-        }
+        // if (forStyle && name.slice(0, 2) !== '--') { // not like --webkit-transform
+        //   name = toCamelCase(name);
+        // }
 
         try {
           if (!TextBindingParser.like(expr)) {
-            group[name] = camelCase ? expr : PrimitiveLiteralParser.tryParse(expr);
+            group[name] = forStyle ? expr : PrimitiveLiteralParser.tryParse(expr);
             continue;
           }
           // if (SINGLE_BINDING_REGEXP.test(expr)) {
@@ -5380,7 +5446,7 @@
         if (result) {
           if (result.length === 1) {
             group[name] = new Expression(DataBinding, result[0]);
-          } else if (camelCase) {
+          } else if (forStyle) {
             group[name] = new Expression(TextBinding, result);
           } else {
             throwError('Illegal x:class expression.', {
@@ -5389,7 +5455,7 @@
             });
           }
         } else {
-          group[name] = camelCase ? expr : PrimitiveLiteralParser.tryParse(expr);
+          group[name] = forStyle ? expr : PrimitiveLiteralParser.tryParse(expr);
         }
       }
 
@@ -5450,7 +5516,7 @@
   };
 
   var SPECIAL_CASES = {
-    'class': 'classes',
+    // 'class': 'classes',
     'inner-html': 'innerHTML'
   };
 
@@ -5460,6 +5526,7 @@
     'x:for': true,
     'x:key': true,
     'x:name': true,
+    'x:slot': true,
     'x:type': true,
     'x:class': true,
     'x:style': true
@@ -5477,7 +5544,7 @@
     if (attrName in SPECIAL_CASES) {
       return SPECIAL_CASES[attrName];
     }
-    return toCamelCase(attrName);
+    return attrName;// toCamelCase(attrName);
   }
 
   function isDirective(name) {
@@ -5496,34 +5563,42 @@
     } else if (name === 'x:style') {
       node.style = ClassStyleParser.parse(expr, prototype, identifiers, true);
     } else if (name === 'x:type') {
-      if (node.tag === 'x:output') {
-        // <x:output x:type="Buuton"/> just like <input type="button">
-        parseAttribute('xtype@', expr, node, prototype, identifiers);
-        return;
-      } else if (node.tag === 'x:slot') {
-        throwError('Unexpected x:type on <x:slot>', {
-          code: 1001,
-          expr: expr,
-          desc: 'Do not use x:type on <x:slot>'
-        });
-      }
+      // if (node.tag === 'x:output') {
+      //   // <x:output x:type="Buuton"/> just like <input type="button">
+      //   parseAttribute('xtype@', expr, node, prototype, identifiers);
+      //   return;
+      // } else if (node.tag === 'x:slot') {
+      //   throwError('Unexpected x:type on <x:slot>', {
+      //     code: 1001,
+      //     expr: expr,
+      //     desc: 'Do not use x:type on <x:slot>'
+      //   });
+      // }
       var ctor = Path.search(expr, prototype.constructor.resources);
-      if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
-        // if ("development" === 'development') {
-        //   logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in static resources.');
-        // }
-        // throw new TypeError('Can not find such component type `' + expr + '`');
-        throwError('Illegal x:type="' + expr + '"', {
-          code: 1001,
-          expr: expr,
-          desc: 'Can not find such component type `' + expr 
-                + '`. Make sure it extends Component and please register `' + expr 
-                + '` in static resources.'
-        });
+      // if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
+      //   // if ("development" === 'development') {
+      //   //   logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in static resources.');
+      //   // }
+      //   // throw new TypeError('Can not find such component type `' + expr + '`');
+      //   throwError('Illegal x:type="' + expr + '"', {
+      //     code: 1001,
+      //     expr: expr,
+      //     desc: 'Can not find such component type `' + expr 
+      //           + '`. Make sure it extends Component and please register `' + expr 
+      //           + '` in static resources.'
+      //   });
+      // }
+      // node.type = ctor;
+      if (typeof ctor === 'function' && ctor.__extag_component_class__) {
+        node.type = ctor;
+      } else {
+        result = DataBindingParser.parse(expr, prototype, identifiers);
+        node.xtype = new Expression(DataBinding, result);
       }
-      node.type = ctor;
     } else if (name === 'x:name') {
       node.name = expr;
+    } else if (name === 'x:slot') {
+      node.slot = expr;
     } else if (name === 'x:key') {
       node.xkey = EvaluatorParser.parse(expr, prototype, identifiers);
     } else if (name === 'x:for') {
@@ -5563,40 +5638,105 @@
     }
   }
 
+  // function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
+  //   var lastChar = attrName[attrName.length - 1];
+  //   var index = attrName.indexOf(':');
+  //   var result, group, key;
+
+  //   // // :title => title
+  //   // if (index === 0) {
+  //   //   attrName = attrName.slice(1);
+  //   // }
+
+  //   if (attrValue == null) {
+  //     if (index < 0) {
+  //       key = getPropName(attrName);
+  //       getGroup(node, 'props')[key] = true;
+  //       return;
+  //     }
+  //     attrValue = '';
+  //   }
+
+  //   if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
+  //     group = getGroup(node, 'events');
+  //     key = attrName.slice(0, -1);
+  //     // attrName = attrName.slice(0, -1);
+  //     // key = index < 0 ? toCamelCase(attrName) : attrName;
+  //     result = EventBindingParser.parse(attrValue, prototype, identifiers);
+  //     group[key] = new Expression(EventBinding, result);
+  //   } else {
+  //     if (index < 0) {
+  //       group = getGroup(node, 'props');
+  //     } else {
+  //       group = getGroup(node, 'attrs');
+  //     }
+  //     switch (lastChar) {
+  //       case BINDING_OPERATORS.DATA: // last char is '@'
+  //         attrName = attrName.slice(0, -1);
+  //         key = index < 0 ? getPropName(attrName) : attrName;
+  //         result = PrimitiveLiteralParser.tryParse(attrValue);
+  //         if (result != null) {
+  //           group[key] = result;
+  //         } else {
+  //           result = DataBindingParser.parse(attrValue, prototype, identifiers);
+  //           group[key] = new Expression(DataBinding, result);
+  //         }
+  //         break;
+  //       case BINDING_OPERATORS.TEXT: // last char is '#'
+  //         attrName = attrName.slice(0, -1);
+  //         key = index < 0 ? getPropName(attrName) : attrName;
+  //         try {
+  //           result = TextBindingParser.parse(attrValue, prototype, identifiers);
+  //         } catch (e) {
+  //           // eslint-disable-next-line no-undef
+  //           if ("development" === 'development') {
+  //             if (e.code === 1001) {
+  //               e.expr = BINDING_FORMAT.replace('0', e.expr);
+  //             }
+  //           }
+  //           throw e;
+  //         }
+  //         if (result) {
+  //           if (result.length === 1) {
+  //             group[key] = new Expression(DataBinding, result[0]);
+  //           } else {
+  //             group[key] = new Expression(TextBinding, result);
+  //           }
+  //         } else {
+  //           group[key] = attrValue;
+  //         }
+  //         break;
+  //       default:
+  //         key = index < 0 ? getPropName(attrName) : attrName;
+  //         // group[key] = viewEngine.isBoolProp(key) || attrValue;
+  //         group[key] = attrValue;
+  //     }
+  //   }
+  // }
+
   function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
     var lastChar = attrName[attrName.length - 1];
     var result, group, key;
-    var index;
 
     if (attrValue == null) {
-      if (attrName.indexOf(':') < 0) {
-        key = getPropName(attrName);
-        getGroup(node, 'props')[key] = true;
-        return;
-      }
-      attrValue = '';
+      key = getPropName(attrName);
+      group = getGroup(node, 'props');
+      group[key] = true;
+      return;
     }
 
     if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
       group = getGroup(node, 'events');
-      key = toCamelCase(attrName.slice(0, -1));
+      key = attrName.slice(0, -1);
+      // attrName = attrName.slice(0, -1);
+      // key = index < 0 ? toCamelCase(attrName) : attrName;
       result = EventBindingParser.parse(attrValue, prototype, identifiers);
       group[key] = new Expression(EventBinding, result);
     } else {
-      index = attrName.indexOf(':');
-      if (index < 0) {
-        group = getGroup(node, 'props');
-      } else {
-        group = getGroup(node, 'attrs');
-        // :title => title
-        if (index === 0) {
-          attrName = attrName.slice(1);
-        }
-      }
+      group = getGroup(node, 'props');
       switch (lastChar) {
         case BINDING_OPERATORS.DATA: // last char is '@'
-          attrName = attrName.slice(0, -1);
-          key = index < 0 ? getPropName(attrName) : attrName;
+          key = getPropName(attrName.slice(0, -1));
           result = PrimitiveLiteralParser.tryParse(attrValue);
           if (result != null) {
             group[key] = result;
@@ -5606,8 +5746,7 @@
           }
           break;
         case BINDING_OPERATORS.TEXT: // last char is '#'
-          attrName = attrName.slice(0, -1);
-          key = index < 0 ? getPropName(attrName) : attrName;
+          key = getPropName(attrName.slice(0, -1));
           try {
             result = TextBindingParser.parse(attrValue, prototype, identifiers);
           } catch (e) {
@@ -5630,8 +5769,7 @@
           }
           break;
         default:
-          key = index < 0 ? getPropName(attrName) : attrName;
-          // group[key] = viewEngine.isBoolProp(key) || attrValue;
+          key = getPropName(attrName);
           group[key] = attrValue;
       }
     }
@@ -5692,7 +5830,7 @@
                 if (e.code === 1001) {
                   var snapshot = getSnapshot(htmx, e.expr, node, start);
                   logger.warn((e.desc || e.message) + ' In the template of component ' 
-                    + (prototype.constructor.fullName || prototype.constructor.name) + ':\n' 
+                    + (prototype.constructor.fullname || prototype.constructor.name) + ':\n' 
                     + snapshot[0], snapshot[1], snapshot[2]);
                 }
               }
@@ -5747,6 +5885,16 @@
   var LF_IN_BLANK_START = /^\s*\n\s*/;
   var LF_IN_BLANK_END = /\s*\n\s*$/;
 
+  function createExprNode(binding, pattern) {
+    return {
+      __extag_node__: EXTAG_VNODE,
+      useExpr: true,
+      type: Expression,
+      expr: new Expression(binding, pattern)
+    }
+  }
+
+
   function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
     var children = parent.children || [], result;
     var text = htmx.slice(start, stop);
@@ -5754,6 +5902,7 @@
     if (!text) {
       return;
     }
+
     if (TextBindingParser.like(text)) {
       try {
         result = TextBindingParser.parse(text, prototype, identifiers);
@@ -5763,7 +5912,7 @@
           if (e.code === 1001) {
             var snapshot = getSnapshot(htmx, BINDING_FORMAT.replace('0', e.expr), parent, start);
             logger.warn((e.desc || e.message) + ' In the template of component ' 
-                    + (prototype.constructor.fullName || prototype.constructor.name) + ':\n' 
+                    + (prototype.constructor.fullname || prototype.constructor.name) + ':\n' 
                     + snapshot[0], snapshot[1], snapshot[2]);
           }
         }
@@ -5771,7 +5920,7 @@
       }
       if (result) {
         if (result.length === 1 && typeof result[0] === 'object') {
-          children.push(new Expression(DataBinding, result[0]));
+          children.push(createExprNode(DataBinding, result[0]));
         } else {
           var i = -1, j = 0 , n = result.length;
           for (; j < n; ++j) {
@@ -5779,14 +5928,14 @@
             if (typeof pattern === 'object' && pattern.target === 'frag') {
               if (j > i) {
                 if (j - i > 1) {
-                  children.push(new Expression(TextBinding, result.slice(i, j)));
-                } else if (typeof result[i] === 'object' && result[i].target === 'text') {
-                  children.push(new Expression(DataBinding, result[i]));
+                  children.push(createExprNode(TextBinding, result.slice(i, j)));
+                } else if (typeof result[i] === 'object') {
+                  children.push(createExprNode(DataBinding, result[i]));
                 } else {
                   children.push(result[i]);
                 }
               }
-              children.push(new Expression(DataBinding, pattern));
+              children.push(createExprNode(DataBinding, pattern));
               i = -1;
             } else if (i < 0) {
               i = j;
@@ -5794,9 +5943,9 @@
           }
           if (i >= 0 && j > i) {
             if (j - i > 1) {
-              children.push(new Expression(TextBinding, result.slice(i, j)));
-            } else if (typeof result[i] === 'object' && result[i].target === 'text') {
-              children.push(new Expression(DataBinding, result[i]));
+              children.push(createExprNode(TextBinding, result.slice(i, j)));
+            } else if (typeof result[i] === 'object') {
+              children.push(createExprNode(DataBinding, result[i]));
             } else {
               children.push(result[i]);
             }
@@ -5842,7 +5991,8 @@
      
           node = {};
           node.tag = tagName;
-          node.__extag_node__ = true;
+          node.useExpr = true;
+          node.__extag_node__ = EXTAG_VNODE;
 
           // eslint-disable-next-line no-undef
           {
@@ -5878,13 +6028,13 @@
               // case 'x:block':
               //   node.type = Block;
               //   break;
-              case 'x:ouput':
-                node.type = Output;
-                break;
+              // case 'x:ouput':
+              //   node.type = Output;
+              //   break;
             }
           }
 
-          if (node.type == null && CAPITAL_REGEXP.test(tagName)) {
+          if (node.type == null && node.xtype == null && CAPITAL_REGEXP.test(tagName)) {
             var ctor = Path.search(tagName, prototype.constructor.resources);
             if (typeof ctor === 'function' && ctor.__extag_component_class__) {
               node.type = ctor;
@@ -5926,7 +6076,7 @@
             {
               var snapshot = getSnapshot(htmx, tagName, parent, start);
               logger.warn('Unclosed tag `' + parent.tag + '`. In the template of component ' 
-                    + (prototype.constructor.fullName || prototype.constructor.name) + ':\n' 
+                    + (prototype.constructor.fullname || prototype.constructor.name) + ':\n' 
                     + snapshot[0], snapshot[1], snapshot[2]);
             }
             throwError('Unclosed tag ' + parent.tag);
@@ -5937,11 +6087,21 @@
             stop = parseAttributes(htmx, start);
           }
 
+          // if (parent.children) {
+          //   var props = getGroup(parent, 'props');
+          //   if (node.type) {
+          //     props.contents = parent.children;
+          //   } else {
+          //     props.children = parent.children;
+          //   }
+          // }
+
           // start = stop = stop + 1;
 
           // tag closed
           if (parents.length > 1) {
             parents.pop();
+            // check <x:frag>@{{draw()^}}</x:frag>
           } else {
             // if (stop < end) {
             //   throw new Error('');
@@ -5966,7 +6126,8 @@
           stop = stop > 0 ? stop : htmx.length;
           node =  {
             tag: '!',
-            comment: htmx.slice(start, stop)
+            comment: htmx.slice(start, stop),
+            __extag_node__: EXTAG_VNODE
           };
           parent.children = parent.children || [];
           parent.children.push(node);
@@ -5996,7 +6157,7 @@
       var root = children[0];
 
       if (children.length !== 1) {
-        throwError('The template of Component ' + (constructor.fullName || constructor.name) + ' must have only one root tag.');
+        throwError('The template of component ' + (constructor.fullname || constructor.name) + ' must have only one root tag.');
       }
       if (root.tag === '!' || root.tag === '#') {
         throwError('Component template root tag must be a DOM element, instead of: ' + htmx.slice(0, htmx.indexOf('>')));
@@ -6016,7 +6177,7 @@
     }
   };
 
-  config.HTMXParser = HTMXParser;
+  HTMXEngine.parseHTMX = HTMXParser.parse;
 
   /* eslint-disable no-unused-vars */
 
@@ -6046,7 +6207,7 @@
   var Extag = {
     anew: Generator.anew,
     inst: Generator.inst,
-    make: HTMXEngine.makeContent,
+    // make: HTMXEngine.makeContent,
 
     conf: function(key, val) {
       if (arguments.length === 1) {
