@@ -1,5 +1,5 @@
 (function() {
-  var Store = Extag.Store;
+  var Model = Extag.Model;
   var Component = Extag.Component;
 
   var uid = 0;
@@ -32,18 +32,25 @@
 
     statics: {
       fullName: 'TodoItem',
-      template: ExtagDom.query('#todo-item-template').innerHTML,
+      template: ExtagDOM.query('#todo-item-template').innerHTML,
       attributes: {
         completed: false,
-        editing: false,
+        // editing: false,
         label: '',
-        text: ''
+        // text: ''
       }
     },
 
     setup: function() {
-      this.onToggle = this.onToggle.bind(this);
-      this.onChange = this.onChange.bind(this);
+      return {
+        onToggle: this.onToggle.bind(this),
+        onChange: this.onChange.bind(this),
+        onKeyup: this.onKeyup.bind(this),
+        state: new Model({
+          editing: false,
+          text: ''
+        })
+      }
     },
 
     onToggle: function(event) {
@@ -51,25 +58,36 @@
     },
 
     onChange: function(event) {
-      this.text = event.target.value.trim();
+      this.state.text = event.target.value.trim();
+    },
+
+    onKeyup: function(event) {
+      switch(event.key.toLowerCase()) {
+        case 'escape':
+          this.cancelEditing();
+          break;
+        case 'enter':
+          this.doneEditing();
+          break;
+      }
     },
 
     startEditing: function() {
-      this.text = this.label;
-      this.editing = true;
+      this.state.text = this.label;
+      this.state.editing = true;
       this.editor.cmd('focus');
     },
 
-    doneEditing: function(event) {
-      if (this.editing) {
-        this.submit(this.text);
+    doneEditing: function() {
+      if (this.state.editing) {
+        this.submit(this.state.text);
       }
 
       this.cancelEditing();
     },
 
-    cancelEditing: function(event) {
-      this.editing = false;
+    cancelEditing: function() {
+      this.state.editing = false;
     },
 
     submit: function(text) {
@@ -90,26 +108,26 @@
 
     statics: {
       fullName: 'TodoApp',
-      attributes: {
-        todos: Extag.anew(Array),
-        status: STATUS.ALL,
-        newTodo: '',
-        remainingCount: {
-          get: function() {
-            return this.todos.length - filter(this.todos, STATUS.COMPLETED).length;
-          }
-        },
-        allDone: {
-          get: function() {
-            return this.remainingCount === 0;
-          },
-          set: function(value) {
-            this.todos.forEach(function(todo) {
-              todo.completed = value;
-            });
-          }
-        }
-      },
+      // attributes: {
+      //   todos: Extag.anew(Array),
+      //   status: STATUS.ALL,
+      //   newTodo: '',
+      //   remainingCount: {
+      //     get: function() {
+      //       return this.todos.length - filter(this.todos, STATUS.COMPLETED).length;
+      //     }
+      //   },
+      //   allDone: {
+      //     get: function() {
+      //       return this.remainingCount === 0;
+      //     },
+      //     set: function(value) {
+      //       this.todos.forEach(function(todo) {
+      //         todo.completed = value;
+      //       });
+      //     }
+      //   }
+      // },
 
       resources: {
         filter: filter,
@@ -122,82 +140,113 @@
         TodoItem: ENJ.TodoItem
       },
 
-      template: ExtagDom.query('#todoapp-template').innerHTML
+      template: ExtagDOM.query('#todoapp-template').innerHTML
     },
 
     setup: function() {
-      this.onSave = this.onSave.bind(this);
-      this.onEnter = this.onEnter.bind(this);
-      this.onToggle = this.onToggle.bind(this);
-      this.onChange = this.onChange.bind(this);
       this.on('created', this.onCreated.bind(this));
+      var state = new Model({
+        todos: [],
+        status: STATUS.ALL,
+        newTodo: '',
+        get allDone() {
+          return this.remainingCount === 0;
+        },
+        set allDone(value) {
+          this.todos.forEach(function(todo) {
+            todo.completed = value;
+          });
+        },
+        get remainingCount() {
+          return this.todos.length - filter(this.todos, STATUS.COMPLETED).length;
+        }
+      });
+      return {
+        state: state,
+        onSave: this.onSave.bind(this),
+        onToggle: this.onToggle.bind(this),
+        onKeyup: this.onKeyup.bind(this),
+        onKeydown: this.onKeydown.bind(this)
+      }
     },
 
     onCreated: function() {
+      var state = this.state;
       var records = ENJ.read();
       if (records) {
         for (var i = 0, n = records.length; i < n; ++i) {
-          this.addTodo(Store.create(records[i]));
+          this.addTodo(records[i]);
         }
       }
-      this.on('changed.todos', this.onSave);
+      state.on('changed', (function(key) {
+        if (key === 'todos') {
+          this.onSave()
+        }
+      }).bind(this));
+
+      function onHashChange () {
+        var hash = window.location.hash;
+        var status = STATUS[hash.replace(/#\/?/, '').toUpperCase()];
+        state.status = status || STATUS.ALL;
+      }
+    
+      onHashChange();
+    
+      window.onhashchange = onHashChange;
     },
 
     addTodo: function(todo) {
+      todo = new Model(todo);
       todo.id = ++uid;
-      this.todos.push(todo);
-      this.emit('changed.todos');
+      this.state.todos.push(todo);
       todo.on('changed', this.onSave);
-      // this.invalidate();
+      this.state.todos = this.state.todos.slice(0);
     },
 
     removeTodo: function(todo) {
-      var index = this.todos.indexOf(todo);
+      var todos = this.state.todos;
+      var index = todos.indexOf(todo);
       if (index < 0) { return; }
-      this.todos.splice(index, 1);
-      this.emit('changed.todos')
+      todos.splice(index, 1);
+      todo.off('changed', this.onSave);
+      this.state.todos = todos.slice(0);
+      // this.emit('changed.todos')
       // this.invalidate();
       todo.off();
     },
 
     clearCompleted: function() {
-      this.todos = filter(this.todos, STATUS.ACTIVE);
+      this.state.todos = filter(this.state.todos, STATUS.ACTIVE);
     },
 
     onToggle: function(event) {
-      this.allDone = event.target.checked;
+      this.state.allDone = event.target.checked;
     },
 
-    onChange: function(event) {
-      this.newTodo = event.target.value.trim();
+    onKeyup: function(event) {
+      if (event.key.toLowerCase() === 'enter') { return; }
+      this.state.newTodo = event.target.value.trim();
     },
 
-    onEnter: function(event) {
-      if (this.newTodo) {
-        this.addTodo(Store.create({
-          label: this.newTodo,
+    onKeydown: function(event) {
+      if (event.key.toLowerCase() !== 'enter') { return; }
+      if (this.state.newTodo) {
+        this.addTodo({
+          label: this.state.newTodo,
           completed: false
-        }));
+        });
       }
-      this.newTodo = '';
+      this.state.newTodo = '';
     },
 
     onSave: function() {
-      ENJ.save(this.todos.slice(0));
+      ENJ.save(this.state.todos.slice(0));
     }
   });
 
   var app = Component.create(ENJ.TodoApp);
-
-  function onHashChange () {
-    var hash = window.location.hash;
-    var status = STATUS[hash.replace(/#\/?/, '').toUpperCase()];
-    app.status = status || STATUS.ALL;
-  }
-
-  onHashChange();
-
-  window.onhashchange = onHashChange;
-
-  app.attach(ExtagDom.query('#todoapp'));
+  // app.attach(ExtagDOM.query('#todoapp'));
+  setTimeout(function() {
+    app.attach(ExtagDOM.query('#todoapp'));
+  }, 2000)
 })();

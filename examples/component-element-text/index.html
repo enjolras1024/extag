@@ -22,49 +22,50 @@
 <script>
   // 定义组件
   var Panel = Extag.defineClass({
-    // constuctor: function() { Extag.Component.apply(this, arguments) },
+    // constuctor: function Panel() { Extag.Component.apply(this, arguments) }, // ES5中如此调用Component的构造函数
     extends: Extag.Component,
     statics: {
       template:'<div class="panel" x:style="border: solid 2px @{color};">' +
                   '<h3 class="head" x:style="background-color: @{color};">' + 
                       '@{title}' +
                   '</h3>' +
-                  '<div class="body">' + 
-                      '<x:slot></x:slot>' + 
+                  '<div class="body" x:name="body">' + 
                   '</div>' +
               '</div>',
-      attributes: ['title', 'color'],
+      attributes: ['title', 'color']
     }
   });
-
   // 创建组件
-  var panel = Extag.Component.create(Panel);
-
+  var panel = new Panel();
   // 创建元素和文本
-  var svg = Extag.Element.create('svg:svg'); // 前缀svg:为元素的命名空间
-  var rect = Extag.Element.create('svg:rect'); 
-  var span = Extag.Element.create('span');
-  var text = Extag.Text.create('');
-
+  var svg = new Extag.Element('svg:svg'); // 前缀svg:为元素的命名空间
+  var rect = new Extag.Element('svg:rect'); 
+  var span = new Extag.Element('span');
+  var text = new Extag.Text('');
   // appendChild, insertChild, removeChild, replaceChild
   svg.appendChild(rect);
   span.appendChild(text);
-
   // 设置属性，样式等
-  text.set('data', "It's a rect");
-
   span.set('title', "It's a rect");
   span.style.set('color', 'white');
   span.classes.set('dark-bg', true);
-
-  rect.assign({width: 100, height: 100});
-  rect.style.assign({fill: 'rgb(0, 120, 240)'});
-  rect.attrs.assign({transform: 'translate(10, 10)'});
-
-  panel.setContents([svg, span]); // 模板中x:slot处会被替换为svg和span
-  panel.assign({title: 'SVG', color: '#eee'}); // 设置DOM属性或自定义属性
+  text.set('content', "It's a rect");
+  rect.assign({
+    width: 100, 
+    height: 100,
+    transform: 'translate(10, 10)'
+  });
+  rect.style.assign({
+    fill: 'rgb(0, 120, 240)'
+  });
+  // 设置DOM属性或自定义特性
+  panel.assign({
+    title: 'SVG', 
+    color: '#eee'
+  }); 
+  panel.body.setChildren([svg, span]);
   // 附着到页面元素上
-  panel.attach(ExtagDom.query('#panel'));
+  panel.attach(ExtagDOM.query('#panel'));
 </script>
 </body>
 </html>

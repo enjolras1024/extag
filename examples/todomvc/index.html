@@ -15,46 +15,46 @@
       <header class="header">
         <h1>todos</h1>
         <input class="new-todo" placeholder="What needs to be done?" autofocus
-               keydown.enter+="onEnter" keyup+="onChange" value@="newTodo">
+               keydown+="onKeydown" keyup+="onKeyup" value@="state.newTodo">
       </header>
-      <section class="main" x:style="display: @{todos.length ? '' : 'none'};">
-        <input type="checkbox" class="toggle-all" id="toggle-all" checked@="allDone" change+="onToggle">
+      <section class="main" x:style="display: @{state.todos.length ? '' : 'none'};">
+        <input type="checkbox" class="toggle-all" id="toggle-all" checked@="state.allDone" change+="onToggle">
         <label for="toggle-all">Mark all as complete</label>
         <ul class="todo-list" x:name="list">
-          <li x:type="TodoItem" x:for="todo of todos |=filter(status)" x:key="todo.id"
-              label@="@todo.label" completed@="@todo.completed" destroy+="this.removeTodo(todo)"></li>
+          <li x:type="TodoItem" x:for="todo of state.todos |=filter(state.status)" x:key="todo.id"
+              label@="@todo.label" completed@="@todo.completed" destroy+="removeTodo(todo)"></li>
         </ul>
       </section>
-      <footer class="footer" x:style="display:@{todos.length |=display};">
+      <footer class="footer" x:style="display:@{state.todos.length |=display};">
         <span class="todo-count">
-          <strong x:name="strong">@{ remainingCount }</strong> @{ remainingCount |=pluralize('item') } left
+          <strong x:name="strong">@{ state.remainingCount }</strong> @{ state.remainingCount |=pluralize('item') } left
         </span>
         <ul class="filters">
           <li>
-            <a x:class="selected:@{status === 'all'}" href="#/">All</a>
+            <a x:class="selected:@{state.status === 'all'}" href="#/">All</a>
           </li>
           <li>
-            <a x:class="selected:@{status === 'active'}" href="#/active">Active</a>
+            <a x:class="selected:@{state.status === 'active'}" href="#/active">Active</a>
           </li>
           <li>
-            <a x:class="selected:@{status === 'completed'}" href="#/completed">Completed</a>
+            <a x:class="selected:@{state.status === 'completed'}" href="#/completed">Completed</a>
           </li>
         </ul>
-        <button class="clear-completed" click+="this.clearCompleted()"
-                x:style="display:@{todos.length > remainingCount |=display};" >Clear completed</button>
+        <button class="clear-completed" click+="clearCompleted()"
+                x:style="display:@{state.todos.length > state.remainingCount |=display};" >Clear completed</button>
       </footer>
     </section>
   </script>
 
   <script type="text/template" id="todo-item-template">
-    <li class="todo-item" x:class="completed:@{completed}; editing:@{editing};">
+    <li x:class="todo-item; completed:@{completed}; editing:@{state.editing};">
       <div class="view">
         <input type="checkbox" class="toggle" checked@="completed" change+="onToggle">
-        <label dblclick+="this.startEditing()">@{ label }</label>
-        <button class="destroy" click+="this.destroy()"></button>
+        <label dblclick+="startEditing()">@{ label }</label>
+        <button class="destroy" click+="destroy()"></button>
       </div>
-      <input class="edit" x:name="editor" value@="text" change+="onChange"
-             keyup.escape+="cancelEditing(event)" keyup.enter+="this.doneEditing()" blur+="this.doneEditing()">
+      <input class="edit" x:name="editor" value@="state.text" change+="onChange"
+             keyup+="onKeyup" blur+="doneEditing()">
     </li>
   </script>
 

@@ -149,6 +149,8 @@ ul > li {
 .icon-triangle {
   display: inline-block; 
   float: right;
+  /* position: relative;
+  left: -10px; */
   
   width: 0; 
   height: 0; 
@@ -161,10 +163,16 @@ ul > li {
 }
 
 .icon-triangle-down {
-  margin: 6px 10px 0 0;
+  /* margin: 6px 10px 0 0; */
   border-top-color:#aaa;
+  transform: translate(-10px, 5px);
 }
 
+.icon-triangle-left {
+  /* margin: 6px 10px 0 0; */
+  border-top-color:#aaa;
+  transform: translate(-13px, 5px) rotateZ(90deg);
+}
 
 
 .menu-card {

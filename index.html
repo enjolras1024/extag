@@ -3,13 +3,10 @@
 <head lang="en">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-
   <link href="stylesheets/codemirror.css" rel="stylesheet">
   <link href="stylesheets/alicestyle.css" rel="stylesheet">
   <link href="stylesheets/common.css" rel="stylesheet">
-
   <title>Extag</title>
-
   <style>
     .hello h1{
       color: #0066dd;
@@ -17,106 +14,8 @@
   </style>
 </head>
 <body>
-<header class="header" style="display: none;">
-  <nav class="nav-bar">
-    <!-- <h1 class="brand">Extag</h1> -->
-    <h3 class="brand"><span href="./" class="logo">Extag</span></h3>
-    <a class="menu-btn"></a>
-    <!-- <ul class="menu-bar">
-      <li><a href="/examples/color-palette.html" class="menu-item"> Examples </a></li>
-      <li><a href="/downloads/index.html" class="menu-item"> Downloads </a></li>
-      <li><a href="/documents/overview.html" class="menu-item  active"> Documents </a></li>
-      <li><a href="/apis/index.html" class="menu-item"> APIs </a></li>
-      <li><a href="https://github.com/enjolras1024/Extag" class="menu-item"> GitHub </a></li>
-    </ul> -->
-  </nav>
-</header>
 <div class="main">
   <aside class="side-bar">
-    <!-- <div class="menu-card">
-      <h4><a href="/" class="menu-link">Extag</a></h4>
-      <ul>
-        <li><a href="/index.html#get-started" class="menu-link">快速开始</a></li>
-      </ul>
-    </div>
-    
-    <div class="menu-card">
-      <h4>
-        <a href="/documents/event.html" class="menu-link">事件系统</a>
-        <i class="icon-triangle icon-triangle-down"></i>
-        <i class="icon-triangle icon-triangle-up"></i>
-      </h4>
-      <ul>
-        <li><a href="/documents/event.html#on-off-emit" class="menu-link">on, off, emit</a></li>
-        <li><a href="/documents/event.html#event-type-and-event-extesion" class="menu-link">事件类型 &amp; 事件扩展名</a></li>
-      </ul>
-    </div>
-    <div class="menu-card">
-      <h4><a href="/documents/component.html" class="menu-link">组件系统</a></h4>
-      <ul>
-        <li><a href="/documents/component.html#component-element-fragment-text" class="menu-link">组件，元素，片段，文本</a></li>
-        <li><a href="/documents/component.html#props-attrs-style-and-classes" class="menu-link">props, attrs, style, classes</a></li>
-        <li><a href="/documents/component.html#component-attributes" class="menu-link">组件自定义特性</a></li>
-        <li><a href="/documents/component.html#component-attribute-validation" class="menu-link">组件特性验证</a></li>
-        <li><a href="/documents/component.html#component-attribute-interception" class="menu-link">组件特性拦截</a></li>
-        <li><a href="/documents/component.html#component-attribute-dependency" class="menu-link">组件特性依赖</a></li>
-        <li><a href="/documents/component.html#component-inner-state" class="menu-link">组件内部状态</a></li>
-        <li><a href="/documents/component.html#component-contents" class="menu-link">组件contents</a></li>
-        <li><a href="/documents/component.html#component-lifecycle" class="menu-link">组件生命周期</a></li>
-      </ul>
-    </div>
-    <div class="menu-card">
-      <h4><a href="/documents/template.html" class="menu-link">模板语法</a></h4>
-      <ul>
-        <li><a href="/documents/template.html#event-listening" class="menu-link">事件监听</a></li>
-        <li><a href="/documents/template.html#data-binding" class="menu-link">数据绑定</a></li>
-        <li><a href="/documents/template.html#fragment-binding" class="menu-link">片段绑定</a></li>
-        <li><a href="/documents/template.html#class-and-style-binding" class="menu-link">class和style绑定</a></li>
-        <li><a href="/documents/template.html#two-way-data-binding" class="menu-link">双向数据绑定</a></li>
-        <li><a href="/documents/template.html#store-for-object" class="menu-link">Store for Object</a></li>
-        <li><a href="/documents/template.html#optional-converters" class="menu-link">可选转换器</a></li>
-        <li><a href="/documents/template.html#using-child-component" class="menu-link">使用子组件</a></li>
-        <li><a href="/documents/template.html#component-slots" class="menu-link">组件slots</a></li>
-        <li><a href="/documents/template.html#part-refrence" class="menu-link">部件引用</a></li>
-        <li><a href="/documents/template.html#list-rendering" class="menu-link">列表渲染</a></li>
-        <li><a href="/documents/template.html#condition-rendering" class="menu-link">条件渲染</a></li>
-        <li><a href="/documents/template.html#fragment-rendering" class="menu-link">片段渲染</a></li>
-        <li><a href="/documents/template.html#camelCase-vs-kebab-case" class="menu-link">camelCase vs kebab-case</a></li>
-        <li><a href="/documents/template.html#tag-namespace" class="menu-link">标签命名空间</a></li>
-      </ul>
-    </div>
-    <div class="menu-card">
-      <h4><a href="./" class="menu-link">API</a></h4>
-      <ul>
-        
-        <li><a href="#" class="menu-link">Watcher</a></li>
-        <li><a href="#" class="menu-link">Validator</a></li>
-        <li><a href="#" class="menu-link">Text</a></li>
-        <li><a href="#" class="menu-link">Element</a></li>
-        <li><a href="#" class="menu-link">Fragment</a></li>
-        <li><a href="#" class="menu-link">Component</a></li>
-        <li><a href="#" class="menu-link">defineClass</a></li>
-        <li><a href="#" class="menu-link">node</a></li>
-        <li><a href="#" class="menu-link">anew</a></li>
-        <li><a href="#" class="menu-link">inst</a></li>
-        
-      </ul>
-    </div>
-    <div class="menu-card">
-      <h4><a href="./" class="menu-link">下载</a></h4>
-      <ul>
-        <li><a href="#" class="menu-link">extag.js</a></li>
-        <li><a href="#" class="menu-link">extag-dom.js</a></li>
-        <li><a href="#" class="menu-link">extag-ssr.js</a></li>
-      </ul>
-    </div>
-    <div class="menu-card">
-      <h4><a href="javascript:void(0);" class="menu-link">示例</a></h4>
-      <ul>
-        <li><a href="/examples/color-palette.html" class="menu-link">Color Palette</a></li>
-        <li><a href="/examples/svg-component.html" class="menu-link">SVG Component</a></li>
-      </ul>
-    </div> -->
   </aside>
   <article class="article">
     <h1>
@@ -126,72 +25,42 @@
       </div> -->
       <span style="font-size: 85px;">Extag</span>
     </h1>
-    <p>Extag是一个事件驱动和基于组件的JavaScript库，用于构建Web用户界面。Extag提供了一个由文本、元素、片段和组件构成的Shell层。其中，组件支持模板、数据绑定等，具有良好的可扩展性，能够更好地组织用户界面，管理数据状态。通过监听和派发自定义属性更改事件，内嵌在组件模板中的数据绑定表达式得以生效，从而能够动态地改变Shell层的内容。Shell层一旦发生变化，Extag就会通过ExtagDom以异步批量的模式，将变化的部分渲染到真实的DOM层。</p>
-    <!-- <p>Extag提供了一个由文本、元素、片段和组件构成的Shell层。Shell层一旦发生变化，Extag就会通过ExtagDom以异步批量的模式，将变化的部分渲染到真实的DOM层。其中，组件支持模板、数据绑定等，有良好的可扩展性，能更好地组织用户界面，管理数据状态。</p> -->
-    <!-- <p>Extag支持DOM事件的监听和自定义事件的派发。基于自定义属性更改事件，Extag支持在组件模板中内嵌数据绑定表达式。派发了相应的属性更改事件后，这些绑定表达式就会执行，从而能够动态地改变元素和组件的属性和内容。</p> -->
-    <!-- <p><b>声明式 | 命令式</b>： 通常你可以为组件声明式地定义一个包含绑定表达式和丰富内容的模板。模板一经编译即可用于初始化一个组件，包括生成子内容、添加事件处理器、完成数据绑定等等。或者有时你只需定义一个简单的空模板，在初始化过后再去命令式地添加子内容、事件处理器等。</p> -->
+    <p>Extag是一个事件驱动和基于组件的JavaScript库，用于构建Web用户界面。Extag提供了一个由文本、元素、片段和组件构成的Shell层。其中，组件支持模板、数据绑定等，具有良好的可扩展性，能够更好地组织用户界面，管理数据状态。通过监听和派发自定义属性更改事件，内嵌在组件模板中的数据绑定表达式得以生效，从而能够动态地改变Shell层的内容。Shell层一旦发生变化，Extag就会通过ExtagDOM以异步批量的模式，将变化的部分渲染到真实的DOM层。</p>
     <h3 id="get-started">快速开始</h3>
-    <p>使用script标签简单地引入Extag和ExtagDom。Extag会通过ExtagDom来进行DOM操作。</p>
-    <div class="code-box scroll"><div class="CodeMirror cm-s-alice"><div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-tag cm-bracket">&lt;</span><span class="cm-tag">script</span> <span class="cm-attribute">src</span>=<span class="cm-string">"https://unpkg.com/extag@0.2.0/dist/extag.js"</span><span class="cm-tag cm-bracket">&gt;&lt;/</span><span class="cm-tag">script</span><span class="cm-tag cm-bracket">&gt;</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-tag cm-bracket">&lt;</span><span class="cm-tag">script</span> <span class="cm-attribute">src</span>=<span class="cm-string">"https://unpkg.com/extag-dom@0.2.0/dist/extag-dom.js"</span><span class="cm-tag cm-bracket">&gt;&lt;/</span><span class="cm-tag">script</span><span class="cm-tag cm-bracket">&gt;</span></span></pre></div></div></div>
+    <p>使用script标签简单地引入Extag和ExtagDOM。Extag会通过ExtagDOM来进行DOM操作。</p>
+    <div class="code-box scroll"><div class="CodeMirror cm-s-alice"><div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-tag cm-bracket">&lt;</span><span class="cm-tag">script</span> <span class="cm-attribute">src</span>=<span class="cm-string">"https://unpkg.com/extag"</span><span class="cm-tag cm-bracket">&gt;&lt;/</span><span class="cm-tag">script</span><span class="cm-tag cm-bracket">&gt;</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-tag cm-bracket">&lt;</span><span class="cm-tag">script</span> <span class="cm-attribute">src</span>=<span class="cm-string">"https://unpkg.com/extag-dom"</span><span class="cm-tag cm-bracket">&gt;&lt;/</span><span class="cm-tag">script</span><span class="cm-tag cm-bracket">&gt;</span></span></pre></div></div></div>
+    <p>如果使用ES6 Module的import，或CommonJS的require，导入Extag和ExtagDOM后，应当将Extag的视图引擎配置为ExtagDOM，</p>
+    <div class="code-box scroll">
+      <div class="CodeMirror cm-s-alice"><div class="CodeMirror-code">
+        <pre class=" CodeMirror-line ">npm install extag</pre>
+        <pre class=" CodeMirror-line ">npm install extag-dom</pre>
+      </div></div>
+    </div>
+    <br>
+    <div class="code-box scroll"><div class="CodeMirror cm-s-alice"><div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">import</span> <span class="cm-def">Extag</span> <span class="cm-keyword">from</span> <span class="cm-string">"extag"</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">import</span> <span class="cm-def">ExtagDOM</span> <span class="cm-keyword">from</span> <span class="cm-string">"extag-dom"</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">Extag</span>.<span class="cm-property">conf</span>(<span class="cm-string">"view-engine"</span>, <span class="cm-variable">ExtagDOM</span>);</span></pre></div></div></div>
     <p>一个简单的Extag例子如下：</p>
     <div id="code-tabs-1"></div>
-    <p>我们定义了一个Hello类，继承自Component。组件模板中使用了一个单向的数据绑定表达式<span class="expr">@{ what }</span>。包裹在<span class="expr">@{ }</span>内的自定义的特性<span class="expr">what</span>是可绑定的，其默认值为<span class="expr">'World'</span>。创建一个Hello类的实例，附着到页面上的一个元素上，<span class="expr">'Hello, World!'</span>的字样就会渲染到页面上。</p>
+    <p>我们定义了一个Hello类，继承自Component。组件模板中使用了一个单向的数据绑定表达式<span class="expr">@{ name }</span>。包裹在<span class="expr">@{ }</span>内的自定义的特性<span class="expr">name</span>是可绑定的，其默认值为<span class="expr">'World'</span>。创建一个Hello类的实例，附着到页面上的一个元素上，<span class="expr">'Hello, World!'</span>的字样就会渲染到页面上。</p>
     <div id="hello"></div>
-    <div class="tip-box"><p>你可以打开开发者工具，在控制台中改变<span class="expr">hello.what</span>的值，看看会发生什么。</p></div>
-    
-    <!-- <p>数据绑定表达式<span class="expr">@{ }</span>不仅可以返回的string, number等类型的数据，还可以返回虚拟节点或片段。</p>
-    <div class="code-box scroll"><div class="CodeMirror cm-s-alice"><div class="CodeMirror-code" style=""><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">var</span> <span class="cm-def">Hello2</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">defineClass</span>({</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">extends</span>: <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>,</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">statics</span>: {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-property">template</span>: <span class="cm-string">'&lt;div&gt;@{ hello(what) }&lt;/div&gt;'</span>,</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-property">attributes</span>: { </span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">      <span class="cm-property">what</span>: <span class="cm-string">'World'</span> </span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  },</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">hello</span>: <span class="cm-keyword">function</span>(<span class="cm-def">what</span>) {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">return</span> <span class="cm-variable">Extag</span>.<span class="cm-property">node</span>(<span class="cm-string">'h1'</span>, {<span class="cm-property">style</span>: {<span class="cm-property">color</span>: <span class="cm-string">'black'</span>}}, [</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">      <span class="cm-string">'Hello, '</span>, <span class="cm-variable-2">what</span>, <span class="cm-string">'!'</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    ]);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">});</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span cm-text="">​</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">var</span> <span class="cm-def">hello2</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>.<span class="cm-property">create</span>(<span class="cm-variable">Hello2</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">hello2</span>.<span class="cm-property">attach</span>(<span class="cm-variable">ExtagDom</span>.<span class="cm-property">query</span>(<span class="cm-string">'#hello2'</span>));</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">window</span>.<span class="cm-property">hello2</span> <span class="cm-operator">=</span> <span class="cm-variable">hello2</span>;</span></pre></div></div></div>
-    <div class="tip-box"><p><span class="expr">resources</span>中引入的都是可以在当前组件模板中访问的静态资源。</p></div>
-    <div id="hello2"></div>
-    
-    <p>组件模板背后实际上是在间接地调用组件和元素的on、set、appendChild等API。你可以声明一个仅有根标签的模板，然后根据需要命令式地去组织组件的内容，也能达到同样的效果。</p>
-    <div class="code-box scroll"><div class="CodeMirror cm-s-alice"><div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">var</span> <span class="cm-def">Hello3</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">defineClass</span>({</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">extends</span>: <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>,</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">statics</span>: {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-property">template</span>: <span class="cm-string">'&lt;div&gt;&lt;/div&gt;'</span>,</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-property">attributes</span>: { <span class="cm-property">what</span>: <span class="cm-string">'World'</span> }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  },</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">onInited</span>: <span class="cm-keyword">function</span>() {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">var</span> <span class="cm-def">h1</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Element</span>.<span class="cm-property">create</span>(<span class="cm-string">'h1'</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-variable-2">h1</span>.<span class="cm-property">style</span>.<span class="cm-property">set</span>(<span class="cm-string">'color'</span>, <span class="cm-string">'grey'</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">var</span> <span class="cm-def">text</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Text</span>.<span class="cm-property">create</span>(<span class="cm-string">'Hello, '</span> <span class="cm-operator">+</span> <span class="cm-keyword">this</span>.<span class="cm-property">what</span> <span class="cm-operator">+</span> <span class="cm-string">"!"</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">this</span>.<span class="cm-property">appendChild</span>(<span class="cm-variable-2">h1</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-variable-2">h1</span>.<span class="cm-property">appendChild</span>(<span class="cm-variable-2">text</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">this</span>.<span class="cm-property">on</span>(<span class="cm-string">'changed.what'</span>, (<span class="cm-keyword">function</span>() {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">      <span class="cm-variable-2">text</span>.<span class="cm-property">set</span>(<span class="cm-string">'data'</span>, <span class="cm-string">'Hello, '</span> <span class="cm-operator">+</span> <span class="cm-keyword">this</span>.<span class="cm-property">what</span> <span class="cm-operator">+</span> <span class="cm-string">"!"</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    }).<span class="cm-property">bind</span>(<span class="cm-keyword">this</span>));</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">});</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span cm-text="">​</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">var</span> <span class="cm-def">hello3</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>.<span class="cm-property">create</span>(<span class="cm-variable">Hello3</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">hello3</span>.<span class="cm-property">attach</span>(<span class="cm-variable">ExtagDom</span>.<span class="cm-property">query</span>(<span class="cm-string">'#hello3'</span>));</span></pre></div></div></div>
-    <div id="hello3"></div>
-    <p>相比而言，通过声明式模板来初始化组件，无疑更为简洁直观。</p> -->
+    <div class="tip-box"><p>你可以打开开发者工具，在控制台中改变<span class="expr">hello.name</span>的值，看看会发生什么。</p></div>
   </article>
-  <!-- <a class="menu-btn">
-    <i></i><i></i><i></i>
-  </a> -->
 </div>
 <!--<footer class="footer">
   <p>Released under the MIT license<br>
     © 2015 Chen Junyong. All rights reserved.</p>
 </footer>-->
-<!--<script src="/javascripts/codemirror.js"></script>-->
-<!--<script src="/javascripts/javascript-mode.js"></script>-->
-<!--<script src="/javascripts/xml-mode.js"></script>-->
-<!--<script src="/javascripts/code-format.js"></script>-->
-
-<!--[if lt IE 9]>
-<script src="/javascripts/es5-shim-4.5.7.min.js"></script>
-<script src="/javascripts/es5-sham-4.5.7.min.js"></script>
-<script src="/javascripts/jquery-1.9.0.min.js"></script>
-<![endif]-->
 
 <script src="javascripts/extag-dom.js"></script>
-
-<!--[if lt IE 9]>
-<script src="/javascripts/Extag-skin-jquery.js"></script>
-<![endif]-->
-
 <script src="javascripts/extag.js"></script>
-
 <script src="javascripts/common.js"></script>
 <script>
   Extag.Component.create(CodeTabs, {
     data: [
-      {label: 'ES5', content: '<div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-comment">// 定义一个组件子类</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">var</span> <span class="cm-def">Hello</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">defineClass</span>({</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">extends</span>: <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>,</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">statics</span>: {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-property">template</span>: <span class="cm-string">\'&lt;div class="hello"&gt;\'</span>  <span class="cm-operator">+</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-tab" role="presentation" cm-text="	">    </span><span class="cm-tab" role="presentation" cm-text="	">    </span><span class="cm-tab" role="presentation" cm-text="	">    </span><span class="cm-string">\'&lt;h1&gt;Hello, @{ what }!&lt;/h1&gt;\'</span> <span class="cm-operator">+</span> </span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-tab" role="presentation" cm-text="	">    </span><span class="cm-tab" role="presentation" cm-text="	">    </span>  <span class="cm-string">\'&lt;/div&gt;\'</span>,</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-property">attributes</span>: { <span class="cm-property">what</span>: <span class="cm-string">\'World\'</span> }, <span class="cm-comment">// so \`what\` is bindable, the default value is \'World\'</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">}); </span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-comment">// 创建一个组件实例</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">var</span> <span class="cm-def">hello</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>.<span class="cm-property">create</span>(<span class="cm-variable">Hello</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-comment">// 附着到一个元素上</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">hello</span>.<span class="cm-property">attach</span>(<span class="cm-variable">ExtagDom</span>.<span class="cm-property">query</span>(<span class="cm-string">\'#hello\'</span>)); <span class="cm-comment">// hello.attach(document.getElementById(\'hello\'));</span></span></pre></div>'},
-      {label: 'ES6', content: '<div class="CodeMirror-code" style=""><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-comment">// 定义一个组件子类</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">class</span> <span class="cm-def">Hello</span> <span class="cm-keyword">extends</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span> {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-keyword">static</span> <span class="cm-keyword">get</span> <span class="cm-property">template</span>() {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">return</span>  <span class="cm-string">\'&lt;div class="hello"&gt;\'</span> <span class="cm-operator">+</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">                <span class="cm-string">\'&lt;h1&gt;Hello, @{ what }!&lt;/h1&gt;\'</span> <span class="cm-operator">+</span> </span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">            <span class="cm-string">\'&lt;/div&gt;\'</span>;</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-keyword">static</span> <span class="cm-keyword">get</span> <span class="cm-property">attributes</span>() {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">return</span> { <span class="cm-property">what</span>: <span class="cm-string">\'World\'</span> };</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">}</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-comment">// 创建一个组件实例</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">const</span> <span class="cm-def">hello</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>.<span class="cm-property">create</span>(<span class="cm-variable">Hello</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-comment">// 附着到一个元素上</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">hello</span>.<span class="cm-property">attach</span>(<span class="cm-variable">ExtagDom</span>.<span class="cm-property">query</span>(<span class="cm-string">\'#hello\'</span>)); </span></pre></div>'},
-      {label: 'ES7', content: '<div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-comment">// 定义一个组件子类</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">class</span> <span class="cm-def">Hello</span> <span class="cm-keyword">extends</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span> {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-keyword">static</span> <span class="cm-property">template</span> <span class="cm-operator">=</span> <span class="cm-string">\'&lt;div class="hello"&gt;\'</span> <span class="cm-operator">+</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">                <span class="cm-tab" role="presentation" cm-text="	">    </span><span class="cm-tab" role="presentation" cm-text="	">    </span><span class="cm-string">\'&lt;h1&gt;Hello, @{ what }!&lt;/h1&gt;\'</span> <span class="cm-operator">+</span> </span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">            <span class="cm-tab" role="presentation" cm-text="	">    </span><span class="cm-tab" role="presentation" cm-text="	">    </span><span class="cm-string">\'&lt;/div&gt;\'</span>;</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-variable">static</span> <span class="cm-variable">attributes</span> <span class="cm-operator">=</span> { <span class="cm-property">what</span>: <span class="cm-string">\'World\'</span> };</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">}</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-comment">// 创建一个组件实例</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">const</span> <span class="cm-def">hello</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>.<span class="cm-property">create</span>(<span class="cm-variable">Hello</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-comment">// 附着到一个元素上</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">hello</span>.<span class="cm-property">attach</span>(<span class="cm-variable">ExtagDom</span>.<span class="cm-property">query</span>(<span class="cm-string">\'#hello\'</span>)); </span></pre></div>'}
+      {label: 'ES5', content: '<div class="CodeMirror-code" role="presentation" style=""><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-comment">// 定义一个组件子类</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-keyword">var</span> <span class="cm-def">Hello</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">defineClass</span>({</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">  <span class="cm-property">extends</span>: <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>,</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">  <span class="cm-property">statics</span>: {</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">    <span class="cm-property">template</span>: <span class="cm-string">\'&lt;div class="hello"&gt;\'</span>  <span class="cm-operator">+</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">                <span class="cm-string">\'&lt;h1&gt;Hello, @{ name }!&lt;/h1&gt;\'</span> <span class="cm-operator">+</span> </span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">              <span class="cm-string">\'&lt;/div&gt;\'</span>,</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">    <span class="cm-property">attributes</span>: { <span class="cm-property">name</span>: <span class="cm-string">\'\'</span> }, <span class="cm-comment">// so `name` is bindable, the default value is \'\'</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">}); </span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-comment">// 创建一个组件实例</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-keyword">var</span> <span class="cm-def">hello</span> <span class="cm-operator">=</span> <span class="cm-keyword">new</span> <span class="cm-variable">Hello</span>({<span class="cm-property">name</span>: <span class="cm-string">\'World\'</span>});</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-comment">// 附着到一个元素上</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-variable">hello</span>.<span class="cm-property">attach</span>(<span class="cm-variable">ExtagDOM</span>.<span class="cm-property">query</span>(<span class="cm-string">\'#hello\'</span>)); <span class="cm-comment">// hello.attach(document.getElementById(\'hello\'));</span></span></pre></div>'},
+      {label: 'ES6', content: '<div class="CodeMirror-code" role="presentation" style=""><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-comment">// 定义一个组件子类</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-keyword">class</span> <span class="cm-def">Hello</span> <span class="cm-keyword">extends</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span> {</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">  <span class="cm-keyword">static</span> <span class="cm-keyword">get</span> <span class="cm-property">template</span>() {</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">    <span class="cm-keyword">return</span>  <span class="cm-string-2">`&lt;div class="hello"&gt;</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">                <span class="cm-string-2">&lt;h1&gt;Hello, @{ name }!&lt;/h1&gt;</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">            <span class="cm-string-2">&lt;/div&gt;`</span>;</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">  <span class="cm-keyword">static</span> <span class="cm-keyword">get</span> <span class="cm-property">attributes</span>() {</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">    <span class="cm-keyword">return</span> { <span class="cm-property">name</span>: <span class="cm-string">\'\'</span> };</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">}</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-comment">// 创建一个组件实例</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-keyword">const</span> <span class="cm-def">hello</span> <span class="cm-operator">=</span> <span class="cm-keyword">new</span> <span class="cm-variable">Hello</span>({<span class="cm-property">name</span>: <span class="cm-string">\'World\'</span>});</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-comment">// 附着到一个元素上</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-variable">hello</span>.<span class="cm-property">attach</span>(<span class="cm-variable">ExtagDOM</span>.<span class="cm-property">query</span>(<span class="cm-string">\'#hello\'</span>)); </span></pre></div>'},
+      {label: 'ES7', content: '<div class="CodeMirror-code" role="presentation" style=""><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-comment">// 定义一个组件子类</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-keyword">class</span> <span class="cm-def">Hello</span> <span class="cm-keyword">extends</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span> {</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">  <span class="cm-keyword">static</span> <span class="cm-property">template</span> <span class="cm-operator">=</span> <span class="cm-string-2">`&lt;div class="hello"&gt;</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">                        <span class="cm-string-2">&lt;h1&gt;Hello, @{ name }!&lt;/h1&gt;</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">                    <span class="cm-string-2">&lt;/div&gt;`</span>;</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">  <span class="cm-variable">static</span> <span class="cm-variable">attributes</span> <span class="cm-operator">=</span> { <span class="cm-property">name</span>: <span class="cm-string">\'\'</span> };</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;">}</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-comment">// 创建一个组件实例</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-keyword">const</span> <span class="cm-def">hello</span> <span class="cm-operator">=</span> <span class="cm-keyword">new</span> <span class="cm-variable">Hello</span>({<span class="cm-property">name</span>: <span class="cm-string">\'World\'</span>});</span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-comment">// 附着到一个元素上</span></span></pre><pre class=" CodeMirror-line " role="presentation"><span role="presentation" style="padding-right: 0.1px;"><span class="cm-variable">hello</span>.<span class="cm-variable">attach</span>(<span class="cm-variable">ExtagDOM</span>.<span class="cm-variable">query</span>(<span class="cm-string">\'#hello\'</span>)); </span></pre></div>'}
     ]
-  }).attach(ExtagDom.query('#code-tabs-1'));
-  // Extag.Component.create(CodeTabs, {
-  //   data: [
-  //     {label: 'ES5', content: '<div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">var</span> <span class="cm-def">Hello3</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">defineClass</span>({</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">extends</span>: <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>,</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">statics</span>: {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-property">template</span>: <span class="cm-string">\'&lt;div&gt;&lt;/div&gt;\'</span>,</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-property">attributes</span>: { <span class="cm-property">what</span>: <span class="cm-string">\'World\'</span> }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  },</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">onInited</span>: <span class="cm-keyword">function</span>() {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">this</span>.<span class="cm-property">classes</span>.<span class="cm-property">set</span>(<span class="cm-string">\'hello3\'</span>, <span class="cm-atom">true</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">var</span> <span class="cm-def">h1</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Element</span>.<span class="cm-property">create</span>(<span class="cm-string">\'h1\'</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">var</span> <span class="cm-def">text</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Text</span>.<span class="cm-property">create</span>(<span class="cm-string">\'Hello, \'</span> <span class="cm-operator">+</span> <span class="cm-keyword">this</span>.<span class="cm-property">what</span> <span class="cm-operator">+</span> <span class="cm-string">"!"</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">this</span>.<span class="cm-property">appendChild</span>(<span class="cm-variable-2">h1</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-variable-2">h1</span>.<span class="cm-property">appendChild</span>(<span class="cm-variable-2">text</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">this</span>.<span class="cm-property">on</span>(<span class="cm-string">\'changed.what\'</span>, (<span class="cm-keyword">function</span>() {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">      <span class="cm-variable-2">text</span>.<span class="cm-property">set</span>(<span class="cm-string">\'data\'</span>, <span class="cm-string">\'Hello, \'</span> <span class="cm-operator">+</span> <span class="cm-keyword">this</span>.<span class="cm-property">what</span> <span class="cm-operator">+</span> <span class="cm-string">"!"</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    }).<span class="cm-property">bind</span>(<span class="cm-keyword">this</span>));</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">});</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span cm-text="">​</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>.<span class="cm-property">create</span>(<span class="cm-variable">Hello3</span>).<span class="cm-property">attach</span>(<span class="cm-variable">ExtagDom</span>.<span class="cm-property">query</span>(<span class="cm-string">\'#hello3\'</span>));</span></pre></div>'},
-  //     {label: 'ES6', content: '<div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">class</span> <span class="cm-def">Hello3</span> <span class="cm-variable">extendss</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span> {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-variable">static</span> <span class="cm-variable">get</span> <span class="cm-variable">template</span>() {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-variable">retrun</span> <span class="cm-string">\'&lt;div&gt;&lt;/div&gt;\'</span>;</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-variable">static</span> <span class="cm-variable">get</span> <span class="cm-variable">attributes</span>() {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">return</span> { <span class="cm-property">what</span>: <span class="cm-string">\'World\'</span> };</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-variable">onInited</span>() {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">this</span>.<span class="cm-property">classes</span>.<span class="cm-property">set</span>(<span class="cm-string">\'hello3\'</span>, <span class="cm-atom">true</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">const</span> <span class="cm-def">h1</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Element</span>.<span class="cm-property">create</span>(<span class="cm-string">\'h1\'</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">const</span> <span class="cm-def">text</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Text</span>.<span class="cm-property">create</span>(<span class="cm-string">\'Hello, \'</span> <span class="cm-operator">+</span> <span class="cm-keyword">this</span>.<span class="cm-property">what</span> <span class="cm-operator">+</span> <span class="cm-string">"!"</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">this</span>.<span class="cm-property">appendChild</span>(<span class="cm-variable">h1</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-variable">h1</span>.<span class="cm-property">appendChild</span>(<span class="cm-variable">text</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">this</span>.<span class="cm-property">on</span>(<span class="cm-string">\'changed.what\'</span>, ()<span class="cm-operator">=&gt;</span> {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">      <span class="cm-variable">text</span>.<span class="cm-property">set</span>(<span class="cm-string">\'data\'</span>, <span class="cm-string">\'Hello, \'</span> <span class="cm-operator">+</span> <span class="cm-keyword">this</span>.<span class="cm-property">what</span> <span class="cm-operator">+</span> <span class="cm-string">"!"</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    });</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span cm-text="">​</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>.<span class="cm-property">create</span>(<span class="cm-variable">Hello3</span>).<span class="cm-property">attach</span>(<span class="cm-variable">ExtagDom</span>.<span class="cm-property">query</span>(<span class="cm-string">\'#hello3\'</span>));</span></pre></div>'},
-  //     {label: 'ES7', content: '<div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">class</span> <span class="cm-def">Hello3</span> <span class="cm-variable">extendss</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Component</span> {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-variable">static</span> <span class="cm-variable">template</span> <span class="cm-operator">=</span> <span class="cm-string">\'&lt;div&gt;&lt;/div&gt;\'</span>;</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-variable">static</span> <span class="cm-variable">attributes</span> <span class="cm-operator">=</span> { <span class="cm-property">what</span>: <span class="cm-string">\'World\'</span> };</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-variable">onInited</span>() {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">this</span>.<span class="cm-property">classes</span>.<span class="cm-property">set</span>(<span class="cm-string">\'hello3\'</span>, <span class="cm-atom">true</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">const</span> <span class="cm-def">h1</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Element</span>.<span class="cm-property">create</span>(<span class="cm-string">\'h1\'</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">const</span> <span class="cm-def">text</span> <span class="cm-operator">=</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Text</span>.<span class="cm-property">create</span>(<span class="cm-string">\'Hello, \'</span> <span class="cm-operator">+</span> <span class="cm-keyword">this</span>.<span class="cm-property">what</span> <span class="cm-operator">+</span> <span class="cm-string">"!"</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">this</span>.<span class="cm-property">appendChild</span>(<span class="cm-variable">h1</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-variable">h1</span>.<span class="cm-property">appendChild</span>(<span class="cm-variable">text</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-keyword">this</span>.<span class="cm-property">on</span>(<span class="cm-string">\'changed.what\'</span>, ()<span class="cm-operator">=&gt;</span> {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">      <span class="cm-variable">text</span>.<span class="cm-property">set</span>(<span class="cm-string">\'data\'</span>, <span class="cm-string">\'Hello, \'</span> <span class="cm-operator">+</span> <span class="cm-keyword">this</span>.<span class="cm-property">what</span> <span class="cm-operator">+</span> <span class="cm-string">"!"</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    });</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span cm-text="">​</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">Extag</span>.<span class="cm-property">Component</span>.<span class="cm-property">create</span>(<span class="cm-variable">Hello3</span>).<span class="cm-property">attach</span>(<span class="cm-variable">ExtagDom</span>.<span class="cm-property">query</span>(<span class="cm-string">\'#hello3\'</span>));</span></pre></div>'}
-  //   ]
-  // }).attach(ExtagDom.query('#code-tabs-2'));
+  }).attach(ExtagDOM.query('#code-tabs-1'));
 </script>
 <script>
   (function() {
@@ -200,88 +69,23 @@
       extends: Extag.Component,
       statics: {
         template: '<div class="hello">'  +
-                      '<h1>Hello, @{ what }!</h1>' + 
+                    '<h1>Hello, @{ name }!</h1>' + 
                   '</div>',
-        attributes: { what: 'World' }, // so `what` is bindable, the default value is 'World'
+        attributes: { name: '' }, // so `name` is bindable, the default value is ''
       }
     }); 
     // 创建一个组件实例
-    var hello = Extag.Component.create(Hello);
+    var hello = new Hello({name: 'World'});
     // 附着到一个元素上
-    hello.attach(ExtagDom.query('#hello')); // hello.attach(document.getElementById('hello'));
+    hello.attach(ExtagDOM.query('#hello')); // hello.attach(document.getElementById('hello'));
 
     window.hello = hello;
 
     console.log('do something like:');
-    console.log('hello.what = "Life";');
-    console.log('hello.set("what", "Universe");');
-    console.log('hello.assign({what: "Everything"});');
+    console.log('hello.name = "Life";');
+    console.log('hello.set("name", "Universe");');
+    console.log('hello.assign({name: "Everything"});');
   })();
-  
-//   // 定义一个组件子类
-// class Hello  extends Extag.Component {
-//   static get template() {
-//     return 	'<div class="hello">' +
-//       			'<h1>Hello, @{ what }!</h1>' + 
-// 			'</div>';
-//   }
-//   static get attributes() {
-//     return { what: 'World' };
-//   }
-// }
-// // 创建一个组件实例
-// const hello = Extag.Component.create(Hello);
-// // 附着到一个元素上
-// hello.attach(ExtagDom.query('#hello')); // hello.attach(document.getElementById('hello'));
-
-
-    
-
-    // (function() {
-    //   var Hello2 = Extag.defineClass({
-    //     extends: Extag.Component,
-    //     statics: {
-    //       template: '<div>@{ hello(what) }</div>',
-    //       attributes: { 
-    //         what: 'World' 
-    //       }
-    //     },
-    //     hello: function(what) {
-    //       return Extag.node('h1', {style: {color: 'black'}}, [
-    //           'Hello, ', what, '!'
-    //       ]);
-    //     }
-    //   });
-
-    //   var hello2 = Extag.Component.create(Hello2);
-    //   hello2.attach(ExtagDom.query('#hello2'));
-    //   window.hello2 = hello2;
-    // })();
-
-
-    // (function() {
-    //   var Hello3 = Extag.defineClass({
-    //     extends: Extag.Component,
-    //     statics: {
-    //       template: '<div></div>',
-    //       attributes: { what: 'World' }
-    //     },
-    //     onInited: function() {
-    //       var h1 = Extag.Element.create('h1');
-    //       h1.style.set('color', 'grey');
-    //       var text = Extag.Text.create('Hello, ' + this.what + "!");
-    //       this.appendChild(h1);
-    //       h1.appendChild(text);
-    //       this.on('changed.what', (function() {
-    //         text.set('data', 'Hello, ' + this.what + "!");
-    //       }).bind(this));
-    //     }
-    //   });
-
-    //   var hello3 = Extag.Component.create(Hello3);
-    //   hello3.attach(ExtagDom.query('#hello3'));
-    //   window.hello3 = hello3;
-    // })();
 </script>
 </body>
 </html>

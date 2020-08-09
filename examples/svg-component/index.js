@@ -10,7 +10,7 @@
         max: 10,
         value: 0
       },
-      template: ExtagDom.query('#slider-template').innerHTML
+      template: ExtagDOM.query('#slider-template').innerHTML
     },
     
     onMouseChange: function(event) {
@@ -19,7 +19,7 @@
         case 'touchmove':  
           if (this.pressed) {
             var clientX = event.touches ? event.touches[0].clientX : event.clientX;
-            var cx = clientX - ExtagDom.call(this.getSkin(), 'getBoundingClientRect').left;
+            var cx = clientX - ExtagDOM.invoke(this.$skin, 'getBoundingClientRect').left;
             cx = cx < 0 ? 0 : cx;
             cx = cx > 150 ? 150 : cx;
             this.value = (cx / 150 * (this.max - this.min) + this.min).toFixed(1);
@@ -65,7 +65,7 @@
     extends: Component,
     
     statics: {
-      template: ExtagDom.query('#text-slider-template').innerHTML,
+      template: ExtagDOM.query('#text-slider-template').innerHTML,
       resources: {
         Slider: Slider
       },
@@ -82,7 +82,7 @@
     extends: Component,
     
     statics: {
-      template: ExtagDom.query('#app-template').innerHTML,
+      template: ExtagDOM.query('#app-template').innerHTML,
       resources: {
         TextSlider: TextSlider
       },
@@ -94,5 +94,5 @@
     }
   });
 
-  Component.create(App).attach(ExtagDom.query('#app'));
+  Component.create(App).attach(ExtagDOM.query('#app'));
 })();

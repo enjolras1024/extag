@@ -9,7 +9,7 @@
 .cm-s-alice.CodeMirror {
   /* font-family: 'source-code-pro', Menlo, Consolas, 'Courier New', monospace; */
   font-family: Consolas, Monaco, courier, monospace;
-  font-size: 1.2em;
+  font-size: 1.35em;
   background-color:#f8f8f8;
   color:#2e383c;
   line-height:1.4375;
@@ -19,6 +19,7 @@
 .cm-s-alice .cm-atom,.cm-s-alice .cm-number { color:#75438a; }
 .cm-s-alice .cm-node/*,.cm-s-alice .cm-tag*/ { color:#9c3328; }
 .cm-s-alice .cm-string { color:#b35e14; }
+.cm-s-alice .cm-string-2 { color:#b35e14; }
 .cm-s-alice .cm-variable,.cm-s-alice .cm-qualifier { color:#047d65; }
 
 

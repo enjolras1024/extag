@@ -3,32 +3,21 @@
 <head lang="en">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  
   <link href="../stylesheets/codemirror.css" rel="stylesheet">
   <link href="../stylesheets/alicestyle.css" rel="stylesheet">
   <link href="../stylesheets/common.css" rel="stylesheet">
-
   <title>事件系统 - Extag</title>
 </head>
 <body>
-<!-- <header class="header">
-  <nav class="nav-bar">
-    <h3 class="brand"><a href="./" class="logo">Exact</a></h3>
-    <a class="menu-btn"></a>
-    <ul class="menu-bar">
-      <li><a href="./examples/color-palette.html" class="menu-item"> Examples </a></li>
-      <li><a href="./downloads/index.html" class="menu-item"> Downloads </a></li>
-      <li><a href="./documents/overview.html" class="menu-item  active"> Documents </a></li>
-      <li><a href="./apis/index.html" class="menu-item"> APIs </a></li>
-      <li><a href="https://github.com/enjolras1024/exact" class="menu-item"> GitHub </a></li>
-    </ul>
-  </nav>
-</header> -->
 <div class="main">
   <aside class="side-bar"></aside>
   <article class="article">
     <h2>事件系统</h2>
-    <p>事件系统是Extag的基础，Watcher对象提供的实例方法，实现了监听、移除和派发任意类型事件的功能。Extag中Element、Component等类的原型都混入了这些事件方法，并且进一步实现了转接转发DOM事件的功能。</p>
+    <p>
+      事件系统是Extag的基础，Watcher对象提供的实例方法，实现了监听、移除和派发任意类型事件的功能。
+      Extag中Element、Component等类的原型都混入了这些事件方法，并且进一步实现了转接转发DOM事件的功能。
+      组件还会派发生命周期事件和属性更改事件，数据绑定功能也正依赖此。
+    </p>
     <h3 id="on-off-emit">on, off, emit</h3>
     <p>用<span class="expr">on</span>方法来监听指定类型的事件，用<span class="expr">off</span>方法来移除相应类型的事件处理函数，用<span class="expr">emit</span>方法来派发事件，向事件处理函数传递附带参数。用例如下：</p>
     <div class="code-box scroll"><div class="CodeMirror cm-s-alice"><div class="CodeMirror-code" style=""><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">var</span> <span class="cm-def">watcher</span> <span class="cm-operator">=</span> <span class="cm-keyword">new</span> <span class="cm-variable">Extag</span>.<span class="cm-property">Watcher</span>();</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-comment">// 单个监听</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">watcher</span>.<span class="cm-property">on</span>(<span class="cm-string">'click'</span>, <span class="cm-keyword">function</span>(<span class="cm-def">event</span>) {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-variable">console</span>.<span class="cm-property">log</span>(<span class="cm-number">0</span>, <span class="cm-variable-2">event</span>.<span class="cm-property">type</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">});</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span cm-text="">​</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-keyword">function</span> <span class="cm-def">onPoint</span>(<span class="cm-def">x</span>, <span class="cm-def">y</span>, <span class="cm-def">z</span>) {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-variable">console</span>.<span class="cm-property">log</span>(<span class="cm-variable-2">x</span>, <span class="cm-variable-2">y</span>, <span class="cm-variable-2">z</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">};</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-comment">// 多个监听</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">wtacher</span>.<span class="cm-property">on</span>({</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">point</span>: <span class="cm-variable">onPoint</span>,</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">click</span>: <span class="cm-keyword">function</span>(<span class="cm-def">event</span>) {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-variable">console</span>.<span class="cm-property">log</span>(<span class="cm-number">1</span>, <span class="cm-variable-2">event</span>.<span class="cm-property">type</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  },</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-property">ready</span>: [<span class="cm-keyword">function</span>() {}, {<span class="cm-property">once</span>: <span class="cm-atom">true</span>}]  <span class="cm-comment">// 单次监听, on('ready', func, {once: true})</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">});</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span cm-text="">​</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">watcher</span>.<span class="cm-property">emit</span>(<span class="cm-string">'point'</span>, <span class="cm-number">0</span>, <span class="cm-number">1</span>, <span class="cm-number">2</span>);<span class="cm-tab" role="presentation" cm-text="	"> </span><span class="cm-tab" role="presentation" cm-text="	">    </span><span class="cm-tab" role="presentation" cm-text="	">    </span><span class="cm-comment">// 触发onPoint，输出: 0 1 2</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">watcher</span>.<span class="cm-property">emit</span>(<span class="cm-string">'click'</span>, {<span class="cm-property">type</span>:<span class="cm-string">'click'</span>});  <span class="cm-comment">// 模拟转发click事件，输出: 0 click</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">                                        <span class="cm-comment">//                   输出: 1 click</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span cm-text="">​</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">watcher</span>.<span class="cm-property">off</span>(<span class="cm-string">'point'</span>, <span class="cm-variable">onPoint</span>);        <span class="cm-tab" role="presentation" cm-text="	">  </span><span class="cm-comment">// 移除了point事件处理函数onPoint</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">watcher</span>.<span class="cm-property">off</span>(<span class="cm-string">'click'</span>);                   <span class="cm-comment">// 移除了所有click事件处理函数</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">watcher</span>.<span class="cm-property">off</span>();                          <span class="cm-comment">// 移除了所有类型事件处理函数</span></span></pre></div></div></div>
@@ -38,29 +27,21 @@
     <p>如果浏览器addEventListener方法支持<a href="https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#Parameters" target="_blank" class="link">passive</a>选项，则可以这样：</p>
     <div class="code-box scroll"><div class="CodeMirror cm-s-alice"><div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">watcher</span>.<span class="cm-property">on</span>(<span class="cm-string">'click'</span>, <span class="cm-keyword">function</span>() {}, {<span class="cm-property">passive</span>: <span class="cm-atom">true</span>});</span></pre></div></div></div>
     <p>对于只会派发一次的事件，或只需触发一次的事件处理函数，可以这样：</p><div class="code-box scroll"><div class="CodeMirror cm-s-alice"><div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">watcher</span>.<span class="cm-property">on</span>(<span class="cm-string">'ready'</span>, <span class="cm-keyword">function</span>() {}, {<span class="cm-property">once</span>: <span class="cm-atom">true</span>});</span></pre></div></div></div>
-    <h3 id="event-type-and-event-extension">事件类型 &amp; 事件扩展名</h3>
+    <!-- <h3 id="event-type-and-event-extension">事件类型 &amp; 事件扩展名</h3>
     <p>Extag的事件系统允许同一类型的事件有不同的事件扩展名。对于组件的属性更改事件，即为<span class="expr">changed.prop</span>，由此你可以通过监听<span class="expr">changed</span>的事件，来响应所有此类属性的更改。对于鼠标事件，你可以单独监听<span class="expr">left, middle, right</span>键点击的情况。对于键盘事件，你可以监听各个按键按下的情况，以及同时按下<span class="expr">ctrl, shift, alt, meta</span>键的情况。</p>
-    <!-- <p>通常在监听键盘事件时，我们会关心用户按下的键名。同样，当某个属性的值发生改变或验证失败时，我们会关心这个属性的名字。 鉴于此，Extag的事件系统允许同一类型的事件有不同的事件扩展名，这使得事件的监听和移除方法更为灵活一点。</p> -->
     <div class="code-box scroll"><div class="CodeMirror cm-s-alice"><div class="CodeMirror-code"><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">component</span>.<span class="cm-property">on</span>({</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-string cm-property">'keydown.enter'</span>: <span class="cm-keyword">function</span>(<span class="cm-def">event</span>) { </span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-comment">// 按下Enter键时，才会输出：key `Enter` is pressed</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-variable">console</span>.<span class="cm-property">log</span>(<span class="cm-string">'key `'</span> <span class="cm-operator">+</span> <span class="cm-variable-2">event</span>.<span class="cm-property">key</span> <span class="cm-operator">+</span> <span class="cm-string">'` is pressed'</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  },</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-string cm-property">'keydown.ctrl.c'</span>: <span class="cm-keyword">function</span>(<span class="cm-def">event</span>) {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-comment">// 按下Ctrl + C时触发</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  },</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-string cm-property">'click.right'</span>: <span class="cm-keyword">function</span>(<span class="cm-def">event</span>) {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-comment">// 单击鼠标右键时触发</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  },</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-string cm-property">'changed.label'</span>: <span class="cm-keyword">function</span>() {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-variable">console</span>.<span class="cm-property">log</span>(<span class="cm-string">'prop `label` is changed, really'</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  },</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  <span class="cm-string cm-property">'changed'</span>: <span class="cm-keyword">function</span>(<span class="cm-def">key</span>) {</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">    <span class="cm-variable">console</span>.<span class="cm-property">log</span>(<span class="cm-string">'prop `'</span> <span class="cm-operator">+</span> <span class="cm-variable-2">key</span> <span class="cm-operator">+</span> <span class="cm-string">'` is changed'</span>);</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">  }</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">});</span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span cm-text="">​</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">component</span>.<span class="cm-property">emit</span>(<span class="cm-string">'changed.label'</span>, <span class="cm-string">'label'</span>);   <span class="cm-comment">// 输出：prop `label` is changed, really</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;">                                            <span class="cm-comment">// 输出：prop `label` is changed</span></span></pre><pre class=" CodeMirror-line "><span style="padding-right: 0.1px;"><span class="cm-variable">component</span>.<span class="cm-property">emit</span>(<span class="cm-string">'changed.other'</span>, <span class="cm-string">'other'</span>);   <span class="cm-comment">// 输出：prop `other` is changed</span></span></pre></div></div></div>
     <div  class="tip-box">
       <p>注意，键盘按键名(<a class="link" target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key">event.key</a>)是首字母大写的，而监听时事件扩展名首字母采用小写。某些按键，如esc和方向键，在IE浏览器中有着不同key值。</p>
       <p>鼠标按键值(<a class="link" target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/button">event.button</a>)与按键名的对应关系通常为<span class="expr">0: left, 1: middle, 2: right</span>。但是也会因浏览器、用户配置而存在差异。</p>
-    </div><p></p>
+    </div> -->
   </article>
 </div>
 <!--<footer class="footer">
   <p>Released under the MIT license<br>
     © 2015 Chen Junyong. All rights reserved.</p>
 </footer>-->
-
 <script src="../javascripts/extag-dom.js"></script>
-
-<!--[if lt IE 9]>
-<script src="/javascripts/Extag-skin-jquery.js"></script>
-<![endif]-->
-
 <script src="../javascripts/extag.js"></script>
-
 <script src="../javascripts/common.js"></script>
 </body>
 </html>

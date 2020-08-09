@@ -4,7 +4,7 @@ var MenuCard = Extag.defineClass({
     template: ['<div class="menu-card">', 
                 '<h4 click+="onClickIcon">',
                   '<a class="menu-link" href@="href">@{text}</a>',
-                  '<i x:class="icon-triangle; icon-triangle-down: @{folded}; icon-triangle-up: @{!folded}"></i>', 
+                  '<i x:class="icon-triangle; icon-triangle-left: @{folded}; icon-triangle-down: @{!folded}"></i>', 
                 '</h4>', 
                 '<ul x:style="display: @{folded ? \'none\' : \'block\'};">', 
                   '<li x:for="menu of menus">', 
@@ -21,7 +21,9 @@ var MenuCard = Extag.defineClass({
     this.folded = !this.folded;
   },
   setup: function() {
-    this.onClickIcon = this.onClickIcon.bind(this);
+    return {
+      onClickIcon: this.onClickIcon.bind(this)
+    }
   }
 });
 
@@ -42,12 +44,14 @@ var SideBar = Extag.defineClass({
     attributes: ['menuCards']
   },
   setup: function() {
-    this.state = new Extag.Store({
-      offscreen: true,
-      activeId: '' 
-    });
-    this.onClickButton = this.onClickButton.bind(this);
     this.on('created', this.onCreated.bind(this));
+    return {
+      state: new Extag.Model({
+        offscreen: true,
+        activeId: '' 
+      }),
+      onClickButton: this.onClickButton.bind(this)
+    }
   },
   onCreated: function() {
     this.links = []
@@ -93,8 +97,6 @@ var SideBar = Extag.defineClass({
   },
   onClickButton: function() {
     this.state.offscreen = !this.state.offscreen;
-    // this.style.set('left', this.state.offscreen ? '-280px' : '0');
-    // this.button.style.set('display', this.state.offscreen ? 'block' : 'none')
     
   },
   onClickScreen: function(event) {
@@ -110,7 +112,6 @@ var SideBar = Extag.defineClass({
       target = target.parentNode;
     }
     this.state.offscreen = true;
-    // this.style.set('left', '-280px');
   }
 });
 
@@ -119,12 +120,12 @@ var CodeTabs = Extag.defineClass({
   statics: {
     template: ['<div class="code-tabs">',
                 '<div class="tab-bar" click+="onClick" x:name="tabBar">',
-                  '<a x:for="entry of data |=entrySet" x:class="active:@{selectedIndex === entry.index};" class="tab-btn" href="javascript:void(0);">' +
+                  '<a x:for="entry of data |=entrySet" x:class="tab-btn; active:@{selectedIndex === entry.index};" href="javascript:void(0);">' +
                     '@{entry.value.label ?}' + 
                   '</a>',
                 '</div>',
                 '<div style="clear:both;"></div>',
-                '<div x:for="entry of data |=entrySet" x:class="active:@{selectedIndex === entry.index};" class="tab-box">',
+                '<div x:for="entry of data |=entrySet" x:class="tab-box; active:@{selectedIndex === entry.index};">',
                   '<div class="code-box scroll active">',
                     '<div class="CodeMirror cm-s-alice" inner-html@="entry.value.content">',
                     '</div>',
@@ -149,79 +150,25 @@ var CodeTabs = Extag.defineClass({
     }
   },
   setup: function() {
-    this.onClick = this.onClick.bind(this);
+    return {
+      onClick: this.onClick.bind(this)
+    }
   },
   onClick: function(event) {
-    
     var tabBtns = this.tabBar.getChildren(true);
-    
-    // var tabBoxs = this.getChildren().slice(2);
     for (var i = 0, n = tabBtns.length; i < n; ++i) {
       if (tabBtns[i].$skin === event.target) {
         this.selectedIndex = i;
         break;
       }
     }
-    // console.log('click', tabBtns, i, this.selectedIndex)
   }
 });
 
-// var Block = Extag.defineClass
-function type2tag(type) {
-  var tag = {};
-  var i = type.indexOf('#');
-  var j = type.indexOf('.');
-
-  if (j > 0) {
-    tag.className = type.slice(j + 1);
-    type = type.slice(0, j);
-  } else {
-    tag.className = '';
-  }
-
-  if (i > 0) {
-    tag.id = type.slice(i + 1);
-    type = type.slice(0, i);
-  } else {
-    tag.id = '';
-  }
-
-  tag.name = type;
-
-  return tag;
-}
-
 (function() {
-  // var links = document.getElementsByClassName('menu-link');
-  // var currLink;
-
-  // window.onscroll = function(event) {
-  //   var i, link;
-  //   if (currLink) {
-  //     currLink.className = 'menu-link';
-  //   }
-  //   for (i = 0; i < links.length; ++i) {
-  //     link = links[i];
-  //     var index = link.href.lastIndexOf('#');
-  //     if (index < 0) {
-  //       continue;
-  //     }
-  //     var id = link.href.slice(index + 1);
-  //     var el = document.getElementById(id);
-  //     if (!el) {
-  //       continue;
-  //     } 
-  //     if (el.offsetTop - window.scrollY < window.innerHeight * 0.25) {
-  //       currLink = link;
-  //     }
-  //   }
-  //   if (currLink) {
-  //     currLink.className = 'menu-link active';
-  //   }
-  // }
   var root = '';
   var href = window.location.href;
-  if (href.indexOf('enjolras1024.github.io') >= 0) {
+  if (href.indexOf('enjolras1024.github.io') >= 0 || href.indexOf('enjolras1024.gitee.io') >= 0) {
     root = '/extag';
   }
   Extag.Component.create(SideBar, {
@@ -231,12 +178,11 @@ function type2tag(type) {
         {text: 'GitHub', href: 'https://github.com/enjolras1024/extag', target: '_blank'}
       ]},
       {text: '事件系统', href: root + '/documents/event.html', menus: [
-        {text: 'on, off, emit', href: root + '/documents/event.html#on-off-emit'},
-        {text: '事件类型 & 事件扩展名', href: root + '/documents/event.html#event-type-and-event-extension'}
+        {text: 'on, off, emit', href: root + '/documents/event.html#on-off-emit'}
       ]},
       {text: '组件系统', href: root + '/documents/component.html', menus: [
         {text: '组件，元素，片段，文本', href: root + '/documents/component.html#component-element-fragment-text'},
-        {text: 'props, attrs, style, classes', href: '/documents/component.html#props-attrs-style-and-classes'},
+        {text: 'props, style, classes', href: '/documents/component.html#props-style-and-classes'},
         {text: '组件自定义特性', href: root + '/documents/component.html#component-attributes'},
         {text: '组件特性验证', href: root + '/documents/component.html#component-attribute-validation'},
         {text: '组件特性拦截', href: root + '/documents/component.html#component-attribute-interception'},
@@ -252,23 +198,22 @@ function type2tag(type) {
         {text: '事件监听', href: root + '/documents/template.html#event-listening'},
         {text: '数据绑定', href: root + '/documents/template.html#data-binding'},
         {text: '双向数据绑定', href: root + '/documents/template.html#two-way-data-binding'},
-        {text: '片段插值绑定', href: root + '/documents/template.html#fragment-binding'},
+        {text: '文本插值绑定', href: root + '/documents/template.html#text-binding'},
         {text: 'class和style绑定', href: root + '/documents/template.html#class-and-style-binding'},
-
-        // {text: 'Store for Object', href: '/documents/template.html#store-for-object'},
         {text: '可选转换器', href: root + '/documents/template.html#optional-converters'},
         {text: '使用子组件', href: root + '/documents/template.html#using-child-component'},
+        // {text: '组件动态输出', href: root + '/documents/template.html#component-output'},
         {text: '组件slots', href: root + '/documents/template.html#component-slots'},
         {text: '部件引用', href: root + '/documents/template.html#part-reference'},
         {text: '列表渲染', href: root + '/documents/template.html#list-rendering'},
         {text: '条件渲染', href: root + '/documents/template.html#condition-rendering'},
         {text: '片段渲染', href: root + '/documents/template.html#fragment-rendering'},
-        {text: 'camelCase v.s. kebab-case', href: root + '/documents/template.html#camelCase-vs-kebab-case'},
+        // {text: 'camelCase v.s. kebab-case', href: root + '/documents/template.html#camelCase-vs-kebab-case'},
         {text: '标签命名空间', href: root + '/documents/template.html#tag-namespace'},
         {text: '变量标识符', href: root + '/documents/template.html#variable-identifier'}
       ]},
       {text: '数据模型', href: root + '/documents/model.html', menus: [
-        {text: 'Store for Object', href: root + '/documents/model.html#store-for-object'}
+        {text: 'Model for Object', href: root + '/documents/model.html#model-for-object'}
       ]},
       // {text: 'Tips', href: root + '/documents/tips.html', menus: [
       //   {text: '函数组件', href: root + '/documents/tips.html#functinal-component'},
@@ -281,5 +226,5 @@ function type2tag(type) {
         {text: 'TodoMVC', href: root + '/examples/todomvc.html'}
       ]}
     ]
-  }).attach(ExtagDom.query('.side-bar'));
+  }).attach(ExtagDOM.query('.side-bar'));
 })();
