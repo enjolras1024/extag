@@ -186,7 +186,7 @@ function renderChildren($skin, shell, children) {
         // }
 
         if ($oldChild && !oldChild && 
-            canHydrate($oldChild && newChild)) {
+            canHydrate($oldChild, newChild)) {
           $newChild = $oldChild;
           resumeSomeAttributes($oldChild);
         } else {

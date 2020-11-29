@@ -1,4 +1,4 @@
-// src/core/template/parsers/PrimaryLiteralParser.js
+// src/core/template/parsers/PrimitiveLiteralParser.js
 
 export default {
   /**

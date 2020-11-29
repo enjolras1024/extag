@@ -81,53 +81,75 @@ function isLegalVarStartCharCode(cc) {
   return  (cc >= 97 && cc <= 122) || (cc >= 65 && cc <= 90) || cc === 95 || cc === 36;
 }
 
+function skipToEnding(code, index, expr) {
+  var n = expr.length;
+  while (index < n) {
+    if (expr.charCodeAt(index) === code 
+        && expr.charCodeAt(index - 1) !== 92) { // 92: \
+      return index;
+    }
+    ++index;
+  }
+  return n;
+}
+
 function getPropChainIndices(expr) {
+  var cc, cb, cp;
   var indices = [];
-  var b0, b1, b2, cb, cc;
-  var n = expr.length, i = 0, j;
-  while(i < n) {
+  var n = expr.length, i = -1, j;
+  while (i < n) {
     cb = cc;
     cc = expr.charCodeAt(i);
+    if (cc === 32 || (cc >=9 && cc <= 13)) {
+      ++i;
+      continue;
+    }
     switch (cc) {
       case 39: // 39: '
-        if (!b0) { b0 = true; } 
-        else if (cb !== 92) { b0 = false; }// 92: \
-        break;
       case 34: // 34: "
-        if (!b1) { b1 = true; } 
-        else if (cb !== 92) { b1 = false; } // 92: \
+        i = skipToEnding(cc, i + 1, expr);
+        if (i === n) {
+          throwError("Unclosed " + expr[i] + ".", {
+            code: 1001, 
+            expr: expr
+          });
+        }
         break;
       case 47: // 47: /, maybe regexp
-        if (!b2) {
-          var cp;
-          for (; j >= 0; --j) {
-            cp = expr.charCodeAt(j);
-            if (!(cp === 32 || (cp >=9 && cp <= 13))) {
-              break;
-            }
+        for (j = i - 1; j >= 0; --j) {
+          cp = expr.charCodeAt(j);
+          if (!(cp === 32 || (cp >=9 && cp <= 13))) {
+            break;
           }
-          if (!cp || !DIVISION_REGEXP.test(cp)) {
-            b2 = true;
-          }
-        } else if (cb !== 92) { b2 = false; }
-        break;
-      // TODO: ``
-      default:
-        if (!b0 && !b1 && !b2 && cb !== 46 && isLegalVarStartCharCode(cc)) {
-          j = skipToPathEnding(expr, i + 1); 
-          cc = expr.charCodeAt(j);
-          if (cc !== 58) { // 58: :, not a property name of object
-            indices.push(i, j);
-          } else if (notPropertyName(expr, i - 1)) {
-            indices.push(i, j);
-          }
-          i = j;
         }
+        if (!cp || !DIVISION_REGEXP.test(String.fromCharCode(cp))) {
+          i = skipToEnding(cc, i + 1, expr);
+          if (i === n) {
+            throwError("Unclosed " + expr[i] + ".", {
+              code: 1001, 
+              expr: expr
+            });
+          }
+        }
+        break;
+      default:
+        if (cb === 46) { // .e.g, "abc".toUpperCase(), /\d+/.test('123')
+            i = skipToPathEnding(expr, i + 1);
+            continue;
+          } else if (isLegalVarStartCharCode(cc)) {
+            j = skipToPathEnding(expr, i + 1); 
+            if (expr.charCodeAt(j) !== 58) { // 58: :, not a property name of object
+              indices.push(i, j);
+            } else if (notPropertyName(expr, i - 1)) {
+              indices.push(i, j);
+            }
+            i = j;
+            continue;
+          }
         break;
     }
     ++i;
   }
-  
   return indices;
 }
 

@@ -93,8 +93,8 @@ function applyAttributeDescriptors(target, descriptors) {
       descriptors[names[i]] = EMPTY_DESC;
     }
   }
-  // merge descriptors
-  var _descriptors = assign({}, target.__extag_descriptors__, descriptors);
+  // extend descriptors
+  var _descriptors = assign({}, target.__extag_descriptors__);
 
   var key, desc;
 

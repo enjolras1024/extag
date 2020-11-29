@@ -57,24 +57,7 @@ if (typeof ExtagDOM !== 'undefined') {
   config.set('view-engine', ExtagDOM);
 }
 
-// export {
-//   help,
-//   defineClass,
-
-//   Validator,
-//   Watcher, 
-
-//   Cache,
-//   Model, 
-
-//   Slot,
-//   Text,
-//   Element,
-//   Fragment,
-//   Component
-// }
-
-export default {
+var Extag = {
   anew: Generator.anew,
   inst: Generator.inst,
   // make: HTMXEngine.makeContent,
@@ -89,31 +72,19 @@ export default {
 
   // functions
   help: help,
-  //@test assign: assign, 
-  //@test defineProp: defineProp, 
   defineClass: defineClass, 
-  //@test slice: slice,
-  //@test flatten: flatten,
-  //@test toClasses: toClasses,
-  //@test encodeHTML: encodeHTML,
-  //@test decodeHTML: decodeHTML,
+  
   setImmediate: Schedule.setImmediate,
 
   // base
-  //@test Accessor: Accessor,
-  //@test Expression: Expression,
-  //@test Generator: Generator,
-  //@test Parent: Parent,
-  //@test Path: Path,
-  //@test Schedule: Schedule,
-  //@test DirtyMarker: DirtyMarker,
+  
   Validator: Validator,
   Watcher: Watcher, 
   
 
   // models
   Model: Model,
-  //@test Cache: Cache,
+  
   
   // shells
   //@test Shell: Shell,
@@ -147,4 +118,32 @@ export default {
 
   // eslint-disable-next-line no-undef
   version: __VERSION__
+};
+
+
+if (__TEST__) {
+  assign(Extag, {
+    assign: assign,
+    flatten: flatten,
+    toClasses: toClasses,
+    encodeHTML: encodeHTML,
+    decodeHTML: decodeHTML,
+
+    config: config,
+
+    Accessor: Accessor,
+    Expression: Expression,
+    Generator: Generator,
+    Path: Path,
+    DirtyMarker: DirtyMarker,
+
+    Cache: Cache,
+
+    Evaluator: Evaluator,
+
+    EvaluatorParser: EvaluatorParser,
+    EventBindingParser: EventBindingParser
+  });
 }
+
+export default Extag;
