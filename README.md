@@ -1,12 +1,12 @@
 ## Extag
-Extag是一个基于组件和事件驱动的JavaScript MMVVM库，用于构建Web用户界面。Extag提供了一个由文本、元素、片段和组件构成的Shell层。其中，组件支持模板、数据绑定等，具有良好的可扩展性，能够更好地组织用户界面，管理数据状态。通过监听和派发自定义属性更改事件，内嵌在组件模板中的数据绑定表达式得以生效，从而能够动态地改变Shell层的内容。Shell层一旦发生变化，Extag就会通过ExtagDOM以异步批量的模式，将变化的部分渲染到真实的DOM层。
+Extag是一个基于组件和事件驱动的JavaScript MVVM库，用于构建Web用户界面。Extag提供了一个由文本、元素、片段和组件构成的Shell层。其中，组件支持模板、数据绑定等，具有良好的可扩展性，能够更好地组织用户界面，管理数据状态。通过监听和派发自定义属性更改事件，内嵌在组件模板中的数据绑定表达式得以生效，从而能够动态地改变Shell层的内容。Shell层一旦发生变化，Extag就会通过ExtagDOM以异步批量的模式，将变化的部分渲染到真实的DOM层。
 
 #### 快速开始
 使用script标签简单地引入Extag和ExtagDOM。
 ```html
 <div id="hello"></div>
-<script src="extag.js"></script>
-<script src="extag-dom.js"></script>
+<script src="https://unpkg.com/extag"></script>
+<script src="https://unpkg.com/extag-dom"></script>
 ```
 或通过npm安装后引入Extag和ExtagDOM。
 ```javascript

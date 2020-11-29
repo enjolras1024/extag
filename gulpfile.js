@@ -81,8 +81,9 @@ async function build(opts) {
     }),
     replace({
       delimiters: ['', ''],
-      '//@test': file.lastIndexOf('.test.') > 0 ? '' : '//',
+      // '//@test': file.lastIndexOf('.test.') > 0 ? '' : '//',
       '__ENV__': '"development"',
+      '__TEST__': file.lastIndexOf('.test.') > 0,
       '__VERSION__': `"${version}"`
     })
   ];
@@ -108,8 +109,9 @@ async function build(opts) {
     }),
     replace({
       delimiters: ['', ''],
-      '//@test': file.lastIndexOf('.test.') > 0 ? '' : '//',
+      // '//@test': file.lastIndexOf('.test.') > 0 ? '' : '//',
       '__ENV__': '"production"',
+      '__TEST__': file.lastIndexOf('.test.') > 0,
       '__VERSION__': `"${version}"`
     }),
     uglify.uglify()
