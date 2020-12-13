@@ -1,4 +1,4 @@
-// src/base/Evaluator.js
+// src/core/template/FuncEvaluator.js
 
 import { defineClass } from 'src/share/functions'
 import logger from 'src/share/logger'
@@ -9,19 +9,19 @@ import logger from 'src/share/logger'
  * @param {Function} func 
  * @param {string} expr
  */
-export default function Evaluator(func, expr) {
+export default function FuncEvaluator(func, expr) {
   this.func = func;    // function to be applied
   this.expr = expr;
 }
 
 defineClass({
-  constructor: Evaluator,
+  constructor: FuncEvaluator,
 
   /**
    * @param {Array} scopes  - local varaibles
    * @param {*} value       - value returned by the prevoius evluator/converter in data-binding expression.
    */
-  execute: function(scopes, value) {
+  execute: function execute(scopes, value) {
     var args = scopes.slice(1);
     if (arguments.length > 1) {
       args.push(value);

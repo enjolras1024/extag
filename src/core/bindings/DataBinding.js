@@ -15,29 +15,10 @@ function applyConverters(converters, scopes, value) {
   return value;
 }
 
-function resolveSource(binding, scopes, identifiers) {
-  var path = binding.path;
-  var from = identifiers.indexOf(path[0]);
-  binding.sourceProp = path[path.length - 1];
-  if (from >= 0) {
-    binding.source = Path.search(path.slice(1, path.length - 1), scopes[from], true);
-  } else {
-    binding.source = Path.search(path.slice(1, path.length - 1), scopes[0].constructor.resources, true);
-  }
-}
-
-// function isBindable(src, prop) {
-//   var desc = Accessor.getAttrDesc(src, prop);
-//   return desc && desc.bindable;
-// }
-
 function DataBinding(pattern) {
   this.mode = pattern.mode;
-  this.path = pattern.path;
-  this.paths = pattern.paths;
   this.evaluator = pattern.evaluator;
   this.converters = pattern.converters;
-  this.identifiers = pattern.identifiers;
 }
 
 defineClass({
@@ -65,7 +46,6 @@ defineClass({
 
     if (this.mode === MODES.TWO_WAY) {
       this.backward = this.backward.bind(this);
-      resolveSource(this, scopes, this.identifiers);
       if (Accessor.getAttrDesc(this.target, this.targetProp)) {
         this.target.on('changed', this.backward);
       }
@@ -87,14 +67,10 @@ defineClass({
 
   replace: function replace(scopes) {
     if (scopes.length > 1 && scopes.length === this.scopes.length) {
-      if (this.mode === MODES.TWO_WAY) {
-        resolveSource(this, scopes, this.identifiers);
-      }
       this.scopes = scopes;
       this.flag = 1;
       this.execute();
     }
-
   },
 
   destroy: function destroy() {
@@ -109,16 +85,17 @@ defineClass({
     if (this.keys && this.keys.length) {
       scopes[0].off('updating', this.execute);
     }
-
-    // Binding.remove(binding.target, binding);
-
+    
     Dependency.clean(this);
   },
 
   evaluate: function() {
-    var converters = this.converters;
-    if (converters && converters.length) {
-      return applyConverters(converters, this.scopes, this.evaluator.execute(this.scopes));
+    if (this.converters && this.converters.length) {
+      return applyConverters(
+        this.converters, 
+        this.scopes, 
+        this.evaluator.execute(this.scopes)
+      );
     } else {
       return this.evaluator.execute(this.scopes);
     }
@@ -147,7 +124,27 @@ defineClass({
   backward: function backward(key) {
     if (key === this.targetProp) {
       var value = this.target[this.targetProp];
-      this.source.set(this.sourceProp, value);
+
+      var path = this.evaluator.path;
+      var from = path.from;
+      var n = path.length;
+      var scopes = this.scopes;
+      var source;
+      if (n === 2) {
+        if (from >= 0) {
+          source = scopes[from];
+        } else {
+          source = scopes[0].constructor.resources;
+        }
+        source.set(path[1], value);
+      } else if (n > 2) {
+        if (from >= 0) {
+          source = Path.search(path.slice(1, n - 1), scopes[from], true);
+        } else {
+          source = Path.search(path.slice(1, n - 1), scopes[0].constructor.resources, true);
+        }
+        source.set(path[n - 1], value);
+      }
     }
   },
 

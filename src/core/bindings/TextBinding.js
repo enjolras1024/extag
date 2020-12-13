@@ -10,7 +10,7 @@ import { defineClass, slice } from 'src/share/functions'
 export default function TextBinding(pattern) {
   var pieces = this.pieces = [];
   for (var i = 0; i < pattern.length; ++i) {
-    if (typeof pattern[i] === 'object') {
+    if (typeof pattern[i] === 'object' && !(pattern[i] instanceof Expression)) {
       pieces.push(new Expression(DataBinding, pattern[i]));
     } else {
       pieces.push(pattern[i]);

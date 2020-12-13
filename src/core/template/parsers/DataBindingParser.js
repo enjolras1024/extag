@@ -1,10 +1,10 @@
 // src/core/template/parsers/DataBindingParser.js
 
 import Path from 'src/base/Path'
-import { throwError } from 'src/share/functions'
+import { hasOwnProp, throwError } from 'src/share/functions'
 import { BINDING_OPERATORS } from 'src/share/constants'
 import DataBinding from 'src/core/bindings/DataBinding'
-import Evaluator from 'src/core/template/Evaluator'
+import FuncEvaluator from 'src/core/template/FuncEvaluator'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 
 var DATA_BINDING_MODES = DataBinding.MODES;
@@ -44,18 +44,14 @@ export default {
       mode = DATA_BINDING_MODES.ONE_WAY;
     }
 
-    var converters, converter, evaluator, pieces, piece, path;
+    var resources, converters, converter, evaluator, pieces, piece;
     if (mode === DATA_BINDING_MODES.TWO_WAY) {
       if (!Path.test(expr.trim())) {
-        throwError('', {
+        throwError('Invalid two-way binding expression!', {
           code: 1001,
           expr: arguments[0],
           desc: '`' + arguments[0] + '` is not a valid two-way binding expression. Must be a property name or path.'
         });
-      }
-      path = Path.parse(expr.trim());
-      if ((path[0] in prototype) && identifiers.indexOf(path[0]) < 0) {
-        path.unshift('this');
       }
       evaluator = EvaluatorParser.parse(expr, prototype, identifiers);
     } else if (expr.indexOf(BINDING_OPERATORS.CONVERTER) < 0) {
@@ -81,12 +77,12 @@ export default {
             piece = piece.slice(0, index + 1) + identifier + ',' + piece.slice(index + 1);
           } else {
             if (piece.indexOf('.') < 0 && identifiers.indexOf(piece) < 0) {
-              var resources = prototype.constructor.resources;
+              resources = prototype.constructor.resources;
               if (resources) {
                 var func = Path.search(piece, resources);
                 if (typeof func === 'function') {
                   converters = converters || [];
-                  converters.push(new Evaluator(func, piece));
+                  converters.push(new FuncEvaluator(func, piece));
                   continue;
                 } 
               }
@@ -106,10 +102,7 @@ export default {
       evaluator: evaluator
     };
 
-    if (mode === DATA_BINDING_MODES.TWO_WAY) {
-      pattern.identifiers = identifiers;
-      pattern.path = path;
-    } else if (converters && converters.length) {
+    if (converters && converters.length) {
       pattern.converters = converters;
     }
 

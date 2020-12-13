@@ -3,7 +3,8 @@
 import Path from 'src/base/Path'
 import { hasOwnProp, throwError } from 'src/share/functions'
 import { WHITE_SPACE_REGEXP } from 'src/share/constants'
-import Evaluator from 'src/core/template/Evaluator'
+import FuncEvaluator from 'src/core/template/FuncEvaluator'
+import PathEvaluator from 'src/core/template/PathEvaluator'
 
 var DIVISION_REGEXP = /[\w).+\-_$\]]/;
 
@@ -29,7 +30,7 @@ function notPropertyName(expr, index) {
   }
 }
 
-function skipToPathEnding(expr, index) {
+function gotoPathEnding(expr, index) {
   var cc, dot, space, length = expr.length;
   while (index < length) {
     cc = expr.charCodeAt(index);
@@ -81,7 +82,7 @@ function isLegalVarStartCharCode(cc) {
   return  (cc >= 97 && cc <= 122) || (cc >= 65 && cc <= 90) || cc === 95 || cc === 36;
 }
 
-function skipToEnding(code, index, expr) {
+function gotoEnding(code, expr, index) {
   var n = expr.length;
   while (index < n) {
     if (expr.charCodeAt(index) === code 
@@ -93,10 +94,21 @@ function skipToEnding(code, index, expr) {
   return n;
 }
 
+function regexStarts(expr, index) {
+  var cp;
+  while (--index >= 0) {
+    cp = expr.charCodeAt(index);
+    if (!(cp === 32 || (cp >=9 && cp <= 13))) {
+      break;
+    }
+  }
+  return !cp || !DIVISION_REGEXP.test(String.fromCharCode(cp));
+}
+
 function getPropChainIndices(expr) {
-  var cc, cb, cp;
+  var cc, cb;
   var indices = [];
-  var n = expr.length, i = -1, j;
+  var n = expr.length, i = 0, j;
   while (i < n) {
     cb = cc;
     cc = expr.charCodeAt(i);
@@ -107,25 +119,19 @@ function getPropChainIndices(expr) {
     switch (cc) {
       case 39: // 39: '
       case 34: // 34: "
-        i = skipToEnding(cc, i + 1, expr);
+        i = gotoEnding(cc, expr, i + 1);
         if (i === n) {
-          throwError("Unclosed " + expr[i] + ".", {
+          throwError("Unclosed " + String.fromCharCode(cc) + " .", {
             code: 1001, 
             expr: expr
           });
         }
         break;
       case 47: // 47: /, maybe regexp
-        for (j = i - 1; j >= 0; --j) {
-          cp = expr.charCodeAt(j);
-          if (!(cp === 32 || (cp >=9 && cp <= 13))) {
-            break;
-          }
-        }
-        if (!cp || !DIVISION_REGEXP.test(String.fromCharCode(cp))) {
-          i = skipToEnding(cc, i + 1, expr);
+        if (regexStarts(expr, i)) {
+          i = gotoEnding(cc, expr, i + 1);
           if (i === n) {
-            throwError("Unclosed " + expr[i] + ".", {
+            throwError("Unclosed " + String.fromCharCode(cc) + " .", {
               code: 1001, 
               expr: expr
             });
@@ -134,10 +140,10 @@ function getPropChainIndices(expr) {
         break;
       default:
         if (cb === 46) { // .e.g, "abc".toUpperCase(), /\d+/.test('123')
-            i = skipToPathEnding(expr, i + 1);
+            i = gotoPathEnding(expr, i + 1);
             continue;
           } else if (isLegalVarStartCharCode(cc)) {
-            j = skipToPathEnding(expr, i + 1); 
+            j = gotoPathEnding(expr, i + 1); 
             if (expr.charCodeAt(j) !== 58) { // 58: :, not a property name of object
               indices.push(i, j);
             } else if (notPropertyName(expr, i - 1)) {
@@ -154,6 +160,10 @@ function getPropChainIndices(expr) {
 }
 
 export default {
+  regexStarts: regexStarts,
+
+  gotoEnding: gotoEnding,
+
   /**
    * Parse an evaluator from string
    * @param {string} expr - e.g. "a + b" in @{a + b} or value@="a + b".
@@ -162,13 +172,22 @@ export default {
    * @returns {PropEvaluator|FuncEvaluator}
    */
   parse: function parse(expr, prototype, identifiers) {
+    var resources = prototype.constructor.resources;
+    var path = Path.parse(expr);
+    if (path && path.length) {
+      path.from = identifiers.indexOf(path[0]);
+      if (path.from < 0 && (!resources|| !hasOwnProp.call(resources, path[0]))) {
+        path.unshift('this');
+        path.from = 0;
+      }
+      return new PathEvaluator(path, expr);
+    }
+
     var args = identifiers.slice(1);
-    var expanded = 0, piece, path;
+    var expanded = 0, piece;
     var lines = [], i, j;
     // get start-index and stop-index of all prop chains, like `a` or `a.b.c`
     var indices = getPropChainIndices(expr);
-
-    var resources = prototype.constructor.resources;
 
     for (j = 0; j < indices.length; j += 2) {
       if (indices[j+1] < 0) { continue; }
@@ -195,7 +214,7 @@ export default {
 
     try {
       var func = Function.apply(null, args);
-      return new Evaluator(func, arguments[0]);
+      return new FuncEvaluator(func, arguments[0]);
     } catch (e) {
       throwError(e, {
         code: 1001,
