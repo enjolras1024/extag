@@ -16,7 +16,7 @@
   <script type="text/template" id="app-template">
     <div class="app">
       <svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">
-        <rect transform@="'translate(150, 100) rotate(' + rotate + ') scale(' + scaleX + ',' + scaleY + ')'"
+        <rect transform#="translate(150, 100) rotate(@{rotate}) scale(@{scaleX}, @{scaleY})"
               width="20" height="20" x:style="fill: rgb(0,102,221);"></rect>
         <circle cx="150" cy="100" r="2" x:style="fill: rgb(255,0,0)"></circle>
         <g x:type="TextSlider" transform="translate(10, 10)" label="rotate" max@="360.0" value@="@rotate"></g>

@@ -118,6 +118,7 @@ var SideBar = Extag.defineClass({
 var CodeTabs = Extag.defineClass({
   extends: Extag.Component,
   statics: {
+    fullname: 'CodeTabs',
     template: ['<div class="code-tabs">',
                 '<div class="tab-bar" click+="onClick" x:name="tabBar">',
                   '<a x:for="entry of data |=entrySet" x:class="tab-btn; active:@{selectedIndex === entry.index};" href="javascript:void(0);">' +
@@ -154,6 +155,9 @@ var CodeTabs = Extag.defineClass({
       onClick: this.onClick.bind(this)
     }
   },
+  update: function() {
+    return Extag.Component.prototype.update.call(this);
+  },
   onClick: function(event) {
     var tabBtns = this.tabBar.getChildren(true);
     for (var i = 0, n = tabBtns.length; i < n; ++i) {
@@ -182,13 +186,13 @@ var CodeTabs = Extag.defineClass({
       ]},
       {text: '组件系统', href: root + '/documents/component.html', menus: [
         {text: '组件，元素，片段，文本', href: root + '/documents/component.html#component-element-fragment-text'},
-        {text: 'props, style, classes', href: '/documents/component.html#props-style-and-classes'},
+        {text: 'props, style, classes', href: root + '/documents/component.html#props-style-and-classes'},
         {text: '组件自定义特性', href: root + '/documents/component.html#component-attributes'},
         {text: '组件特性验证', href: root + '/documents/component.html#component-attribute-validation'},
         {text: '组件特性拦截', href: root + '/documents/component.html#component-attribute-interception'},
         {text: '组件特性依赖', href: root + '/documents/component.html#component-attribute-dependency'},
         {text: '组件内部状态', href: root + '/documents/component.html#component-inner-state'},
-        {text: '组件contents', href: root + '/documents/component.html#component-contents'},
+        // {text: '组件contents', href: root + '/documents/component.html#component-contents'},
         {text: '组件边界处理', href: root + '/documents/component.html#component-boundary'},
         {text: '组件生命周期', href: root + '/documents/component.html#component-lifecycle'}, 
         {text: '组件context', href: root + '/documents/component.html#component-context'}, 
@@ -208,6 +212,7 @@ var CodeTabs = Extag.defineClass({
         {text: '列表渲染', href: root + '/documents/template.html#list-rendering'},
         {text: '条件渲染', href: root + '/documents/template.html#condition-rendering'},
         {text: '片段渲染', href: root + '/documents/template.html#fragment-rendering'},
+        {text: '函数化模板', href: root + '/documents/template.html#functional-template'},
         // {text: 'camelCase v.s. kebab-case', href: root + '/documents/template.html#camelCase-vs-kebab-case'},
         {text: '标签命名空间', href: root + '/documents/template.html#tag-namespace'},
         {text: '变量标识符', href: root + '/documents/template.html#variable-identifier'}
