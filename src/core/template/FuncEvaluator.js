@@ -22,8 +22,9 @@ defineClass({
    * @param {*} value       - value returned by the prevoius evluator/converter in data-binding expression.
    */
   execute: function execute(scopes, value) {
-    var args = scopes.slice(1);
+    var args = scopes;
     if (arguments.length > 1) {
+      args = scopes.slice(0);
       args.push(value);
     }
     

@@ -184,6 +184,7 @@ export default {
     }
 
     var args = identifiers.slice(1);
+    var vars = identifiers.slice(1);
     var expanded = 0, piece;
     var lines = [], i, j;
     // get start-index and stop-index of all prop chains, like `a` or `a.b.c`
@@ -196,21 +197,29 @@ export default {
       if (hasOwnProp.call(JS_KEYWORD_MAP, path[0])) {
         continue;
       }
+      
       i = identifiers.indexOf(path[0]);
       if (i < 0) {
         if (resources && hasOwnProp.call(resources, path[0])) {
           lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
+          vars.push(path[0]);
         } else {
           expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
           expanded += 5;
         }
       } else {
-        //
+        // vars.push(identifiers[i]);
       }
     }
 
     lines.push('return ' + expr);
     args.push(lines.join('\n'));
+
+    var self = '$';
+    while (vars.indexOf(self) >= 0) {
+      self += '$';
+    }
+    args.unshift(self);
 
     try {
       var func = Function.apply(null, args);
