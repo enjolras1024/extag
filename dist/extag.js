@@ -4869,7 +4869,7 @@
         mode = DATA_BINDING_MODES.ONE_WAY;
       }
 
-      var resources, converters, converter, evaluator, pieces, piece;
+      var converters, converter, evaluator, pieces, piece;
       if (mode === DATA_BINDING_MODES.TWO_WAY) {
         if (!Path.test(expr.trim())) {
           throwError('Invalid two-way binding expression!', {
@@ -4901,17 +4901,17 @@
             if (index > 0) {
               piece = piece.slice(0, index + 1) + identifier + ',' + piece.slice(index + 1);
             } else {
-              if (piece.indexOf('.') < 0 && identifiers.indexOf(piece) < 0) {
-                resources = prototype.constructor.resources;
-                if (resources) {
-                  var func = Path.search(piece, resources);
-                  if (typeof func === 'function') {
-                    converters = converters || [];
-                    converters.push(new FuncEvaluator(func, piece));
-                    continue;
-                  } 
-                }
-              }
+              // if (piece.indexOf('.') < 0 && identifiers.indexOf(piece) < 0) {
+              //   resources = prototype.constructor.resources;
+              //   if (resources) {
+              //     var func = Path.search(piece, resources);
+              //     if (typeof func === 'function') {
+              //       converters = converters || [];
+              //       converters.push(new FuncEvaluator(func, piece));
+              //       continue;
+              //     } 
+              //   }
+              // }
               piece = piece + '(' + identifier + ')';
             }
 

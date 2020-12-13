@@ -5,8 +5,8 @@ Extag是一个基于组件和事件驱动的JavaScript MVVM库，用于构建Web
 使用script标签简单地引入Extag和ExtagDOM。
 ```html
 <div id="hello"></div>
-<script src="https://unpkg.com/extag"></script>
-<script src="https://unpkg.com/extag-dom"></script>
+<script src="https://unpkg.com/extag@0.4.1/dist/extag.js"></script>
+<script src="https://unpkg.com/extag-dom@0.4.1/dist/extag-dom.js"></script>
 ```
 或通过npm安装后引入Extag和ExtagDOM。
 ```javascript
