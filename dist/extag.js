@@ -1,5 +1,5 @@
 /**
- * Extag v0.3.3
+ * Extag v0.4.1
  * (c) 2017-present enjolras.chen
  * Released under the MIT License.
  */
@@ -2654,12 +2654,12 @@
   var KEYS_PRESERVED = [
     '$meta', '$flag', '$skin', 
     'style', 'classes', 'contents', 'children', 
-    '_dirty', '_props', '_style', '_classes', '_children'
+    '_dirty', '_props', '_style', '_classes', '_children', '_vnodes'
   ];
   var METHODS_PRESERVED = [
     'on', 'off', 'emit',
+    'getParent', 'getChildren', 'setChildren',
     'appendChild', 'insertChild', 'removeChild', 'replaceChild', 
-    'getParent', 'getChildren', 'setChildren', 'getContents', 'setContents',
     'get', 'set', 'cmd', 'bind', 'assign', 'update', 'digest', 'attach', 'detach', 'invalidate'
   ];
 
@@ -2800,6 +2800,13 @@
         // building
         try {
           HTMXEngine.driveComponent(component, scopes, template, props, _template);
+          // if (typeof component.render === 'function' && 
+          //   constructor.template == '<x:frag></x:frag>') {
+          //   component.$meta.render = true;
+          //   component.bind(component, '_vnodes', function() {
+          //     return component.render(component._props);
+          //   });
+          // }
         } catch (e) {
           captureError(e, component, 'building');
         }
@@ -2810,6 +2817,8 @@
         } catch (e) {
           captureError(e, component, 'created');
         }
+
+        component.invalidate();
       }
 
     },
@@ -2877,7 +2886,8 @@
     },
 
     bind: function(target, property, collect, reflect) {
-      Binding.create(this, target, property, collect, reflect);
+      var binding = Binding.create(this, target, property, collect, reflect);
+      Binding.record(target, binding);
     },
 
     /**
@@ -2979,10 +2989,23 @@
         if (!Array.isArray(children)) {
           children = [children];
         }
-        HTMXEngine.driveChildren(this, [this], children, false, true);
+        HTMXEngine.driveChildren(this, [this], children, false, false);
       }
+      // if (this.$meta.render) {
+      //   var children;
+      //   if (this.hasDirty('_vnodes')) {
+      //     DirtyMarker.clean(this, '_vnodes');
+      //     children = this.get('_vnodes') || [];
+      //   } else {
+      //     children = this.render(this._props) || [];
+      //   }
+        
+      //   if (!Array.isArray(children)) {
+      //     children = [children];
+      //   }
+      //   HTMXEngine.driveChildren(this, [this], children, false, false);
+      // }
 
-      // DirtyMarker.clean(this, 'children');
       DirtyMarker.clean(this, 'contents');
 
       if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
@@ -3045,7 +3068,7 @@
 
       var actions = this._actions;
 
-      if (this.$flag & FLAG_MOUNTED === 0) {
+      if ((this.$flag & FLAG_MOUNTED) === 0) {
         if (this.$meta.type === 0) {
           var parent = Parent.findParent(true);
           if (parent && parent.$skin) {
@@ -3076,17 +3099,6 @@
       }
 
       this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
-    },
-
-    getContents: function getContents() {
-      return this._contents;
-    },
-
-    setContents: function setContents(value) {
-      if (this._contents !== value) {
-        this._contents = value;
-        this.emit('changed', 'contents', value);
-      }
     },
 
     /**
@@ -3333,11 +3345,8 @@
         fragment.scopes = scopes;
         
         if (scopes && template) {
-          template.connect('children', fragment, scopes);
-          
+          template.connect('_vnodes', fragment, scopes);
         }
-
-        
       }
 
       // create: function create(props, scopes, template) {
@@ -3359,14 +3368,12 @@
       //   this.onUpdating();
       // }
 
-      if (this.scopes && this.hasDirty('children')) {
-        // var JSXEngine = config.JSXEngine;
-        DirtyMarker.clean(this, 'children');
-        var children = this.get('children') || [];
+      if (this.scopes && this.hasDirty('_vnodes')) {
+        var children = this.get('_vnodes') || [];
+        DirtyMarker.clean(this, '_vnodes');
         if (!Array.isArray(children)) {
           children = [children];
         }
-        // JSXEngine.reflow(this.scopes[0], this, contents);
         HTMXEngine.driveChildren(this, this.scopes, children, false);
       }
 
@@ -3822,8 +3829,9 @@
      * @param {*} value       - value returned by the prevoius evluator/converter in data-binding expression.
      */
     execute: function execute(scopes, value) {
-      var args = scopes.slice(1);
+      var args = scopes;
       if (arguments.length > 1) {
+        args = scopes.slice(0);
         args.push(value);
       }
       
@@ -3864,6 +3872,7 @@
       value = scopes[i];
     } else {
       value = scopes[0].constructor.resources;
+      value = value[path[0]];
     }
 
     if (n === 2) {
@@ -4057,7 +4066,7 @@
       for (type in oldEvents) {
         value = oldEvents[type];
         if (typeof value === 'function') {
-          target.off(name, value);
+          target.off(type, value);
         } else if (Array.isArray(value)) {
           target.off(type, value[0], value[1]);
         }
@@ -4773,6 +4782,7 @@
       }
 
       var args = identifiers.slice(1);
+      var vars = identifiers.slice(1);
       var expanded = 0, piece;
       var lines = [], i, j;
       // get start-index and stop-index of all prop chains, like `a` or `a.b.c`
@@ -4785,10 +4795,12 @@
         if (hasOwnProp.call(JS_KEYWORD_MAP, path[0])) {
           continue;
         }
+        
         i = identifiers.indexOf(path[0]);
         if (i < 0) {
           if (resources && hasOwnProp.call(resources, path[0])) {
             lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
+            vars.push(path[0]);
           } else {
             expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
             expanded += 5;
@@ -4798,6 +4810,12 @@
 
       lines.push('return ' + expr);
       args.push(lines.join('\n'));
+
+      var self = '$';
+      while (vars.indexOf(self) >= 0) {
+        self += '$';
+      }
+      args.unshift(self);
 
       try {
         var func = Function.apply(null, args);
@@ -5121,7 +5139,7 @@
       node.xkey = parseJsxExpr(args, node, prototype);
     }
     if (props) {
-      // parse expression, and extract style, attrs, classes
+      // parse expression, and extract style, class
       for (key in props) {
         value = props[key];
         if (value && typeof value === 'object') {
@@ -5129,7 +5147,7 @@
             args = value.args;
             checkExprMode(args[0]);
             props[key] = parseJsxExpr(args, node, prototype);
-          } else if (key === 'classes' || key === 'style') {
+          } else if (key === 'class' || key === 'style') {
             node[key] = parseJsxData(value, node, prototype);
             delete props[key];
           }
@@ -6399,7 +6417,7 @@
     
 
     // eslint-disable-next-line no-undef
-    version: "0.3.3"
+    version: "0.4.1"
   };
 
   return Extag;
