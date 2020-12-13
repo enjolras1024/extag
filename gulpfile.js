@@ -81,9 +81,8 @@ async function build(opts) {
     }),
     replace({
       delimiters: ['', ''],
-      // '//@test': file.lastIndexOf('.test.') > 0 ? '' : '//',
       '__ENV__': '"development"',
-      '__TEST__': file.lastIndexOf('.test.') > 0,
+      '__TEST__': false,
       '__VERSION__': `"${version}"`
     })
   ];
@@ -109,9 +108,8 @@ async function build(opts) {
     }),
     replace({
       delimiters: ['', ''],
-      // '//@test': file.lastIndexOf('.test.') > 0 ? '' : '//',
       '__ENV__': '"production"',
-      '__TEST__': file.lastIndexOf('.test.') > 0,
+      '__TEST__': false,
       '__VERSION__': `"${version}"`
     }),
     uglify.uglify()
@@ -126,6 +124,31 @@ async function build(opts) {
     name: name,
     format: format,
     file: `dist/${minfile}`
+  });
+
+  let testfile = file.slice(0, i) + '.test' + file.slice(i);
+
+  plugins = [
+    alias({
+      src: `${__dirname}/src`
+    }),
+    replace({
+      delimiters: ['', ''],
+      '__ENV__': '"development"',
+      '__TEST__': '"testing"',
+      '__VERSION__': `"${version}"`
+    })
+  ]
+
+  bundle = await rollup.rollup({
+    input: `src/${input}`,
+    plugins: plugins
+  });
+
+  await bundle.write({
+    name: name,
+    format: format,
+    file: `dist/${testfile}`
   });
 
   if (!pack) {
@@ -160,14 +183,14 @@ gulp.task('rollup-extag', async function () {
   })
 });
 
-gulp.task('rollup-extag-test', async function () {
-  await build({
-    format: 'umd',
-    input: 'Extag.js',
-    file: 'extag.test.js',
-    name: 'Extag'
-  })
-});
+// gulp.task('rollup-extag-test', async function () {
+//   await build({
+//     format: 'umd',
+//     input: 'Extag.js',
+//     file: 'extag.test.js',
+//     name: 'Extag'
+//   })
+// });
 
 gulp.task('rollup-extag-dom', async function () {
   await build({
@@ -179,12 +202,12 @@ gulp.task('rollup-extag-dom', async function () {
   })
 });
 
-gulp.task('rollup-extag-ssr', async function () {
-  await build({
-    format: 'umd',
-    input: 'more/ExtagSSR.js',
-    file: 'extag-ssr.js',
-    pack: 'extag-ssr',
-    name: 'ExtagSSR'
-  })
-});
+// gulp.task('rollup-extag-ssr', async function () {
+//   await build({
+//     format: 'umd',
+//     input: 'more/ExtagSSR.js',
+//     file: 'extag-ssr.js',
+//     pack: 'extag-ssr',
+//     name: 'ExtagSSR'
+//   })
+// });

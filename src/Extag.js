@@ -26,8 +26,10 @@ import DataBinding from 'src/core/bindings/DataBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import TextBinding from 'src/core/bindings/TextBinding'
 
-import Evaluator from 'src/core/template/Evaluator'
+
 import Expression from 'src/core/template/Expression'
+import FuncEvaluator from 'src/core/template/FuncEvaluator'
+import PathEvaluator from 'src/core/template/PathEvaluator'
 import { createContent } from 'src/core/template/drivers/index.js'
 // import JSXEngine from 'src/core/template/engines/JSXEngine'
 import HTMXEngine from 'src/core/template/HTMXEngine'
@@ -60,6 +62,9 @@ if (typeof ExtagDOM !== 'undefined') {
 var Extag = {
   anew: Generator.anew,
   inst: Generator.inst,
+
+  node: JSXParser.node,
+  expr: JSXParser.expr,
   // make: HTMXEngine.makeContent,
 
   conf: function(key, val) {
@@ -68,7 +73,6 @@ var Extag = {
     }
     config.set(key, val);
   },
-  //@test config: config,
 
   // functions
   help: help,
@@ -87,8 +91,6 @@ var Extag = {
   
   
   // shells
-  //@test Shell: Shell,
-  //@test
   Text: Text, 
   Slot: Slot,
   Output: Output,
@@ -96,25 +98,7 @@ var Extag = {
   Fragment: Fragment,
   Component: Component,
 
-  // bindings
-  //@test Binding: Binding,
-  //@test DataBinding: DataBinding,
-  //@test EventBinding: EventBinding,
-
-  // parsers
-  //@test HTMXParser: HTMXParser,
-  //@test EvaluatorParser: EvaluatorParser,
-  //@test DataBindingParser: DataBindingParser,
-  //@test EventBindingParser: EventBindingParser,
-
-  // template
   
-  //@test Evaluator: Evaluator,
-
-  // JSXEngine: JSXEngine,
-  //@test HTMXEngine: HTMXEngine,
-  node: JSXParser.node,
-  expr: JSXParser.expr,
 
   // eslint-disable-next-line no-undef
   version: __VERSION__
@@ -139,9 +123,14 @@ if (__TEST__) {
 
     Cache: Cache,
 
-    Evaluator: Evaluator,
+    FuncEvaluator: FuncEvaluator,
+    PathEvaluator: PathEvaluator,
+
+    DataBinding: DataBinding,
 
     EvaluatorParser: EvaluatorParser,
+    DataBindingParser: DataBindingParser,
+    TextBindingParser: TextBindingParser,
     EventBindingParser: EventBindingParser
   });
 }

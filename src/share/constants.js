@@ -40,6 +40,7 @@ var BINDING_OPERATORS = {
   DATA: '@', 
   TEXT: '#', 
   EVENT: '+', 
+  FRAGMENT: '<>',
   MODIFIER: '::',
   CONVERTER: '|=', 
   // SCOPE_EVENT: '@', 
