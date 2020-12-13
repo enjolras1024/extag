@@ -36,12 +36,12 @@ var shellProto = Shell.prototype;
 var KEYS_PRESERVED = [
   '$meta', '$flag', '$skin', 
   'style', 'classes', 'contents', 'children', 
-  '_dirty', '_props', '_style', '_classes', '_children'
+  '_dirty', '_props', '_style', '_classes', '_children', '_vnodes'
 ];
 var METHODS_PRESERVED = [
   'on', 'off', 'emit',
+  'getParent', 'getChildren', 'setChildren',
   'appendChild', 'insertChild', 'removeChild', 'replaceChild', 
-  'getParent', 'getChildren', 'setChildren', 'getContents', 'setContents',
   'get', 'set', 'cmd', 'bind', 'assign', 'update', 'digest', 'attach', 'detach', 'invalidate'
 ];
 
@@ -182,6 +182,13 @@ defineClass({
       // building
       try {
         HTMXEngine.driveComponent(component, scopes, template, props, _template);
+        // if (typeof component.render === 'function' && 
+        //   constructor.template == '<x:frag></x:frag>') {
+        //   component.$meta.render = true;
+        //   component.bind(component, '_vnodes', function() {
+        //     return component.render(component._props);
+        //   });
+        // }
       } catch (e) {
         captureError(e, component, 'building');
       }
@@ -192,6 +199,8 @@ defineClass({
       } catch (e) {
         captureError(e, component, 'created');
       }
+
+      component.invalidate();
     }
 
   },
@@ -259,7 +268,8 @@ defineClass({
   },
 
   bind: function(target, property, collect, reflect) {
-    Binding.create(this, target, property, collect, reflect);
+    var binding = Binding.create(this, target, property, collect, reflect);
+    Binding.record(target, binding);
   },
 
   /**
@@ -361,10 +371,23 @@ defineClass({
       if (!Array.isArray(children)) {
         children = [children];
       }
-      HTMXEngine.driveChildren(this, [this], children, false, true);
+      HTMXEngine.driveChildren(this, [this], children, false, false);
     }
+    // if (this.$meta.render) {
+    //   var children;
+    //   if (this.hasDirty('_vnodes')) {
+    //     DirtyMarker.clean(this, '_vnodes');
+    //     children = this.get('_vnodes') || [];
+    //   } else {
+    //     children = this.render(this._props) || [];
+    //   }
+      
+    //   if (!Array.isArray(children)) {
+    //     children = [children];
+    //   }
+    //   HTMXEngine.driveChildren(this, [this], children, false, false);
+    // }
 
-    // DirtyMarker.clean(this, 'children');
     DirtyMarker.clean(this, 'contents');
 
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
@@ -427,7 +450,7 @@ defineClass({
 
     var actions = this._actions;
 
-    if (this.$flag & FLAG_MOUNTED === 0) {
+    if ((this.$flag & FLAG_MOUNTED) === 0) {
       if (this.$meta.type === 0) {
         var parent = Parent.findParent(true);
         if (parent && parent.$skin) {
@@ -458,17 +481,6 @@ defineClass({
     }
 
     this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
-  },
-
-  getContents: function getContents() {
-    return this._contents;
-  },
-
-  setContents: function setContents(value) {
-    if (this._contents !== value) {
-      this._contents = value;
-      this.emit('changed', 'contents', value);
-    }
   },
 
   /**

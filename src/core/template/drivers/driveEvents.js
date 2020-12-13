@@ -10,7 +10,7 @@ function driveEvents(target, scopes, newEvents, useExpr) {
     for (type in oldEvents) {
       value = oldEvents[type];
       if (typeof value === 'function') {
-        target.off(name, value);
+        target.off(type, value);
       } else if (Array.isArray(value)) {
         target.off(type, value[0], value[1]);
       }

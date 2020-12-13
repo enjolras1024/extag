@@ -53,7 +53,7 @@ function parseJsxNode(node, prototype) {
     node.xkey = parseJsxExpr(args, node, prototype);
   }
   if (props) {
-    // parse expression, and extract style, attrs, classes
+    // parse expression, and extract style, class
     for (key in props) {
       value = props[key];
       if (value && typeof value === 'object') {
@@ -61,7 +61,7 @@ function parseJsxNode(node, prototype) {
           args = value.args;
           checkExprMode(args[0]);
           props[key] = parseJsxExpr(args, node, prototype);
-        } else if (key === 'classes' || key === 'style') {
+        } else if (key === 'class' || key === 'style') {
           node[key] = parseJsxData(value, node, prototype);
           delete props[key];
         }

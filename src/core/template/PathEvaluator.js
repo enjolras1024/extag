@@ -23,6 +23,7 @@ function execute(scopes) {
     value = scopes[i];
   } else {
     value = scopes[0].constructor.resources;
+    value = value[path[0]];
   }
 
   if (n === 2) {

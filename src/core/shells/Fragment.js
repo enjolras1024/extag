@@ -37,11 +37,8 @@ defineClass({
       fragment.scopes = scopes;
       
       if (scopes && template) {
-        template.connect('children', fragment, scopes);
-        
+        template.connect('_vnodes', fragment, scopes);
       }
-
-      
     }
 
     // create: function create(props, scopes, template) {
@@ -63,14 +60,12 @@ defineClass({
     //   this.onUpdating();
     // }
 
-    if (this.scopes && this.hasDirty('children')) {
-      // var JSXEngine = config.JSXEngine;
-      DirtyMarker.clean(this, 'children');
-      var children = this.get('children') || [];
+    if (this.scopes && this.hasDirty('_vnodes')) {
+      var children = this.get('_vnodes') || [];
+      DirtyMarker.clean(this, '_vnodes');
       if (!Array.isArray(children)) {
         children = [children];
       }
-      // JSXEngine.reflow(this.scopes[0], this, contents);
       HTMXEngine.driveChildren(this, this.scopes, children, false);
     }
 
