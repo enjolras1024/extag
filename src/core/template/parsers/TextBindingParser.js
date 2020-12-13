@@ -1,8 +1,9 @@
 // src/core/template/parsers/FragmentBindingParser.js
 
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
+import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 import { BINDING_OPERATORS, BINDING_BRACKETS } from 'src/share/constants'
-import { decodeHTML } from 'src/share/functions'
+import { throwError, decodeHTML } from 'src/share/functions'
 
 var LF_IN_BLANK = /\s*\n\s*/g;
 
@@ -19,58 +20,96 @@ export default {
     return BINDING_LIKE_REGEXP.test(expr);
   },
 
-  /**
+   /**
    * parse an fragment expression that contains  `@{...}`
    * @param {string} expr - fragment expression that contains  `@{...}`
    * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
    * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
    */
-  parse: function(expr, prototype, identifiers) {
-    var i, n, template = [], start = 0, stop;
-    var b0, b1, b2, ct = 0, cc, cb;
+  parse: function parse(expr, prototype, identifiers) {
+    var template = [], start = 0, stop;
+    var n = expr.length, i = 0;
+    var cc, cb, ct = 0, b2;
     var pattern, text;
-    for (i = 0, n = expr.length; i < n; ++i) {
+    while (i < n) {
       cb = cc;
       cc = expr.charCodeAt(i);
-      if (b2) {
-        if (cc === 125 && !b0 && !b1) { // }
-          --ct;
-          if (ct === 0) {
-            if (start < stop) {
-              text = expr.slice(start, stop)
-              text = text.replace(LF_IN_BLANK, ' ');
-              if (text) {
-                text = decodeHTML(text);
-                template.push(text);
+      switch (cc) {
+        case 125: // 125: }
+          if (b2) {
+            --ct;
+            if (ct === 0) {
+              if (start < stop) {
+                text = expr.slice(start, stop)
+                text = text.replace(LF_IN_BLANK, ' ');
+                if (text) {
+                  text = decodeHTML(text);
+                  template.push(text);
+                }
               }
+              if (expr.charCodeAt(stop + 2) === 123 && expr.charCodeAt(i - 1) === 125) {
+                // @{{...}}
+                pattern = DataBindingParser.parse(expr.slice(stop + 3, i - 1), prototype, identifiers);
+                pattern.target = 'frag';
+              } else {
+                // @{...}
+                pattern = DataBindingParser.parse(expr.slice(stop + 2, i), prototype, identifiers);
+                pattern.target = 'text';
+              }
+              template.push(pattern);
+              start = stop = i + 1;
+              b2 = false;
             }
-            if (expr.charCodeAt(stop + 2) === 123 && expr.charCodeAt(i - 1) === 125) {
-              // @{{...}}
-              pattern = DataBindingParser.parse(expr.slice(stop + 3, i - 1), prototype, identifiers);
-              pattern.target = 'frag';
-            } else {
-              // @{...}
-              pattern = DataBindingParser.parse(expr.slice(stop + 2, i), prototype, identifiers);
-              pattern.target = 'text';
-            }
-            template.push(pattern);
-            start = stop = i + 1;
-            b2 = false;
           }
-        } else if (cc === 39) { // 39: '
-          if (!b0) b0 = true; 
-          else if (cb !== 92) b0 = false; // 92: \
-        } else if (cc === 34) { // 34: "
-          if (!b1) b1 = true; 
-          else if (cb !== 92) b1 = false; // 92: \
-        } else if (cc === 123 && !b0 && !b1) {
-          ++ct;
-        } 
-      } else if (cb === 64 && cc === 123) { // @{
-        b2 = true;
-        stop = i-1; 
-        ct = 1;
+          break;
+        case 123: // 123: {
+          if (b2) {
+            if (cb === 64) {
+              throwError("Unclosed @{ .", {
+                code: 1001, 
+                expr: expr
+              });
+            }
+            ++ct;
+          } else {
+            if (cb === 64) { // 64: @
+              stop = i - 1;
+              b2 = true;
+              ct = 1;
+            }
+          }
+          break;
+        case 39: // 39: '
+        case 34: // 34: "
+          i = EvaluatorParser.gotoEnding(cc, expr, i + 1);
+          if (i === n) {
+            throwError("Unclosed " + String.fromCharCode(cc) + " .", {
+              code: 1001, 
+              expr: expr
+            });
+          }
+          break;
+      case 47: // 47: /, maybe regexp
+        if (EvaluatorParser.regexStarts(expr, i)) {
+          i = EvaluatorParser.gotoEnding(cc, expr, i + 1);
+          if (i === n) {
+            throwError("Unclosed " + String.fromCharCode(cc) + " .", {
+              code: 1001, 
+              expr: expr
+            });
+          }
+        }
+        break;
       }
+
+      ++i;
+    }
+
+    if (b2) {
+      throwError("Unclosed @{ .", {
+        code: 1001, 
+        expr: expr
+      });
     }
 
     if (0 < start && start < n) {

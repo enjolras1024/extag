@@ -2,17 +2,22 @@ import Path from 'src/base/Path'
 import Slot from 'src/core/shells/Slot'
 import Output from 'src/core/shells/Output'
 import Fragment from 'src/core/shells/Fragment'
-import Evaluator from 'src/core/template/Evaluator'
 import Expression from 'src/core/template/Expression'
 import HTMXEngine from 'src/core/template/HTMXEngine'
+import FuncEvaluator from 'src/core/template/FuncEvaluator'
+import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 import DataBindingParser from "src/core/template/parsers/DataBindingParser";
+import TextBindingParser from "src/core/template/parsers/TextBindingParser";
 import EventBindingParser from "src/core/template/parsers/EventBindingParser";
+import PrimitiveLiteralParser from 'src/core/template/parsers/PrimitiveLiteralParser'
 import DataBinding from 'src/core/bindings/DataBinding'
+import TextBinding from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import logger from 'src/share/logger'
 import { 
   EXTAG_VNODE,
   CAPITAL_REGEXP,
+  BINDING_OPERATORS
  } from 'src/share/constants'
 import { 
   slice, 
@@ -21,43 +26,45 @@ import {
   hasOwnProp
  } from 'src/share/functions'
 
- function getExprArgs(value) {
-  var type = typeof value;
-  if (type === 'object' && value.__extag_expr__ === Expression) {
-    return value.args;
-  } else if (type === 'string' || type === 'function') {
-    return [value];
-  } else if (Array.isArray(value)) {
-    return value;
+ var DATA_BINDING_MODES = DataBinding.MODES;
+
+function checkExprMode(mode) {
+  if (mode !== BINDING_OPERATORS.DATA && mode !== BINDING_OPERATORS.TEXT) {
+    throwError(mode + ' is not allowed in expr() for data binding');
   }
 }
 
 function parseJsxNode(node, prototype) {
   var props = node.props, value, key, ctor, args;
   if (node.xif) {
-    args = getExprArgs(node.xif);
-    node.xif = parseJsxDataExpr(args, node, prototype);
+    args = node.xif.args;
+    checkExprMode(args[0]);
+    node.xif = parseJsxExpr(args, node, prototype);
   }
   if (node.xfor) {
-    args = getExprArgs(node.xfor[1]);
-    node.xfor[1] = parseJsxDataExpr(args, node, prototype);
+    args = node.xfor[1].args;
+    checkExprMode(args[0]);
+    node.xfor[1] = parseJsxExpr(args, node, prototype);
     node.identifiers = node.identifiers.concat([node.xfor[0]]);
   }
   if (node.xkey) {
-    args = getExprArgs(node.xkey);
-    node.xkey = parseJsxDataExpr(args, node, prototype);
+    args = node.xkey.args;
+    checkExprMode(args[0]);
+    node.xkey = parseJsxExpr(args, node, prototype);
   }
   if (props) {
     // parse expression, and extract style, attrs, classes
     for (key in props) {
       value = props[key];
-      if (typeof value === 'object') {
+      if (value && typeof value === 'object') {
         if (value.__extag_expr__ === Expression) {
-          props[key] = parseJsxDataExpr(value.args, node, prototype);
-        } /*else if (key === 'classes' || key === 'style' || key === 'attrs') {
-          node[key] = value;
+          args = value.args;
+          checkExprMode(args[0]);
+          props[key] = parseJsxExpr(args, node, prototype);
+        } else if (key === 'classes' || key === 'style') {
+          node[key] = parseJsxData(value, node, prototype);
           delete props[key];
-        }*/
+        }
       }
     }
   }
@@ -106,100 +113,146 @@ function parseJsxNode(node, prototype) {
   }
 }
 
-function parseEvaluater(evaluator, prototype, identifiers) {
-  var type = typeof evaluator;
+function parseEvaluater(expr, prototype, identifiers) {
+  var type = typeof expr;
   if (type === 'string') {
-    return EventBindingParser.parse(evaluator, prototype, identifiers);
+    return EvaluatorParser.parse(expr, prototype, identifiers);
   } else if (type === 'function') {
-    return new Evaluator(evaluator);
+    return new FuncEvaluator(expr);
   } else {
     throwError('evaluator must be string or function');
   }
 }
 
-function parseConverters(converters, prototype, identifiers) {
-  for (var i = 0; i < converters.length; ++i) {
-    converters[i] = parseEvaluater(converters[i, prototype, identifiers]);
+function parseConverters(exprs, prototype, identifiers) {
+  var converters = [], converter;
+  for (var i = 0; i < exprs.length; ++i) {
+    converter = parseEvaluater(
+      exprs[i], 
+      prototype, 
+      identifiers
+    );
+    converters.push(converter);
   }
+  return converters;
 }
 
-function parseJsxDataExpr(args, node, prototype) {
-  var target, type = typeof args[0];
-  if (args.length === 1) {
-    if (type === 'string') {
-      return new Expression(DataBinding, 
-        DataBindingParser.parse(args[0], prototype, node.identifiers));
-    } else if (type === 'function') {
-      return new Expression(DataBinding, {
-        mode: 1,
-        evaluator: parseEvaluater(args[0], prototype, node.identifiers)
-      })
-    } else {
-      return args[0]
+function parseJsxData(data, node, prototype) {
+  var key, value;
+  for (key in data) {
+    value = data[key];
+    if (value && typeof value === 'object') {
+      if (value.__extag_expr__ === Expression) {
+        data[key] = parseJsxExpr(value.args, node, prototype);
+      }
     }
-    
-  } else {
-    if (args[0] === '{' && args[args.length - 1] === '}') {
-      args = args.slice(1, 2);
+  }
+  return data;
+}
+function parseJsxExpr(args, node, prototype) {
+  if (args.length < 2) {
+    throwError('Unexpected arguments for expr()');
+  }
+  var mode = args[0];
+  var expr = args[1];
+  var type = typeof expr;
+  var target, pattern, result;
+  if (mode === BINDING_OPERATORS.DATA 
+      || mode === BINDING_OPERATORS.FRAGMENT) {
+    if (mode === BINDING_OPERATORS.FRAGMENT) {
       target = 'frag';
     }
-    if (args[0] === '@') {
-      return new Expression(DataBinding, {
-        mode: 2,
-        path: args[1],
-        evaluator: parseEvaluater(args[2]),
-        identifiers: node.identifiers
-      })
+    if (args.length === 2 && type === 'string') {
+      if (!target && expr[0] === BINDING_OPERATORS.TWO_WAY) {
+        if (!Path.test(expr.slice(1))) {
+          throwError('Invalid two-way binding expression!', {
+            code: 1001,
+            expr: arguments[0],
+            desc: '`' + arguments[0] + '` is not a valid two-way binding expression. Must be a property name or path.'
+          });
+        }
+        pattern = {
+          mode: DATA_BINDING_MODES.TWO_WAY,
+          evaluator: parseEvaluater(expr.slice(1), prototype, node.identifiers)
+        };
+        return new Expression(DataBinding, pattern);
+      }
+      result = PrimitiveLiteralParser.tryParse(expr.trim());
+      if (result != null) {
+        return result;
+      }
+      pattern = DataBindingParser.parse(expr, prototype, node.identifiers);
+      pattern.target = target;
+      return new Expression(DataBinding, pattern);
     } else {
-      var mode = 1;
       switch (args[args.length - 1]) {
-        case '?':
+        case BINDING_OPERATORS.ASSIGN:
+          mode = DATA_BINDING_MODES.ASSIGN;
           args = args.slice(0, -1);
-          mode = 0;
           break;
-        case '!':
+        case BINDING_OPERATORS.ANY_WAY:
+          mode = DATA_BINDING_MODES.ANY_WAY;
           args = args.slice(0, -1);
-          mode = -1;
           break;
-        case '^':
+        case BINDING_OPERATORS.ONE_TIME:
+          mode = DATA_BINDING_MODES.ONE_TIME;
           args = args.slice(0, -1);
-          mode = 3;
+          break;
+        default:
+          mode = DATA_BINDING_MODES.ONE_WAY;
           break;
       }
-      return new Expression(DataBinding, {
+
+      pattern = {
         mode: mode,
         target: target,
-        evaluator: parseEvaluater(args[1], prototype, node.identifiers),
-        converters: args.length === 2 ? null : 
-                    parseConverters(args.slice(2), prototype, node.identifiers)
-      });
+        evaluator: parseEvaluater(expr, prototype, node.identifiers),
+        converters: args.length <= 2 ? null :
+                      parseConverters(args.slice(2), prototype, node.identifiers)
+      };
+      return new Expression(DataBinding, pattern);
     }
-  }
-}
-
-function parseJsxEventExpr(args, node, prototype) {
-  var pattern,  type = typeof args[0];
-  if (type === 'string' && args.length === 1) {
-    pattern = EventBindingParser.parse(args[0], prototype, node.identifiers);
-  } else if (type === 'function') {
-    pattern = {
-      evaluator: new Evaluator(args[0]),
-      modifiers: args.length > 1 ? args.slice(1) : null
-    };
+  } else if (mode === BINDING_OPERATORS.EVENT) {
+    if (type === 'string' && args.length === 2) {
+      pattern = EventBindingParser.parse(expr, prototype, node.identifiers);
+    } else if (type === 'function') {
+      pattern = {
+        evaluator: parseEvaluater(expr, prototype, node.identifiers),
+        modifiers: args.length > 2 ? args.slice(2) : null
+      };
+    } else {
+      throwError('Unexpected arguments for expr()');
+    }
+    return new Expression(EventBinding, pattern);
+  } else if (mode === BINDING_OPERATORS.TEXT) {
+    pattern = [];
+    for (var i = 1; i < args.length; ++i) {
+      expr = args[i];
+      if (expr && typeof expr === 'object' && expr.__extag_expr__) {
+        expr = parseJsxExpr(expr.args, node, prototype);
+      }
+      pattern.push(expr);
+    }
+    return new Expression(TextBinding, pattern);
   } else {
-    pattern = null;
+    throwError('The first argument of expr() should be one of "@", "+", "#", "{}"');
   }
-  return pattern ? new Expression(EventBinding, pattern) : null;
+
 }
 
 function parseJsxEvents(node, prototype) {
   var evt, expr, args, value, events = node.events;
   for (evt in events) {
     value = events[evt];
-    args = getExprArgs(value);
-    expr = parseJsxEventExpr(args, prototype, node.identifiers);
-    if (expr) {
-      events[evt] = expr;
+    if (value && typeof value === 'object' && value.__extag_expr__ === Expression) {
+      args = value.args;
+      if (args[0] !== BINDING_OPERATORS.EVENT) {
+        throwError(args[0] + ' is not allowed in expr() for event binding');
+      }
+      expr = parseJsxExpr(args, node, prototype);
+      if (expr) {
+        events[evt] = expr;
+      }
     }
   }
 }
@@ -220,12 +273,16 @@ function parseJsxChildren(node, prototype) {
         parseJsxChildren(child, prototype);
         continue;
       } else if (child.__extag_expr__ === Expression) {
-        // children[i] = parseJsxDataExpr(child.args, node, prototype);
+        var mode = child.args[0];
+        if (mode !== BINDING_OPERATORS.DATA && 
+            mode !== BINDING_OPERATORS.FRAGMENT) {
+          throwError(mode + ' is not allowed in expr() for text or fragment binding');
+        }
         children[i] = {
           __extag_node__: EXTAG_VNODE,
           useExpr: true,
           type: Expression,
-          expr: parseJsxDataExpr(child.args, node, prototype)
+          expr: parseJsxExpr(child.args, node, prototype)
         };
       }
     }
@@ -388,6 +445,12 @@ var JSXParser = {
    */
   parse: function(template, prototype) {
     var _node = template(node, expr);
+
+    if (_node.__extag_node__ !== EXTAG_VNODE) {
+      throwError('template root must be a tag node');
+    }
+
+    _node.useExpr = true;
     _node.identifiers = ['this'];
     parseJsxNode(_node, prototype);
     parseJsxChildren(_node, prototype);

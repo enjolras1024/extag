@@ -300,7 +300,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
     switch (lastChar) {
       case BINDING_OPERATORS.DATA: // last char is '@'
         key = getPropName(attrName.slice(0, -1));
-        result = PrimitiveLiteralParser.tryParse(attrValue);
+        result = PrimitiveLiteralParser.tryParse(attrValue.trim());
         if (result != null) {
           group[key] = result;
         } else {

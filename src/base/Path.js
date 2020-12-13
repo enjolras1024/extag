@@ -1,10 +1,7 @@
 // src/base/Path.js
 
-// var PATH_DELIMITER = /\[|\]?\./;
-var PATH_DELIMITER_1 = /\./;
-var PATH_DELIMITER_2 = /(\]\.)|\.|\[|\]/g;
-var PATH_REGEXP_1 = /^[$_A-Z][$_A-Z0-9]*(\.[$_A-Z0-9]+)*$/i;
-var PATH_REGEXP_2 = /^[$_A-Z][$_A-Z0-9]*((\[\d+\])|(\.[$_A-Z0-9]+))*$/i;
+var PATH_MATCHER = /^\s*[$_A-Z][$_A-Z0-9]*(\s*\.\s*[$_A-Z0-9]+)*\s*$/i;
+var PATH_SPLITER = /\s*\.\s*/;
 
 /**
  * Find the resource in the scope
@@ -27,23 +24,17 @@ function find(path, scope) {
 }
 
 var Path = {
-  test: function(text) {
-    return PATH_REGEXP_1.test(text);
+  test: function(expr) {
+    return PATH_MATCHER.test(expr);
   },
   /**
    * Parse property path from a string.
-   * @param {string} text - like 'a.b.c' or 'a[0].c'...
+   * @param {string} expr - like 'a.b.c'
    */
-  parse: function parse(text) {
-    var path = null;
-    if (PATH_REGEXP_1.test(text)) {
-      path = text.split(PATH_DELIMITER_1);
-      // path.text = text;
-    } else if (PATH_REGEXP_2.test(text)) {
-      path = text.replace(PATH_DELIMITER_2, ' ').trim().split(' ');
-      // path.text = text;
+  parse: function parse(expr) {
+    if (Path.test(expr)) {
+      return expr.trim().split(PATH_SPLITER);
     }
-    return path;
   },
 
   /**
