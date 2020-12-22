@@ -22,6 +22,7 @@ defineClass({
       });
       
       scopes[0].on('updating', slot.onScopeUpdating.bind(slot));
+      slot.on('updating', slot.onUpdating.bind(slot));
 
       if (template.children) {
         var contents = template.children.slice(0);
@@ -34,7 +35,7 @@ defineClass({
     template: '<x:frag></x:frag>'
   },
 
-  update: function update() {
+  onUpdating: function onUpdating() {
     if (this.hasDirty('collection') || this.hasDirty('contents')) {
       var scopes = this.scopes;
       var contents = this.get('contents');
@@ -49,8 +50,6 @@ defineClass({
       } else {
         this.setChildern([]);
       }
-      
-      Component.prototype.update.call(this);
     }
   },
 
@@ -65,6 +64,7 @@ defineClass({
     if (scopes[0].hasDirty('contents')) {
       collection = [];
       scopeContents = scopes[0].get('contents');
+      collection.scopes = scopeContents.scopes;
       if (scopeContents && scopeContents.length > 0) {
         name = this.get('name') || '';
         for (i = 0, n = scopeContents.length; i < n; ++i) {
