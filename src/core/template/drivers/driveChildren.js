@@ -27,7 +27,7 @@ function matchChild(child, vnode) {
   if (meta.type === TYPE_TEXT && vnode.__extag_node__ !== EXTAG_VNODE) {
     return true;
   }
-  return child.__extag_key__ === vnode.xkey && 
+  return child.__key__ === vnode.xkey && 
           (vnode.type ? child.constructor === vnode.type : 
             (meta.tag === vnode.tag && meta.ns === vnode.ns));
 }
@@ -42,7 +42,7 @@ export function driveContent(target, vnode, scopes) {
   if (isVNode(vnode)) {
     driveProps(target, scopes, vnode.props);
     driveEvents(target, scopes, vnode.events);
-    driveChildren(target, scopes, vnode.children, target instanceof Component);
+    driveChildren(target, scopes, vnode.children, vnode.useExpr, target instanceof Component);
     // if (target instanceof Component && target !== scopes[0]) {
     // } else {
 
@@ -76,10 +76,11 @@ export function createContent(vnode, scopes) {
       content = new ctor(null, scopes, vnode);
     } else {
       content = new Element(vnode.ns ? vnode.ns + ':' + vnode.tag : vnode.tag);
-      
+
       if (vnode.events) {
         driveEvents(content, scopes, vnode.events, useExpr);
       }
+
       if (vnode.props) {
         driveProps(content, scopes, vnode.props, useExpr)
       }
@@ -178,7 +179,7 @@ function collectContents(children, scopes, target) {
       if (!indices) {
         indices = {};
         for (i = oldBeginIndex; i <= oldEndIndex; ++i) {
-          key = oldShells[oldBeginIndex].__key__;
+          key = oldShells[i].__key__;
           if (key) {
             indices[key] = i;
           }
@@ -193,6 +194,7 @@ function collectContents(children, scopes, target) {
       } else {
         content = createContent(newBeginVNode, scopes, false);
         if (content) {
+          content.__key__ = key;
           contents[newBeginIndex] = content;
         } else {
           throw new Error('Can not create content from ', newBeginVNode);
@@ -211,6 +213,7 @@ function collectContents(children, scopes, target) {
       content = createContent(newBeginVNode, scopes, false);
       if (content) {
         contents[newBeginIndex] = content;
+        content.__key__ = newBeginVNode.xkey;
       } else {
         throw new Error('Can not create content from ', newBeginVNode);
       }
