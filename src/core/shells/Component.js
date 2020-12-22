@@ -128,7 +128,7 @@ defineClass({
       if (!_template) {
         try {
           if (!constructor.template) {
-            constructor.template = '<x:frag></x:frag>';
+            constructor.template = '<x:frag children@="render(_props) ^"></x:frag>';//'<x:frag></x:frag>';
           }
           if (typeof constructor.template === 'string') {
             _template = HTMXEngine.parseHTMX(constructor.template, prototype);
@@ -183,7 +183,7 @@ defineClass({
       try {
         HTMXEngine.driveComponent(component, scopes, template, props, _template);
         // if (typeof component.render === 'function' && 
-        //   constructor.template == '<x:frag></x:frag>') {
+        //   constructor.template == '<x:frag children@="render(_props) ^"></x:frag>') {
         //   component.$meta.render = true;
         //   component.bind(component, '_vnodes', function() {
         //     return component.render(component._props);
@@ -352,27 +352,29 @@ defineClass({
     } /*else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
       this._parent.invalidate(FLAG_CHANGED_CHILDREN);
     }*/ 
-    // else {
-    //   if (this.__props && this.__props.hasDirty('children')) {
-    //     var children = this.__props.get('children') || [];
-    //     DirtyMarker.clean(this.__props, 'children');
-    //     if (!Array.isArray(children)) {
-    //       children = [children];
-    //     }
-    //     HTMXEngine.driveChildren(this, [this], children, false);
+    else {
+      if (this.__props && this.__props.hasDirty('children')) {
+        var children = this.__props.get('children') || [];
+        DirtyMarker.clean(this.__props, 'children');
+        if (!Array.isArray(children)) {
+          children = [children];
+        }
+        HTMXEngine.driveChildren(this, [this], children, false);
+        children.length = 0;
+      }
+      // if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+      //   this._parent.invalidate(FLAG_CHANGED_CHILDREN);
+      // }
+    }
+
+    // if (this.render && typeof this.render === 'function') {
+    //   var children = this.render(this._props) || [];
+    //   if (!Array.isArray(children)) {
+    //     children = [children];
     //   }
-    //   // if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-    //   //   this._parent.invalidate(FLAG_CHANGED_CHILDREN);
-    //   // }
+    //   HTMXEngine.driveChildren(this, [this], children, false, false);
     // }
 
-    if (this.render && typeof this.render === 'function') {
-      var children = this.render(this._props) || [];
-      if (!Array.isArray(children)) {
-        children = [children];
-      }
-      HTMXEngine.driveChildren(this, [this], children, false, false);
-    }
     // if (this.$meta.render) {
     //   var children;
     //   if (this.hasDirty('_vnodes')) {

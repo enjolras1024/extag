@@ -175,12 +175,14 @@ export default {
     var resources = prototype.constructor.resources;
     var path = Path.parse(expr);
     if (path && path.length) {
-      path.from = identifiers.indexOf(path[0]);
-      if (path.from < 0 && (!resources|| !hasOwnProp.call(resources, path[0]))) {
-        path.unshift('this');
-        path.from = 0;
+      if (!hasOwnProp.call(JS_KEYWORD_MAP, path[0]) || path[0] === 'this') {
+        path.from = identifiers.indexOf(path[0]);
+        if (path.from < 0 && (!resources|| !hasOwnProp.call(resources, path[0]))) {
+          path.unshift('this');
+          path.from = 0;
+        }
+        return new PathEvaluator(path, expr);
       }
-      return new PathEvaluator(path, expr);
     }
 
     var args = identifiers.slice(1);

@@ -37,7 +37,7 @@ defineClass({
       fragment.scopes = scopes;
       
       if (scopes && template) {
-        template.connect('_vnodes', fragment, scopes);
+        template.connect('children', fragment, scopes);
       }
     }
 
@@ -60,13 +60,14 @@ defineClass({
     //   this.onUpdating();
     // }
 
-    if (this.scopes && this.hasDirty('_vnodes')) {
-      var children = this.get('_vnodes') || [];
-      DirtyMarker.clean(this, '_vnodes');
+    if (this.scopes && this.hasDirty('children')) {
+      var children = this.get('children') || [];
+      DirtyMarker.clean(this, 'children');
       if (!Array.isArray(children)) {
         children = [children];
       }
       HTMXEngine.driveChildren(this, this.scopes, children, false);
+      children.length = 0;
     }
 
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
