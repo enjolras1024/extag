@@ -323,7 +323,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         }
         if (result) {
           if (result.length === 1) {
-            group[key] = new Expression(DataBinding, result[0]);
+            group[key] = result[0];
           } else {
             group[key] = new Expression(TextBinding, result);
           }
@@ -453,10 +453,10 @@ function createExprNode(binding, pattern) {
     __extag_node__: EXTAG_VNODE,
     useExpr: true,
     type: Expression,
-    expr: new Expression(binding, pattern)
+    expr: pattern instanceof Expression ? 
+          pattern : new Expression(binding, pattern)
   }
 }
-
 
 function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
   var children = parent.children || [], result;
@@ -482,23 +482,23 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
       throw e;
     }
     if (result) {
-      if (result.length === 1 && typeof result[0] === 'object') {
+      if (result.length === 1 && (result[0] instanceof Expression)) {
         children.push(createExprNode(DataBinding, result[0]));
       } else {
         var i = -1, j = 0 , n = result.length;
         for (; j < n; ++j) {
-          var pattern = result[j];
-          if (typeof pattern === 'object' && pattern.target === 'frag') {
+          var expr = result[j];
+          if ((expr instanceof Expression) && expr.pattern.target === 'frag') {
             if (j > i) {
               if (j - i > 1) {
                 children.push(createExprNode(TextBinding, result.slice(i, j)));
-              } else if (typeof result[i] === 'object') {
+              } else if (result[i] instanceof Expression) {
                 children.push(createExprNode(DataBinding, result[i]));
               } else {
                 children.push(result[i]);
               }
             }
-            children.push(createExprNode(DataBinding, pattern));
+            children.push(createExprNode(DataBinding, expr));
             i = -1;
           } else if (i < 0) {
             i = j;
@@ -507,7 +507,7 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
         if (i >= 0 && j > i) {
           if (j - i > 1) {
             children.push(createExprNode(TextBinding, result.slice(i, j)));
-          } else if (typeof result[i] === 'object') {
+          } else if (result[i] instanceof Expression) {
             children.push(createExprNode(DataBinding, result[i]));
           } else {
             children.push(result[i]);

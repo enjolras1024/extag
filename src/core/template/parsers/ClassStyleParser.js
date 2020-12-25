@@ -87,7 +87,7 @@ export default {
       }
       if (result) {
         if (result.length === 1) {
-          group[name] = new Expression(DataBinding, result[0]);
+          group[name] = result[0];
         } else if (forStyle) {
           group[name] = new Expression(TextBinding, result);
         } else {

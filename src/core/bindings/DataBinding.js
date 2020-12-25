@@ -8,17 +8,30 @@ import { defineClass } from 'src/share/functions'
 
 var MODES = { ASSIGN: -1, ONE_TIME: 0, ONE_WAY: 1, TWO_WAY: 2, ANY_WAY: 3 };
 
-function applyConverters(converters, scopes, value) {
+export function applyConverters(converters, scopes, value) {
   for (var i = 0; i < converters.length; ++i) {
     value = converters[i].execute(scopes, value);
   }
   return value;
 }
 
+export function applyEvaluator(pattern, scopes) {
+  if (pattern.converters && pattern.converters.length) {
+    return applyConverters(
+      pattern.converters, 
+      scopes, 
+      pattern.evaluator.execute(scopes)
+    );
+  } else {
+    return pattern.evaluator.execute(scopes);
+  }
+}
+
 function DataBinding(pattern) {
-  this.mode = pattern.mode;
-  this.evaluator = pattern.evaluator;
-  this.converters = pattern.converters;
+  this.pattern = pattern;
+  // this.mode = pattern.mode;
+  // this.evaluator = pattern.evaluator;
+  // this.converters = pattern.converters;
 }
 
 defineClass({
@@ -36,31 +49,36 @@ defineClass({
     this.target = target;
     this.targetProp = property;
 
-    if (this.mode === MODES.ASSIGN) {
-      this.target.set(this.targetProp, this.evaluate());
+    var pattern = this.pattern;
+
+    if (pattern.mode === MODES.ASSIGN) {
+      this.target.set(this.targetProp, applyEvaluator(pattern, scopes));
       return;
     }
 
     this.execute = this.execute.bind(this);
     this.invalidate = this.invalidate.bind(this);
 
-    if (this.mode === MODES.TWO_WAY) {
+    if (pattern.mode === MODES.TWO_WAY) {
       this.backward = this.backward.bind(this);
       if (Accessor.getAttrDesc(this.target, this.targetProp)) {
         this.target.on('changed', this.backward);
       }
     }
 
-    if (this.mode === MODES.ANY_WAY) {
-      this.scopes[0].on('updating', this.execute);
-      this.target.set(this.targetProp, this.evaluate());
-    } else {
-      this.flag = 1;
-      this.execute();
-      if (this.keys && this.keys.length) {
-        scopes[0].on('updating', this.execute);
-      }
-    }
+    // if (pattern.mode === MODES.ANY_WAY) {
+    //   this.scopes[0].on('updating', this.execute);
+    //   this.target.set(this.targetProp, applyEvaluator(pattern, scopes));
+    // } else {
+    //   this.flag = 1;
+    //   this.execute();
+    //   if (this.keys && this.keys.length) {
+    //     scopes[0].on('updating', this.execute);
+    //   }
+    // }
+    this.flag = 1;
+    this.execute();
+    scopes[0].on('updating', this.execute);
 
     Binding.record(target, this);
   },
@@ -76,47 +94,48 @@ defineClass({
   destroy: function destroy() {
     var scopes = this.scopes;
 
-    if (this.mode === MODES.TWO_WAY)  {
+    if (this.pattern.mode === MODES.TWO_WAY)  {
       if (Accessor.getAttrDesc(this.target, this.targetProp)) {
         this.target.off('changed', this.backward);
       }
     }
 
-    if (this.keys && this.keys.length) {
+    // if (this.keys && this.keys.length) {
       scopes[0].off('updating', this.execute);
-    }
+    // }
     
     Dependency.clean(this);
   },
 
-  evaluate: function() {
-    if (this.converters && this.converters.length) {
-      return applyConverters(
-        this.converters, 
-        this.scopes, 
-        this.evaluator.execute(this.scopes)
-      );
-    } else {
-      return this.evaluator.execute(this.scopes);
-    }
-  },
+  // evaluate: function() {
+  //   if (this.converters && this.converters.length) {
+  //     return applyConverters(
+  //       this.converters, 
+  //       this.scopes, 
+  //       this.evaluator.execute(this.scopes)
+  //     );
+  //   } else {
+  //     return this.evaluator.execute(this.scopes);
+  //   }
+  // },
 
   execute: function execute() {
-    if (this.mode === MODES.ANY_WAY) {
-      this.target.set(this.targetProp, this.evaluate());
-      return;
-    }
-    if (this.flag === 0) {
+    var pattern = this.pattern;
+    // if (pattern.mode === MODES.ANY_WAY) {
+    //   this.target.set(this.targetProp, applyEvaluator(pattern, this.scopes));
+    //   return;
+    // }
+    if (this.flag === 0 && pattern.mode !== MODES.ANY_WAY) {
       return;
     }
 
     Dependency.begin(this);
-    var value = this.evaluate();
+    var value = applyEvaluator(pattern, this.scopes);
     Dependency.end();
     this.target.set(this.targetProp, value);
 
     this.flag = 0;
-    if (this.mode === MODES.ONE_TIME) {
+    if (pattern.mode === MODES.ONE_TIME) {
       this.destroy();
     }
   },
@@ -125,7 +144,7 @@ defineClass({
     if (key === this.targetProp) {
       var value = this.target[this.targetProp];
 
-      var path = this.evaluator.path;
+      var path = this.pattern.evaluator.path;
       var from = path.from;
       var n = path.length;
       var scopes = this.scopes;
@@ -149,7 +168,7 @@ defineClass({
   },
 
   invalidate: function invalidate(key) {
-    if (this.keys.indexOf(key) >= 0) {
+    if (this.keys && this.keys.indexOf(key) >= 0) {
       this.scopes[0].invalidate();
       this.flag = 1;
     }
