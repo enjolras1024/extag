@@ -7,9 +7,17 @@ import {
   namespaceURIs
 } from './config'
 
-import {
-  toKebabCase
-} from './utils'
+import { renderClassName } from "./classes";
+
+(function() {
+  var desc;
+
+  desc = DOM_PROPERTY_DESCRIPTORS.className;
+  desc.render = renderClassName;
+
+  desc = DOM_PROPERTY_DESCRIPTORS['class'];
+  desc.render = renderClassName;
+})();
 
 function renderProps($skin, props, dirty) {
   var key, desc, index, value, nsURI;
@@ -19,7 +27,9 @@ function renderProps($skin, props, dirty) {
       value = props[key];
       desc = DOM_PROPERTY_DESCRIPTORS[key];
       if (desc) {
-        if (desc.mustUseProperty) {
+        if (desc.render) {
+          desc.render($skin, value, dirty[key]);
+        } else if (desc.mustUseProperty) {
           $skin[desc.propertyName] = value;
         } else if (value != null) {
           $skin.setAttribute(desc.attributeName, value);

@@ -19,28 +19,60 @@ import {
 
 import { renderProps } from "./props";
 import { renderStyle } from "./style";
-import { renderClasses } from "./classes";
+import { toClassName } from "./classes";
 import { renderChildren } from "./children";
 
-function mergeProps(outerProps, innerProps) {
-  if (innerProps) {
-    var key, props = {};
-    assign(props, outerProps);
-    for (key in innerProps) {
-      if (props[key] == null) {
-        props[key] = innerProps[key];
-      }
-    }
-    return props;
+function mergeClasses(outerClasses, innerClasses) {
+  var outerClassName = toClassName(outerClasses);
+  var innerClassName = toClassName(innerClasses);
+  if (!outerClassName) {
+    return innerClassName;
   }
-  return outerProps;
+  if (!innerClassName) {
+    return outerClassName;
+  }
+  return innerClassName + ' ' + outerClassName;
+}
+
+function mergeProps(outerProps, innerProps) {
+  if (!innerProps) {
+    return outerProps;
+  }
+  if (!outerProps) {
+    return innerProps;
+  }
+  var key, props = {};
+  assign(props, outerProps);
+  for (key in innerProps) {
+    if (key === 'class') {
+      props[key] = mergeClasses(outerProps[key], innerProps[key]);
+    } else if (!(key in outerProps)) {
+      props[key] = innerProps[key];
+    }
+  }
+  return props;
 }
 
 function mergeDirty(outerDirty, innerDirty) {
-  if (innerDirty) {
-    return assign({}, innerDirty, outerDirty);
+  if (!innerDirty) {
+    return outerDirty;
   }
-  return outerDirty;
+  if (!outerDirty) {
+    return innerDirty;
+  }
+
+  var key, dirty = {};
+  assign(dirty, outerDirty);
+  for (key in innerDirty) {
+    if (!(key in outerDirty)) {
+      dirty[key] = innerDirty[key];
+    }
+  }
+  return dirty;
+  // if (innerDirty) {
+  //   return assign({}, innerDirty, outerDirty);
+  // }
+  // return outerDirty;
 }
 
 function invokeCommands($skin, commands) {
@@ -116,58 +148,21 @@ function renderShell($skin, shell) {
     if (props && dirty) {
       renderProps($skin, props, dirty);
     }
-
-    var shadowMode = props.shadowMode;
-
-    // var attrs = shell._attrs;
-    var style = shell._style;
-    var classes = shell._classes;
-    var children = shell._children;
-
-    // if (attrs) {
-    //   props = attrs._props;
-    //   dirty = attrs._dirty;
-    // } else {
-    //   props = null;
-    //   dirty = null;
-    // }
-    // if (shell.__attrs) {
-    //   props = mergeProps(props, shell.__attrs && shell.__attrs._props);
-    //   dirty = mergeDirty(dirty, shell.__attrs && shell.__attrs._dirty);
-    // }
-    // if (props && dirty) {
-    //   renderAttrs($skin, props, dirty);
-    // }
     
-    if (style) {
-      props = style._props;
-      dirty = style._dirty;
-    } else {
-      props = null;
-      dirty = null;
-    }
+    var shadowMode = props.shadowMode;
+    var children = shell._children;
+    var style = shell._style;
+    
+    props = style && style._props;
+    dirty = style && style._dirty;
     if (shell.__style) {
       props = mergeProps(props, shell.__style._props);
       dirty = mergeDirty(dirty, shell.__style._dirty);
     }
     if (props && dirty) {
       renderStyle($skin, props, dirty);
-    }
-
-    if (classes) {
-      props = classes._props;
-      dirty = classes._dirty;
-    } else {
-      props = null;
-      dirty = null;
-    }
-    if (shell.__classes) {
-      props = mergeProps(props, shell.__classes._props);
-      dirty = mergeDirty(dirty, shell.__classes._dirty);
-    }
-    if (props && dirty) {
-      renderClasses($skin, props, dirty);
-    }        
+    }      
+    
     
     if (children && (shell.$flag & FLAG_CHANGED_CHILDREN)) {
       if (!shadowMode || !$skin.attachShadow) {

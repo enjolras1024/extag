@@ -21,8 +21,8 @@ import DataBinding from 'src/core/bindings/DataBinding'
 import TextBinding  from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import HTMXEngine from 'src/core/template/HTMXEngine'
+import StyleParser from 'src/core/template/parsers/StyleParser'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
-import ClassStyleParser from 'src/core/template/parsers/ClassStyleParser'
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
 import TextBindingParser from 'src/core/template/parsers/TextBindingParser'
 import EventBindingParser from 'src/core/template/parsers/EventBindingParser'
@@ -91,7 +91,7 @@ var DIRECTIVES = {
   'x:name': true,
   'x:slot': true,
   'x:type': true,
-  'x:class': true,
+  // 'x:class': true,
   'x:style': true
 }
 
@@ -121,10 +121,8 @@ function isSelfClosingTag(tagName) {
 
 function parseDirective(name, expr, node, prototype, identifiers) {
   var result;
-  if (name === 'x:class') {
-    node.classes = ClassStyleParser.parse(expr, prototype, identifiers, false);
-  } else if (name === 'x:style') {
-    node.style = ClassStyleParser.parse(expr, prototype, identifiers, true);
+  if (name === 'x:style') {
+    node.style = StyleParser.parse(expr, prototype, identifiers);
   } else if (name === 'x:type') {
     // if (node.tag === 'x:output') {
     //   // <x:output x:type="Buuton"/> just like <input type="button">

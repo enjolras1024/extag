@@ -7,10 +7,8 @@ import Schedule from 'src/core/Schedule'
 import Dependency from 'src/core/Dependency'
 import Shell from 'src/core/shells/Shell'
 import Parent from 'src/core/shells/Parent'
-import Element from 'src/core/shells/Element'
 import Binding from 'src/core/bindings/Binding'
 import HTMXEngine from 'src/core/template/HTMXEngine'
-// import config from 'src/share/config'
 import logger from 'src/share/logger'
 import { 
   defineProp, 
@@ -31,12 +29,10 @@ import {
 } from 'src/share/constants'
 import captureError from 'src/core/captureError'
 
-var shellProto = Shell.prototype;
-
 var KEYS_PRESERVED = [
   '$meta', '$flag', '$skin', 
-  'style', 'classes', 'contents', 'children', 
-  '_dirty', '_props', '_style', '_classes', '_children', '_vnodes'
+  'style', 'contents', 'children', 
+  '_dirty', '_props', '_style', '_children'
 ];
 var METHODS_PRESERVED = [
   'on', 'off', 'emit',
@@ -61,17 +57,6 @@ defineClass({
   statics: {
     
     __extag_component_class__: true,
-
-    // /**
-    //  * Creating a component
-    //  *
-    //  * @param {Function}  ctor        - component constructor or class
-    //  * @param {Object}    props       - component attributes and DOM properties
-    //  * @returns {Component}
-    //  */
-    // create: function create(ctor, props) {
-    //   return new ctor(props);
-    // },
 
     destroy: function destroy(component) {
       if (component.$flag & FLAG_DESTROYED) { return; }
@@ -128,7 +113,7 @@ defineClass({
       if (!_template) {
         try {
           if (!constructor.template) {
-            constructor.template = '<x:frag children@="render(_props) ^"></x:frag>';//'<x:frag></x:frag>';
+            constructor.template = '<x:frag children@="this.render(this._props) ^"></x:frag>';
           }
           if (typeof constructor.template === 'string') {
             _template = HTMXEngine.parseHTMX(constructor.template, prototype);
@@ -152,7 +137,7 @@ defineClass({
       // 4. initialize the component as normal element
       Shell.initialize(component, _template.tag !== 'x:frag' ? TYPE_ELEM : TYPE_FRAG, _template.tag, _template.ns || '');
 
-      Element.defineMembers(component);
+      // Element.defineMembers(component);
 
       // 6. setup
       var model;
@@ -182,13 +167,6 @@ defineClass({
       // building
       try {
         HTMXEngine.driveComponent(component, scopes, template, props, _template);
-        // if (typeof component.render === 'function' && 
-        //   constructor.template == '<x:frag children@="render(_props) ^"></x:frag>') {
-        //   component.$meta.render = true;
-        //   component.bind(component, '_vnodes', function() {
-        //     return component.render(component._props);
-        //   });
-        // }
       } catch (e) {
         captureError(e, component, 'building');
       }
@@ -230,41 +208,47 @@ defineClass({
    */
   set: function set(key, val) {
     var desc = Accessor.getAttrDesc(this, key);//this.__extag_descriptors__[key];
-    // DOM property, stored in _props
-    if (!desc) {
-      return shellProto.set.call(this, key, val);
-    }
-    // validation in development 
-    // eslint-disable-next-line no-undef
-    if (__ENV__ === 'development') {
-      Validator.validate(this, key, val, true);
-    }
-    // // Unbindable custom prpoerty
-    // if (!desc.bindable) {
-    //   this[key] = val;
-    //   return;
-    // }
-    // Custom attribute, stored in _props
     var props = this._props, old;
-
-    if (!desc.get) { // usually, no custom `get` and `set`, checking if the property value is changed firstly.
+    if (desc) {
+      // validation in development 
+      // eslint-disable-next-line no-undef
+      if (__ENV__ === 'development') {
+        Validator.validate(this, key, val, true);
+      }
+      // // Unbindable custom prpoerty
+      // if (!desc.bindable) {
+      //   this[key] = val;
+      //   return;
+      // }
+      // Custom attribute, stored in _props
+      if (!desc.get) { // usually, no custom `get` and `set`, checking if the property value is changed firstly.
+        old = props[key];
+        if (old !== val) {
+          props[key] = val;
+          this.invalidate();
+          this.emit('changed', key, val);
+          // DirtyMarker.check(this, key, val, old);
+        }
+      } else if (desc.set) { // else, `get`, `set` and `get` again, then check if the property value is changed.
+        old = desc.get.call(this, props);
+        desc.set.call(this, val, props);
+        val = desc.get.call(this, props);
+        if (old !== val) {
+          this.invalidate();
+          this.emit('changed', key, val);
+          // DirtyMarker.check(this, key, val, old);
+        }
+      }
+    } else {
+      // DOM property, stored in _props
+      // shellProto.set.call(this, key, val);
       old = props[key];
       if (old !== val) {
         props[key] = val;
-        this.invalidate();
-        this.emit('changed', key, val);
-      }
-    } else if (desc.set) { // else, `get`, `set` and `get` again, then check if the property value is changed.
-      old = desc.get.call(this, props);
-      desc.set.call(this, val, props);
-      val = desc.get.call(this, props);
-      if (old !== val) {
-        this.invalidate();
-        this.emit('changed', key, val);
+        this.invalidate(FLAG_CHANGED_CACHE);
+        DirtyMarker.check(this, key, val, old);
       }
     }
-
-    // return this;
   },
 
   bind: function(target, property, collect, reflect) {
@@ -282,52 +266,6 @@ defineClass({
     }
   },
 
-  // /**
-  //  * attach a skin to this shell.
-  //  * You should use this method for a root component in browser. 
-  //  * For the child texts, elements and components, the viewEngine (ExtagSkin as default) help them attach the skins.
-  //  * On the server-side, the shell do not need to attach some skin, since there is no skin on server-side actually.
-  //  * @param {HTMLElement} $skin
-  //  */
-  // attach: function attach($skin) {
-  //   if (shellProto.attach.call(this, $skin)) {
-  //     try {
-  //       this.emit('attached', $skin);
-  //     } catch (e) {
-  //       captureError(e, this, 'attached');
-  //     }
-  //     // if (this.onAttached) {
-  //     //   this.onAttached($skin);
-  //     // }
-  //     return true;
-  //   }
-  //   return false;
-  // },
-
-  // /**
-  //  * detach the skin from this shell, and destroy itself firstly.
-  //  * You can config('prevent-detach', true) to prevent detaching and destroying.
-  //  * @param {boolean} force - if not, detaching can be prevented, so this shell and the skin can be reused.
-  //  */
-  // detach: function detach(force) {
-  //   if (Shell.prototype.detach.call(this, force)) {
-  //     if (this.$skin) {
-  //       try {
-  //         this.emit('detached', this.$skin);
-  //       } catch (e) {
-  //         captureError(e, this, 'detached');
-  //       }
-  //     }
-  //     try {
-  //       this.emit('destroyed');
-  //     } catch (e) {
-  //       captureError(e, this, 'destroyed');
-  //     }
-  //     return true;
-  //   }
-  //   return false;
-  // },
-
   /**
    * Update this shell and append it to the schedule for digesting.
    */
@@ -335,9 +273,7 @@ defineClass({
     if ((this.$flag & FLAG_WAITING_UPDATING) === 0) {
       return;
     }
-    // if (this.$flag === FLAG_NORMAL) {
-    //   return false;
-    // }
+
     try {
       this.emit('updating');
     } catch (e) {
@@ -362,33 +298,7 @@ defineClass({
         HTMXEngine.driveChildren(this, [this], children, false);
         children.length = 0;
       }
-      // if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-      //   this._parent.invalidate(FLAG_CHANGED_CHILDREN);
-      // }
     }
-
-    // if (this.render && typeof this.render === 'function') {
-    //   var children = this.render(this._props) || [];
-    //   if (!Array.isArray(children)) {
-    //     children = [children];
-    //   }
-    //   HTMXEngine.driveChildren(this, [this], children, false, false);
-    // }
-
-    // if (this.$meta.render) {
-    //   var children;
-    //   if (this.hasDirty('_vnodes')) {
-    //     DirtyMarker.clean(this, '_vnodes');
-    //     children = this.get('_vnodes') || [];
-    //   } else {
-    //     children = this.render(this._props) || [];
-    //   }
-      
-    //   if (!Array.isArray(children)) {
-    //     children = [children];
-    //   }
-    //   HTMXEngine.driveChildren(this, [this], children, false, false);
-    // }
 
     DirtyMarker.clean(this, 'contents');
 
@@ -406,11 +316,7 @@ defineClass({
       }
       this.$flag |= FLAG_WAITING_DIGESTING;
       Schedule.insertDigestQueue(this);
-      // this.digest();
     }
-
-    // this.$flag ^= FLAG_WAITING_UPDATING;
-    // this.digest();
   },
 
   /**
@@ -420,14 +326,7 @@ defineClass({
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       return;
     }
-    // if (this.$flag === FLAG_NORMAL) {
-    //   return false;
-    // }
-    // if (this.$meta.type !== 0) {
-    //   elementPropto.digest.call(this);
-    // } else {
-    //   fragmentProto.digest.call(this);
-    // }
+
     if (this.$skin && this.$meta.type !== 0 && (this.$flag & FLAG_SHOULD_RENDER_TO_VIEW)) {
       var viewEngine = Shell.getViewEngine(this);
 
@@ -435,13 +334,8 @@ defineClass({
  
       DirtyMarker.clean(this);
   
-      // this._attrs && DirtyMarker.clean(this._attrs);
       this._style && DirtyMarker.clean(this._style);
-      this._classes && DirtyMarker.clean(this._classes);
-
-      // this.__attrs && DirtyMarker.clean(this.__attrs);
       this.__style && DirtyMarker.clean(this.__style);
-      this.__classes && DirtyMarker.clean(this.__classes);
 
       if (this._commands) {
         this._commands = null;

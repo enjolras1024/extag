@@ -88,6 +88,7 @@ var Extag = {
 
   // models
   Model: Model,
+  Cache: Cache,
   
   
   // shells
@@ -120,8 +121,6 @@ if (__TEST__) {
     Generator: Generator,
     Path: Path,
     DirtyMarker: DirtyMarker,
-
-    Cache: Cache,
 
     FuncEvaluator: FuncEvaluator,
     PathEvaluator: PathEvaluator,

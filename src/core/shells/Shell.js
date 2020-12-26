@@ -3,6 +3,7 @@
 import Watcher from 'src/base/Watcher'
 import Accessor from 'src/base/Accessor'
 import DirtyMarker from 'src/base/DirtyMarker'
+import Cache from 'src/core/models/Cache'
 import Schedule from 'src/core/Schedule'
 import config from 'src/share/config'
 import logger from 'src/share/logger'
@@ -10,6 +11,7 @@ import { VIEW_ENGINE } from 'src/share/constants'
 import { 
   slice, 
   hasOwnProp, 
+  defineProp,
   defineClass 
 } from 'src/share/functions'
 import {
@@ -114,13 +116,6 @@ defineClass({
    * detach the skin from this shell, and destroy itself firstly.
    */
   detach: function detach() {
-    // var parent = this._parent;
-    // if (parent && !parent._parent) {
-    //   this._parent = null;
-    //   parent.detach();
-    //   return;
-    // }
-
     if (this.$owner) {
       this.$owner = null;
     }
@@ -134,14 +129,6 @@ defineClass({
       this.$skin = null;
     }
   },
-
-  // getSkin: function getSkin() {
-  //   return this.$skin;
-  // },
-
-  // getParent: function getParent(actual) {
-  //   return actual ? Parent.findParent(this) : this._parent;
-  // },
 
   /**
    * return this shell's name, tag and guid.
@@ -330,4 +317,20 @@ defineClass({
       }
     }
   }
+});
+
+defineProp(Shell.prototype, 'style', {
+  get: function() {
+    if (!this._style) {
+      this._style = new Cache(this);
+      // defineProp(this, '_style', {
+      //   value: new Cache(this), 
+      //   configurable: true
+      // });
+    }
+    return this._style;
+  }//,
+  // set: function(value) {
+  //   resetCache(this.style, value);
+  // }
 });

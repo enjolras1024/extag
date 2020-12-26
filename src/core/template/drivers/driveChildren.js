@@ -84,14 +84,8 @@ export function createContent(vnode, scopes) {
       if (vnode.props) {
         driveProps(content, scopes, vnode.props, useExpr)
       }
-      // if (vnode.attrs) {
-      //   driveProps(content.attrs, scopes, vnode.attrs, useExpr);
-      // }
       if (vnode.style) {
         driveProps(content.style, scopes, vnode.style, useExpr);
-      }
-      if (vnode.classes) {
-        driveProps(content.classes, scopes, vnode.classes, useExpr);
       }
       if (vnode.children) {
         driveChildren(content, scopes, vnode.children, useExpr);
@@ -261,22 +255,6 @@ function flattenVNodes(children, array, ns) {
   }
   return array ? array : children;
 }
-
-// function driveChildren(target, scopes, children, useExpr) { 
-//   var contents;
-
-//   if (useExpr) {
-//     contents = createContents(children, scopes);
-//   } else {
-//     contents = collectContents(children, scopes, target);
-//   }
-  
-//   if (target instanceof Component && target !== scopes[0]) {
-//     target.setContents(contents);
-//   } else {
-//     target.setChildren(contents);
-//   }
-// }
 
 function driveChildren(target, scopes, children, useExpr, areContents) {
   var contents;

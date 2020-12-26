@@ -7,7 +7,6 @@ import HTMXEngine from 'src/core/template/HTMXEngine'
 import FuncEvaluator from 'src/core/template/FuncEvaluator'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 import DataBindingParser from "src/core/template/parsers/DataBindingParser";
-import TextBindingParser from "src/core/template/parsers/TextBindingParser";
 import EventBindingParser from "src/core/template/parsers/EventBindingParser";
 import PrimitiveLiteralParser from 'src/core/template/parsers/PrimitiveLiteralParser'
 import DataBinding from 'src/core/bindings/DataBinding'
@@ -61,7 +60,7 @@ function parseJsxNode(node, prototype) {
           args = value.args;
           checkExprMode(args[0]);
           props[key] = parseJsxExpr(args, node, prototype);
-        } else if (key === 'class' || key === 'style') {
+        } else if (key === 'style') {
           node[key] = parseJsxData(value, node, prototype);
           delete props[key];
         }
@@ -402,17 +401,6 @@ function node(type, options, children) {
       children = [children];
     }
     node.children = children;
-
-    // if (node.props) {
-    //   props = node.props;
-    // } else {
-    //   props = node.props = {};
-    // }
-    // if (node.type) {
-    //   props.contents = children;
-    // } else {
-    //   props.children = children;
-    // }
   }
 
   return node;

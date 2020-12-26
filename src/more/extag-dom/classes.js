@@ -2,30 +2,38 @@ import {
   hasOwnProp
 } from 'src/share/functions'
 
-function renderClasses($skin, classes, dirty) {
-  var key, classList = $skin.classList;
-  // if (!dirty) { return; }
-  if (classList) {
-    for (key in dirty) {
-      if (hasOwnProp.call(dirty, key)) {
-        if (classes[key]) {
-          classList.add(key);
-        } else {
-          classList.remove(key);
+function toClassName(classes) {
+  if (classes) {
+    var type = typeof classes;
+    if (type === 'string') {
+      return classes;
+    }
+    if (Array.isArray(classes)) {
+      return classes.join(' ');
+    }
+    if (type === 'object') {
+      var names = [];
+      for (var name in classes) {
+        if (classes[name] && 
+            hasOwnProp.call(classes, name)) {
+          names.push(name);
         }
       }
+      return names.join(' ');
     }
-  } else {
-    var names = [];
-    for (key in classes) {
-      if (hasOwnProp.call(classes, key) && classes[key]) {
-        names.push(key);
-      }
-    }
-    $skin.setAttribute('class', names.join(' '));
+  }
+  return '';
+}
+
+function renderClassName($skin, newValue, oldValue) {
+  newValue = toClassName(newValue);
+  oldValue = toClassName(oldValue);
+  if (newValue !== oldValue) {
+    $skin.setAttribute('class', newValue);
   }
 }
 
 export {
-  renderClasses
+  toClassName,
+  renderClassName
 }
