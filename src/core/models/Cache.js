@@ -3,7 +3,7 @@
 import Accessor from 'src/base/Accessor'
 import DirtyMarker from 'src/base/DirtyMarker'
 import { FLAG_CHANGED_CACHE } from 'src/share/constants'
-import { defineClass } from 'src/share/functions'
+import { defineClass, hasOwnProp } from 'src/share/functions'
 
 var EMPTY_OWNER = {
   invalidate: function() {}
@@ -39,16 +39,28 @@ defineClass({
   },
 
   reset: function(props) {
-    var _props = this._props, key;
+    var _props = this._props, value, key;
     if (_props) {
       for (key in _props) {
-        if (!props || !(key in props)) {
-          this.set(key, null);
+        if (hasOwnProp.call(_props, key)) {
+          if (!props || !hasOwnProp.call(props, key)) {
+            DirtyMarker.check(this, key, null, _props[key]);
+          }
         }
       }
     }
     if (props) {
-      this.assign(props);
+      for (key in props) {
+        if (hasOwnProp.call(props, key)) {
+          value = props[key];
+          if (value !== _props[key]) {
+            DirtyMarker.check(this, key, value, _props[key]);
+          }
+        }
+      }
+      this._props = props;
+    } else {
+      this._props = {};
     }
   }
 });

@@ -1,5 +1,6 @@
 // src/core/template/drivers/driveComponent.js
 
+import ClassBinding from 'src/core/bindings/ClassBinding'
 import Cache from 'src/core/models/Cache'
 import Validator from 'src/base/Validator'
 import { assign } from 'src/share/functions'
@@ -30,6 +31,9 @@ function driveComponent(target, scopes, vnode, props, template) {
       if (vnode.style) {
         driveProps(target.style, scopes, vnode.style, useExpr);
       }
+      if (vnode.classes) {
+        ClassBinding.create(vnode.classes).connect('class', target, scopes);
+      }
     }
     if (vnode.children) {
       driveChildren(target, scopes, vnode.children, useExpr, true);
@@ -52,13 +56,13 @@ function driveComponent(target, scopes, vnode, props, template) {
     driveEvents(target, _scopes, template.events, useExpr);
   }
   if (template.props) {
-    target.__props = new Cache(target);
-    driveProps(target.__props, _scopes, template.props, useExpr);
+    target.$props = new Cache(target);
+    driveProps(target.$props, _scopes, template.props, useExpr);
   }
   if (useExpr) {
     if (template.style) {
-      target.__style = new Cache(target);
-      driveProps(target.__style, _scopes, template.style, useExpr);
+      target.$style = new Cache(target);
+      driveProps(target.$style, _scopes, template.style, useExpr);
     }
   }
   if (template.children) {

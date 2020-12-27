@@ -8,6 +8,7 @@ import Component from 'src/core/shells/Component'
 // import Expression from 'src/core/template/Expression'
 import HTMXEngine from 'src/core/template/HTMXEngine'
 import { assign, defineClass } from 'src/share/functions'
+import { applyEvaluator } from 'src/core/bindings/DataBinding'
 // import config from 'src/share/config'
 
 function replaceScopes(content, newScopes) {
@@ -71,11 +72,12 @@ defineClass({
         expression = template.xfor[1];
         expression.connect('iterable', block, scopes);
         if (template.xkey) {
-          block.keyEval = template.xkey;//.evaluator;
+          block.keyExpr = template.xkey;//.evaluator;
         }
       }
 
       if (template.xtype) {
+        block.mode = block.mode || 1;
         block.xtype = true;
         expression = template.xtype;
         expression.connect('component', block, scopes);
@@ -122,11 +124,11 @@ defineClass({
     var indices = {}, index, content, item, key, n, i;
     var iterable = this.get('iterable') || [];
     var children = this._children || [];
-    var keyEval = this.keyEval;
+    var keyExpr = this.keyExpr;
     var newScopes;
   
     for (i = 0, n = children.length; i < n; ++i) {
-      key = children[i].__key__;
+      key = children[i].__extag_key__;
       if (key) {
         indices[key] = i;
       }
@@ -138,8 +140,8 @@ defineClass({
       item = iterable[i];
       newScopes = scopes.concat([item]);
 
-      if (keyEval) {
-        key = keyEval.execute(newScopes);
+      if (keyExpr) {
+        key = applyEvaluator(keyExpr.pattern, newScopes);
         index = indices[key];
         if (index != null) {
           content = children[index];
@@ -148,10 +150,10 @@ defineClass({
   
       if (!content) {
         content = HTMXEngine.makeContent(template, newScopes);
-        content.__key__ = key;
+        content.__extag_key__ = key;
       } else {
         replaceScopes(content, newScopes);
-        // content.__key__ = key;
+        // content.__extag_key__ = key;
       }
   
       contents.push(content);

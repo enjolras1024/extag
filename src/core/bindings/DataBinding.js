@@ -85,9 +85,18 @@ defineClass({
 
   replace: function replace(scopes) {
     if (scopes.length > 1 && scopes.length === this.scopes.length) {
-      this.scopes = scopes;
-      this.flag = 1;
-      this.execute();
+      var diff;
+      for (var i = scopes.length - 1; i >= 0; --i) {
+        if (scopes[i] !== this.scopes[i]) {
+          diff = true;
+          break;
+        }
+      }
+      if (diff) {
+        this.scopes = scopes;
+        this.flag = 1;
+        this.execute();
+      }
     }
   },
 

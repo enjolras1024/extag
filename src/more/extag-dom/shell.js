@@ -141,9 +141,9 @@ function renderShell($skin, shell) {
 
     props = shell._props;
     dirty = shell._dirty;
-    if (shell.__props) {
-      props = mergeProps(props, shell.__props._props);
-      dirty = mergeDirty(dirty, shell.__props._dirty);
+    if (shell.$props) {
+      props = mergeProps(props, shell.$props._props);
+      dirty = mergeDirty(dirty, shell.$props._dirty);
     }
     if (props && dirty) {
       renderProps($skin, props, dirty);
@@ -155,14 +155,13 @@ function renderShell($skin, shell) {
     
     props = style && style._props;
     dirty = style && style._dirty;
-    if (shell.__style) {
-      props = mergeProps(props, shell.__style._props);
-      dirty = mergeDirty(dirty, shell.__style._dirty);
+    if (shell.$style) {
+      props = mergeProps(props, shell.$style._props);
+      dirty = mergeDirty(dirty, shell.$style._dirty);
     }
     if (props && dirty) {
       renderStyle($skin, props, dirty);
     }      
-    
     
     if (children && (shell.$flag & FLAG_CHANGED_CHILDREN)) {
       if (!shadowMode || !$skin.attachShadow) {

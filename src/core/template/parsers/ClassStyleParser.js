@@ -1,7 +1,9 @@
-// src/core/template/parsers/StyleParser.js
+// src/core/template/parsers/ClassStyleParser.js
 
+import PrimitiveLiteralParser from 'src/core/template/parsers/PrimitiveLiteralParser'
 import TextBindingParser from 'src/core/template/parsers/TextBindingParser'
 import TextBinding from 'src/core/bindings/TextBinding'
+import DataBinding from 'src/core/bindings/DataBinding'
 import Expression from 'src/core/template/Expression'
 import { 
   throwError
@@ -15,10 +17,6 @@ import {
 
 var STYLE_DELIMITER = /;/g;
 var CSS_NAME_REGEXP = /^[a-z0-9\-_]+$/i;
-// var SINGLE_BINDING_REGEXP = /^@\{[^@]*\}$/;
-// var SINGLE_BINDING_REGEXP = new RegExp(
-//   '^' + BINDING_OPERATORS.DATA +'\\' + BINDING_BRACKETS[0] + '[^' + BINDING_OPERATORS.DATA + ']*\\' + BINDING_BRACKETS[1] + '$'
-// );
 
 export default {
   /**
@@ -27,8 +25,9 @@ export default {
    *                              and "display: none; font-size#:@{fontSize}px;" for x:style
    * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
    * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
+   * @param {boolean} forStyle  - 
    */
-  parse: function parse(expr, prototype, identifiers) {
+  parse: function parse(expr, prototype, identifiers, forStyle) {
     var group = {};
     var pieces = expr.split(STYLE_DELIMITER); 
     var result, piece, name, names, n, i, j, k;
@@ -53,7 +52,7 @@ export default {
       expr = piece.slice(k + 1).trim();
 
       if (!name || !CSS_NAME_REGEXP.test(name)) {
-        throwError('Illegal x:style expression.', {
+        throwError('Illegal ' + (forStyle ? 'x:style' : 'x:class') + ' expression.', {
           code: 1001,
           expr: name || arguments[0]
         });
@@ -61,13 +60,13 @@ export default {
 
       try {
         if (!TextBindingParser.like(expr)) {
-          group[name] = expr;
+          group[name] = forStyle ? expr : PrimitiveLiteralParser.tryParse(expr);
           continue;
         }
         result = TextBindingParser.parse(expr, prototype, identifiers);
       } catch (e) {
         // eslint-disable-next-line no-undef
-        if (__ENV__ === 'development') {
+        {
           if (e.code === 1001) {
             e.expr = BINDING_FORMAT.replace('0', e.expr);
           }
@@ -77,11 +76,16 @@ export default {
       if (result) {
         if (result.length === 1) {
           group[name] = result[0];
-        } else {
+        } else if (forStyle) {
           group[name] = new Expression(TextBinding, result);
+        } else {
+          throwError('Illegal x:class expression.', {
+            code: 1001,
+            expr: expr
+          });
         }
       } else {
-        group[name] = expr;
+        group[name] = forStyle ? expr : PrimitiveLiteralParser.tryParse(expr);
       }
     }
 

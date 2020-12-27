@@ -50,18 +50,18 @@ function transferProps(shell) {
     shell.style.reset(style);
   }
 
-  if (!shell.__props || !shell.constructor.__extag_component_class__) { 
+  if (!shell.$props || !shell.constructor.__extag_component_class__) { 
       return; 
   }
 
-  var __props = shell.__props;
+  var $props = shell.$props;
 
-  if (__props.hasDirty('style')) {
-    var __style = getOrCreateCache(shell, '__style');
-    DirtyMarker.clean(__props, 'style');
-    style = __props.get('style');
+  if ($props.hasDirty('style')) {
+    var $style = getOrCreateCache(shell, '$style');
+    DirtyMarker.clean($props, 'style');
+    style = $props.get('style');
     style = toStyleObject(style);
-    __style.reset(style);
+    $style.reset(style);
   }
 }
 

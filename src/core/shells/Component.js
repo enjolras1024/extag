@@ -16,6 +16,7 @@ import {
   getOwnPropDesc 
 } from 'src/share/functions'
 import {
+  EMPTY_ARRAY,
   TYPE_FRAG,
   TYPE_ELEM,
   FLAG_MOUNTED,
@@ -30,7 +31,7 @@ import {
 import captureError from 'src/core/captureError'
 
 var KEYS_PRESERVED = [
-  '$meta', '$flag', '$skin', 
+  '$meta', '$flag', '$skin', '$props', '$style',
   'style', 'contents', 'children', 
   '_dirty', '_props', '_style', '_children'
 ];
@@ -289,14 +290,14 @@ defineClass({
       this._parent.invalidate(FLAG_CHANGED_CHILDREN);
     }*/ 
     else {
-      if (this.__props && this.__props.hasDirty('children')) {
-        var children = this.__props.get('children') || [];
-        DirtyMarker.clean(this.__props, 'children');
+      if (this.$props && this.$props.hasDirty('children')) {
+        var children = this.$props.get('children') || [];
+        this.$props.set('children', EMPTY_ARRAY);
+        DirtyMarker.clean(this.$props, 'children');
         if (!Array.isArray(children)) {
           children = [children];
         }
         HTMXEngine.driveChildren(this, [this], children, false);
-        children.length = 0;
       }
     }
 
@@ -333,9 +334,11 @@ defineClass({
       viewEngine.renderShell(this.$skin, this);
  
       DirtyMarker.clean(this);
+      
   
       this._style && DirtyMarker.clean(this._style);
-      this.__style && DirtyMarker.clean(this.__style);
+      this.$style && DirtyMarker.clean(this.$style);
+      this.$props && DirtyMarker.clean(this.$props);
 
       if (this._commands) {
         this._commands = null;

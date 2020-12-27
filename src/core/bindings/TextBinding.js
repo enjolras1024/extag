@@ -1,13 +1,11 @@
 // src/core/bindings/TextBinding.js
 
-import Cache from 'src/core/models/Cache'
 import Dependency from 'src/core/Dependency'
-import DirtyMarker from 'src/base/DirtyMarker'
 import Binding from 'src/core/bindings/Binding'
 import DataBinding from 'src/core/bindings/DataBinding'
 import { applyEvaluator } from 'src/core/bindings/DataBinding'
 import Expression from 'src/core/template/Expression'
-import { defineClass, slice } from 'src/share/functions'
+import { defineClass, throwError } from 'src/share/functions'
 
 var DATA_BINDING_MODES = DataBinding.MODES;
 
@@ -34,22 +32,20 @@ defineClass({
     this.property = property;
 
     this.flag = 1;
-    this.mode = DATA_BINDING_MODES.ASSIGN;
 
-    var i, n, piece, pattern = this.pattern;
+    var i, n, expr, pattern = this.pattern;
 
     for (i = 0, n = pattern.length; i < n; ++i) {
-      piece = pattern[i];
-      if (piece instanceof Expression && 
-          piece.pattern.mode !== DATA_BINDING_MODES.ASSIGN) {
-        this.mode = piece.pattern.mode;
-        if (this.mode === DATA_BINDING_MODES.ANY_WAY) {
-          break;
+      expr = pattern[i];
+      if (expr instanceof Expression) {
+        if (this.mode != null && this.mode !== expr.pattern.mode) {
+          throwError('all embedded expressions must have same data-binding mode for TextBinding');
         }
+        this.mode = expr.pattern.mode;
       }
     }
 
-    if (this.mode === DATA_BINDING_MODES.ASSIGN) {
+    if (this.mode == null || this.mode === DATA_BINDING_MODES.ASSIGN) {
       this.execute();
       return;
     }
@@ -84,14 +80,14 @@ defineClass({
 
     Dependency.begin(this);
 
-    var i, n, piece, cache = [], pattern = this.pattern;
+    var i, n, expr, cache = [], pattern = this.pattern;
 
     for (i = 0, n = pattern.length; i < n; ++i) {
-      piece = pattern[i];
-      if (piece instanceof Expression) {
-        piece = applyEvaluator(piece.pattern, this.scopes);
+      expr = pattern[i];
+      if (expr instanceof Expression) {
+        expr = applyEvaluator(expr.pattern, this.scopes);
       }
-      cache.push(piece);
+      cache.push(expr);
     }
 
     Dependency.end();
@@ -99,6 +95,9 @@ defineClass({
     this.target.set(this.property, cache.join(''));
 
     this.flag = 0;
+    if (this.mode === DATA_BINDING_MODES.ONE_TIME) {
+      this.destroy();
+    }
   },
 
   invalidate: function invalidate(key) {

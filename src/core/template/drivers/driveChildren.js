@@ -14,6 +14,7 @@ import Fragment from 'src/core/shells/Fragment'
 import Component from 'src/core/shells/Component'
 import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
+import ClassBinding from 'src/core/bindings/ClassBinding'
 import driveEvents from "./driveEvents";
 import driveProps from './driveProps'
 
@@ -27,7 +28,7 @@ function matchChild(child, vnode) {
   if (meta.type === TYPE_TEXT && vnode.__extag_node__ !== EXTAG_VNODE) {
     return true;
   }
-  return child.__key__ === vnode.xkey && 
+  return child.__extag_key__ === vnode.xkey && 
           (vnode.type ? child.constructor === vnode.type : 
             (meta.tag === vnode.tag && meta.ns === vnode.ns));
 }
@@ -86,6 +87,9 @@ export function createContent(vnode, scopes) {
       }
       if (vnode.style) {
         driveProps(content.style, scopes, vnode.style, useExpr);
+      }
+      if (vnode.classes) {
+        ClassBinding.create(vnode.classes).connect('class', content, scopes);
       }
       if (vnode.children) {
         driveChildren(content, scopes, vnode.children, useExpr);
@@ -173,7 +177,7 @@ function collectContents(children, scopes, target) {
       if (!indices) {
         indices = {};
         for (i = oldBeginIndex; i <= oldEndIndex; ++i) {
-          key = oldShells[i].__key__;
+          key = oldShells[i].__extag_key__;
           if (key) {
             indices[key] = i;
           }
@@ -188,7 +192,7 @@ function collectContents(children, scopes, target) {
       } else {
         content = createContent(newBeginVNode, scopes, false);
         if (content) {
-          content.__key__ = key;
+          content.__extag_key__ = key;
           contents[newBeginIndex] = content;
         } else {
           throw new Error('Can not create content from ', newBeginVNode);
@@ -207,7 +211,7 @@ function collectContents(children, scopes, target) {
       content = createContent(newBeginVNode, scopes, false);
       if (content) {
         contents[newBeginIndex] = content;
-        content.__key__ = newBeginVNode.xkey;
+        content.__extag_key__ = newBeginVNode.xkey;
       } else {
         throw new Error('Can not create content from ', newBeginVNode);
       }
@@ -259,8 +263,11 @@ function flattenVNodes(children, array, ns) {
 function driveChildren(target, scopes, children, useExpr, areContents) {
   var contents;
   if (areContents) {
-    // target.setContents(contents);
-    contents = children.slice(0);
+    contents = target.get('contents');
+    if ((!children || !children.length) && (!contents || !contents.length)) {
+      return;
+    }
+    contents = children ? children.slice(0) : [];
     contents.scopes = scopes;
     target.set('contents', contents);
   } else {

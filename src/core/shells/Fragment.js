@@ -7,6 +7,7 @@ import HTMXEngine from 'src/core/template/HTMXEngine'
 import DirtyMarker from 'src/base/DirtyMarker'
 import { defineClass } from 'src/share/functions'
 import {
+  EMPTY_ARRAY,
   FLAG_CHANGED_CHILDREN,
   FLAG_WAITING_UPDATING,
   FLAG_WAITING_DIGESTING
@@ -52,22 +53,15 @@ defineClass({
     if ((this.$flag & FLAG_WAITING_UPDATING) == 0) {
       return;
     }
-    // if (this.$flag === FLAG_NORMAL) {
-    //   return false;
-    // }
-
-    // if (this.onUpdating) {
-    //   this.onUpdating();
-    // }
 
     if (this.scopes && this.hasDirty('children')) {
       var children = this.get('children') || [];
+      this.set('children', EMPTY_ARRAY);
       DirtyMarker.clean(this, 'children');
       if (!Array.isArray(children)) {
         children = [children];
       }
       HTMXEngine.driveChildren(this, this.scopes, children, false);
-      children.length = 0;
     }
 
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
