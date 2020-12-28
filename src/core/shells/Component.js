@@ -114,7 +114,11 @@ defineClass({
       if (!_template) {
         try {
           if (!constructor.template) {
-            constructor.template = '<x:frag children@="this.render(this._props) ^"></x:frag>';
+            if (typeof prototype.render === 'function') {
+              constructor.template = '<x:frag children@="this.render(this._props) ^"></x:frag>';
+            } else {
+              constructor.template = '<x:frag></x:frag>';
+            }
           }
           if (typeof constructor.template === 'string') {
             _template = HTMXEngine.parseHTMX(constructor.template, prototype);

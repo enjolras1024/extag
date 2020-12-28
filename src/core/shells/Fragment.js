@@ -38,7 +38,7 @@ defineClass({
       fragment.scopes = scopes;
       
       if (scopes && template) {
-        template.connect('children', fragment, scopes);
+        HTMXEngine.driveComponent(fragment, scopes, template, props);
       }
     }
 

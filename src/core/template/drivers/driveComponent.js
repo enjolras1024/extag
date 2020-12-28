@@ -8,7 +8,7 @@ import driveChildren from './driveChildren'
 import driveEvents from "./driveEvents";
 import driveProps from './driveProps'
 
-function driveComponent(target, scopes, vnode, props, template) {
+export default function driveComponent(target, scopes, vnode, props, template) {
   var useExpr;
 
   if (vnode && scopes) {
@@ -69,5 +69,3 @@ function driveComponent(target, scopes, vnode, props, template) {
     driveChildren(target, _scopes, template.children, useExpr);
   }
 }
-
-export default driveComponent;

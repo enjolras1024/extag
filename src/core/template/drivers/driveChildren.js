@@ -66,7 +66,12 @@ export function createContent(vnode, scopes) {
   } else if (useExpr && vnode.type === Expression) {
     expr = vnode.expr;
     if (expr.binding === DataBinding && expr.pattern.target === 'frag') {
-      content = new Fragment(null, scopes, expr);
+      content = new Fragment(null, scopes, {
+        useExpr: true,
+        props: {
+          children: expr
+        }
+      });
     } else {
       content = new Text('');
       expr.connect('content', content, scopes);
