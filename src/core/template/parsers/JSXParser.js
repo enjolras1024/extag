@@ -1,6 +1,5 @@
 import Path from 'src/base/Path'
 import Slot from 'src/core/shells/Slot'
-import Output from 'src/core/shells/Output'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import HTMXEngine from 'src/core/template/HTMXEngine'
@@ -102,9 +101,9 @@ function parseJsxNode(node, prototype) {
       // case 'x:block':
       //   node.type = Block;
       //   break;
-      case 'x:output':
-        node.type = Output;
-        break;
+      // case 'x:output':
+      //   node.type = Output;
+      //   break;
     }
   }
   if (node.events) {
@@ -329,10 +328,10 @@ function node(type, options, children) {
             node.tag = type;
             node.type = Fragment;
             break;
-          case 'x:output':
-            node.tag = type;
-            node.type = Output;
-            break;
+          // case 'x:output':
+          //   node.tag = type;
+          //   node.type = Output;
+          //   break;
         }
       } 
       if (!node.type) {
@@ -366,12 +365,10 @@ function node(type, options, children) {
       node.slot = options.xslot;
     }
     if (options.xtype) {
-      if (!node.type) {
+      if (options.xtype instanceof Expression) {
+        node.xtype = options.xtype;
+      } else {
         node.type = options.xtype;
-      } else if (node.type === Output) {
-        node.props = {
-          xtype: options.xtype
-        }
       }
     }
 
