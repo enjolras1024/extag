@@ -4,6 +4,12 @@ import Binding from 'src/core/bindings/Binding'
 import { defineClass } from 'src/share/functions'
 import logger from 'src/share/logger'
 
+function append(scopes, event) {
+  scopes = scopes.slice(0);
+  scopes.push(event);
+  return scopes;
+}
+
 export default function EventBinding(pattern) {
   this.pattern = pattern;
 }
@@ -55,13 +61,13 @@ defineClass({
       }
     } else if (scopes.length <= 1) {
       if (!modifiers || !modifiers.length) {
-        this.handler = function() {
-          evaluator.execute(scopes);
+        this.handler = function(event) {
+          evaluator.execute(append(scopes, event));
         };
       } else {
         this.handler = function(event) {
           processModifiers(modifiers, event);
-          evaluator.execute(scopes);
+          evaluator.execute(append(scopes, event));
         };
         this.options = extractOptions(modifiers);
       }
@@ -69,13 +75,13 @@ defineClass({
     } else {
       this.scopes = scopes; // the 2nd scope may be replaced later in x:for loop.
       if (!modifiers || !modifiers.length) {
-        this.handler = (function() {
-          evaluator.execute(this.scopes);
+        this.handler = (function(event) {
+          evaluator.execute(append(scopes, event));
         }).bind(this);
       } else {
         this.handler = (function(event) {
           processModifiers(modifiers, event);
-          evaluator.execute(this.scopes);
+          evaluator.execute(append(scopes, event));
         }).bind(this);
         this.options = extractOptions(modifiers);
       }
@@ -93,7 +99,10 @@ defineClass({
   replace: function replace(scopes) {
     if (this.scopes && scopes.length > 1 
         && this.scopes.length === scopes.length) {
-      this.scopes = scopes;
+      // this.scopes = scopes;
+      for (var i = 1; i < scopes.length; ++i) {
+        this.scopes[i] = scopes[i];
+      }
     }
   },
 
