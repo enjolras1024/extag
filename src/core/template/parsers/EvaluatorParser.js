@@ -1,10 +1,8 @@
 // src/core/template/parsers/EvaluatorParser.js
 
 import Path from 'src/base/Path'
+import { WHITE_SPACES_REGEXP } from 'src/share/constants'
 import { hasOwnProp, throwError } from 'src/share/functions'
-import { WHITE_SPACE_REGEXP } from 'src/share/constants'
-import FuncEvaluator from 'src/core/template/FuncEvaluator'
-import PathEvaluator from 'src/core/template/PathEvaluator'
 
 var DIVISION_REGEXP = /[\w).+\-_$\]]/;
 
@@ -28,6 +26,29 @@ function notPropertyName(expr, index) {
     }
     --index;
   }
+}
+
+function newParameter(expr, index) {
+  var identifier = '$' + index;
+  while (expr.indexOf(identifier) >= 0) {
+    identifier = '$' + identifier;
+  }
+  return identifier;
+}
+
+function identifierIndexOf(identifier, identifiers) {
+  for (var i = identifiers.length - 1; i >= 0; --i) {
+    if (typeof identifiers[i] === 'string') {
+      if (identifier === identifiers[i]) {
+        return i;
+      }
+    } else { // array, like ['item', 'index'] from x:for="(item, index) of items"
+      if (identifiers[i].indexOf(identifier) >= 0) {
+        return i;
+      }
+    }
+  }
+  return -1;
 }
 
 function gotoPathEnding(expr, index) {
@@ -159,6 +180,27 @@ function getPropChainIndices(expr) {
   return indices;
 }
 
+function makeEvaluator(parameters, lines, path, expr) {
+  try {
+    parameters.push(lines.join('\n'));
+    var evaluator = Function.apply(null, parameters);
+    if (path) {
+      evaluator.path = path;
+    }
+    // eslint-disable-next-line no-undef
+    if (__ENV__ === 'development') {
+      evaluator.expr = expr;
+    }
+    return evaluator;
+  } catch (e) {
+    throwError(e, {
+      code: 1001,
+      expr: expr,
+      desc: 'Illegal expression `' + expr + '`.'
+    });
+  }
+}
+
 export default {
   regexStarts: regexStarts,
 
@@ -169,70 +211,78 @@ export default {
    * @param {string} expr - e.g. "a + b" in @{a + b} or value@="a + b".
    * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
    * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
-   * @returns {PropEvaluator|FuncEvaluator}
+   * @param {string} wholeExpr
+   * @returns {Function}
    */
-  parse: function parse(expr, prototype, identifiers) {
+  parse: function parse(expr, prototype, identifiers, wholeExpr) {
+    var i, j;
+    var lines = [];
+    var parameters = [];
+    for (i = 0; i < identifiers.length; ++i) {
+      if (identifiers[i][0] === '$') { 
+        parameters.push(identifiers[i]);
+      } else {
+        parameters.push(newParameter(expr, i));
+      }
+      
+    }
+    var varaibles = parameters.slice(0);
+
     var resources = prototype.constructor.resources;
     var path = Path.parse(expr);
     if (path && path.length) {
       if (!hasOwnProp.call(JS_KEYWORD_MAP, path[0]) || path[0] === 'this') {
-        path.from = identifiers.indexOf(path[0]);
-        if (path.from < 0 && (!resources|| !hasOwnProp.call(resources, path[0]))) {
-          path.unshift('this');
-          path.from = 0;
+        // path.from = identifiers.indexOf(path[0]);
+        path.from = identifierIndexOf(path[0], identifiers);
+        if (path.from < 0) {
+          if (resources && hasOwnProp.call(resources, path[0])) {
+            lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
+          } else {
+            path.unshift('this');
+            path.from = 0;
+          }
+        } else {
+          if (typeof identifiers[path.from] !== 'string') {
+            path.unshift(parameters[path.from]);
+          }
         }
-        return new PathEvaluator(path, expr);
+        lines.push('return ' + path.join('.'));
+        // return new PathEvaluator(path, expr, identifiers);
+        return makeEvaluator(parameters, lines, path, wholeExpr);
       }
     }
 
-    var args = identifiers.slice(1);
-    var vars = identifiers.slice(1);
     var expanded = 0, piece;
-    var lines = [], i, j;
     // get start-index and stop-index of all prop chains, like `a` or `a.b.c`
     var indices = getPropChainIndices(expr);
 
     for (j = 0; j < indices.length; j += 2) {
       if (indices[j+1] < 0) { continue; }
       piece = expr.slice(indices[j] + expanded, indices[j+1] + expanded);
-      path = Path.parse(piece.replace(WHITE_SPACE_REGEXP, ''));
+      path = Path.parse(piece.replace(WHITE_SPACES_REGEXP, ''));
       if (hasOwnProp.call(JS_KEYWORD_MAP, path[0])) {
         continue;
       }
       
-      i = identifiers.indexOf(path[0]);
+      i = identifierIndexOf(path[0], identifiers);
       if (i < 0) {
         if (resources && hasOwnProp.call(resources, path[0])) {
           lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
-          vars.push(path[0]);
+          varaibles.push(path[0]);
         } else {
           expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
           expanded += 5;
         }
-      } else {
-        // vars.push(identifiers[i]);
+      } else if (typeof identifiers[i] !== 'string') {
+        // array, like ['item', 'index'] from x:for="(item, index) of items"
+        expr = expr.slice(0, indices[j] + expanded) + parameters[i] + '.' + piece + expr.slice(indices[j+1] + expanded);
+        expanded += parameters[i].length + 1;
       }
     }
 
     lines.push('return ' + expr);
-    args.push(lines.join('\n'));
 
-    var self = '$';
-    while (vars.indexOf(self) >= 0) {
-      self += '$';
-    }
-    args.unshift(self);
-
-    try {
-      var func = Function.apply(null, args);
-      return new FuncEvaluator(func, arguments[0]);
-    } catch (e) {
-      throwError(e, {
-        code: 1001,
-        expr: arguments[0],
-        desc: 'Illegal expression `' + arguments[0] + '`.'
-      });
-    }
+    return makeEvaluator(parameters, lines, null, wholeExpr);
   }
 };
   

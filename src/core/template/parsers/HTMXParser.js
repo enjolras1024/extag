@@ -17,6 +17,7 @@ import Path from 'src/base/Path'
 import Slot from 'src/core/shells/Slot'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
+import FuncBinding from 'src/core/bindings/FuncBinding'
 import DataBinding from 'src/core/bindings/DataBinding'
 import TextBinding  from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
@@ -28,7 +29,13 @@ import TextBindingParser from 'src/core/template/parsers/TextBindingParser'
 import EventBindingParser from 'src/core/template/parsers/EventBindingParser'
 import PrimitiveLiteralParser from 'src/core/template/parsers/PrimitiveLiteralParser'
 
-var FOR_LOOP_REGEXP = /^([_$\w]+)\s+of\s+(.+)$/;
+// var FOR_LOOP_REGEXP = /^([_$\w]+)\s+of\s+(.+)$/;
+var FOR_LOOP_REGEXP = /^\s*\(?\s*[_$\w]+(\s*,\s*[_$\w]+\s*\))?\s+of\s+.+$/;
+
+var PARENTHESES_REGEXP = /^\(.+\)$/;
+var FOR_OF_SPLITTER = /\s+of\s+/;
+var COMMA_SPLITTER = /,/;
+var VARNAME_REGEXP = /^[\w\$\_]+$/;
 var LETTER_REGEXP = /[a-zA-Z]/;
 var TAGNAME_STOP = /[\s/>]/;
 var ATTRNAME_SPLITTER = /[\s\/]+/;
@@ -166,19 +173,38 @@ function parseDirective(name, expr, node, prototype, identifiers) {
     result = DataBindingParser.parse(expr, prototype, identifiers);
     node.xkey = new Expression(DataBinding, result);
   } else if (name === 'x:for') {
-    var matches = expr.trim().match(FOR_LOOP_REGEXP);
-
-    if (!matches || !matches[2].trim()) {
+    var pieces = expr.trim().split(FOR_OF_SPLITTER);
+    
+    if (pieces.length !== 2) {
       throwError('Illegal x:for="' + expr + '".', {
         code: 1001,
         expr: expr
       });
     }
 
-    result = DataBindingParser.parse(matches[2], prototype, identifiers);
+    result = pieces[1].trim();
+    pieces[0] = pieces[0].trim();
+    if (PARENTHESES_REGEXP.test(pieces[0])) { 
+      // x:for="(item, index) of items" 
+      pieces = pieces[0].slice(1, -1).split(COMMA_SPLITTER);
+    } else {
+      // x:for="item of items" 
+      pieces = [pieces[0]];
+    }
 
+    for (var i = 0; i < pieces.length; ++i) {
+      pieces[i] = pieces[i].trim();
+      if (!VARNAME_REGEXP.test(pieces[i])) {
+        throwError('Illegal x:for="' + expr + '".', {
+          code: 1001,
+          expr: expr
+        });
+      }
+    }
+
+    result = result && DataBindingParser.parse(result, prototype, identifiers);
     if (result) {
-      node.xfor = [matches[1], new Expression(DataBinding, result)];
+      node.xfor = [pieces, new Expression(DataBinding, result)];
     } else {
       throwError('Illegal x:for="' + expr + '".', {
         code: 1001,
@@ -186,7 +212,8 @@ function parseDirective(name, expr, node, prototype, identifiers) {
       });
     }
 
-    node.identifiers = identifiers.concat([matches[1]]);
+    node.identifiers = identifiers.slice(0);
+    node.identifiers.push(pieces);
   } else if (name === 'x:if') {
     result = DataBindingParser.parse(expr, prototype, identifiers);
     if (result) {
@@ -201,82 +228,6 @@ function parseDirective(name, expr, node, prototype, identifiers) {
     node.ns = expr;
   }
 }
-
-// function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
-//   var lastChar = attrName[attrName.length - 1];
-//   var index = attrName.indexOf(':');
-//   var result, group, key;
-
-//   // // :title => title
-//   // if (index === 0) {
-//   //   attrName = attrName.slice(1);
-//   // }
-
-//   if (attrValue == null) {
-//     if (index < 0) {
-//       key = getPropName(attrName);
-//       getGroup(node, 'props')[key] = true;
-//       return;
-//     }
-//     attrValue = '';
-//   }
-
-//   if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
-//     group = getGroup(node, 'events');
-//     key = attrName.slice(0, -1);
-//     // attrName = attrName.slice(0, -1);
-//     // key = index < 0 ? toCamelCase(attrName) : attrName;
-//     result = EventBindingParser.parse(attrValue, prototype, identifiers);
-//     group[key] = new Expression(EventBinding, result);
-//   } else {
-//     if (index < 0) {
-//       group = getGroup(node, 'props');
-//     } else {
-//       group = getGroup(node, 'attrs');
-//     }
-//     switch (lastChar) {
-//       case BINDING_OPERATORS.DATA: // last char is '@'
-//         attrName = attrName.slice(0, -1);
-//         key = index < 0 ? getPropName(attrName) : attrName;
-//         result = PrimitiveLiteralParser.tryParse(attrValue);
-//         if (result != null) {
-//           group[key] = result;
-//         } else {
-//           result = DataBindingParser.parse(attrValue, prototype, identifiers);
-//           group[key] = new Expression(DataBinding, result);
-//         }
-//         break;
-//       case BINDING_OPERATORS.TEXT: // last char is '#'
-//         attrName = attrName.slice(0, -1);
-//         key = index < 0 ? getPropName(attrName) : attrName;
-//         try {
-//           result = TextBindingParser.parse(attrValue, prototype, identifiers);
-//         } catch (e) {
-//           // eslint-disable-next-line no-undef
-//           if (__ENV__ === 'development') {
-//             if (e.code === 1001) {
-//               e.expr = BINDING_FORMAT.replace('0', e.expr);
-//             }
-//           }
-//           throw e;
-//         }
-//         if (result) {
-//           if (result.length === 1) {
-//             group[key] = new Expression(DataBinding, result[0]);
-//           } else {
-//             group[key] = new Expression(TextBinding, result);
-//           }
-//         } else {
-//           group[key] = attrValue;
-//         }
-//         break;
-//       default:
-//         key = index < 0 ? getPropName(attrName) : attrName;
-//         // group[key] = viewEngine.isBoolProp(key) || attrValue;
-//         group[key] = attrValue;
-//     }
-//   }
-// }
 
 function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
   var lastChar = attrName[attrName.length - 1];
@@ -484,7 +435,8 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
     }
     if (result) {
       if (result.length === 1 && (result[0] instanceof Expression)) {
-        children.push(createExprNode(DataBinding, result[0]));
+        expr = result[0];
+        children.push(createExprNode(result[0].binding, result[0]));
       } else {
         var i = -1, j = 0 , n = result.length;
         for (; j < n; ++j) {
@@ -494,12 +446,12 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
               if (j - i > 1) {
                 children.push(createExprNode(TextBinding, result.slice(i, j)));
               } else if (result[i] instanceof Expression) {
-                children.push(createExprNode(DataBinding, result[i]));
+                children.push(createExprNode(result[i].binding, result[i]));
               } else {
                 children.push(result[i]);
               }
             }
-            children.push(createExprNode(DataBinding, expr));
+            children.push(createExprNode(expr.binding, expr));
             i = -1;
           } else if (i < 0) {
             i = j;
@@ -509,7 +461,7 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
           if (j - i > 1) {
             children.push(createExprNode(TextBinding, result.slice(i, j)));
           } else if (result[i] instanceof Expression) {
-            children.push(createExprNode(DataBinding, result[i]));
+            children.push(createExprNode(result[i].binding, result[i]));
           } else {
             children.push(result[i]);
           }
@@ -534,7 +486,7 @@ function parseHTMX(htmx, prototype) {
   var idx = 0, end = htmx.length;
 
   parent = {
-    tag: '[]',
+    tag: '<>',
     children: [],
     identifiers: ['this']
   };

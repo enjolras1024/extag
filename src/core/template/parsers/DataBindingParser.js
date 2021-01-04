@@ -1,21 +1,12 @@
 // src/core/template/parsers/DataBindingParser.js
 
 import Path from 'src/base/Path'
-import { hasOwnProp, throwError } from 'src/share/functions'
+import { throwError } from 'src/share/functions'
 import { BINDING_OPERATORS } from 'src/share/constants'
 import DataBinding from 'src/core/bindings/DataBinding'
-import FuncEvaluator from 'src/core/template/FuncEvaluator'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 
 var DATA_BINDING_MODES = DataBinding.MODES;
-
-function newIdentifier(expr, identifiers) {
-  var identifier = '$' + identifiers.length;
-  while (expr.indexOf(identifier) >= 0) {
-    identifier = '$' + identifier;
-  }
-  return identifier;
-}
 
 export default {
   /**
@@ -53,12 +44,12 @@ export default {
           desc: '`' + arguments[0] + '` is not a valid two-way binding expression. Must be a property name or path.'
         });
       }
-      evaluator = EvaluatorParser.parse(expr, prototype, identifiers);
+      evaluator = EvaluatorParser.parse(expr, prototype, identifiers, arguments[0]);
     } else if (expr.indexOf(BINDING_OPERATORS.CONVERTER) < 0) {
-      evaluator = EvaluatorParser.parse(expr, prototype, identifiers);
+      evaluator = EvaluatorParser.parse(expr, prototype, identifiers, arguments[0]);
     } else {
       pieces = expr.split(BINDING_OPERATORS.CONVERTER);
-      evaluator = EvaluatorParser.parse(pieces[0], prototype, identifiers);
+      evaluator = EvaluatorParser.parse(pieces[0], prototype, identifiers, arguments[0]);
       if (pieces.length > 1) {
         for (i = 1; i < pieces.length; ++i) {
           piece = pieces[i].trim();
@@ -71,26 +62,18 @@ export default {
             });
           }
 
-          var identifier = newIdentifier(expr, identifiers);
+          var identifier = '$value';
+          while (expr.indexOf(identifier) >= 0) {
+            identifier = '$' + identifier;
+          }
           var index = piece.indexOf('(');
           if (index > 0) {
             piece = piece.slice(0, index + 1) + identifier + ',' + piece.slice(index + 1);
           } else {
-            // if (piece.indexOf('.') < 0 && identifiers.indexOf(piece) < 0) {
-            //   resources = prototype.constructor.resources;
-            //   if (resources) {
-            //     var func = Path.search(piece, resources);
-            //     if (typeof func === 'function') {
-            //       converters = converters || [];
-            //       converters.push(new FuncEvaluator(func, piece));
-            //       continue;
-            //     } 
-            //   }
-            // }
             piece = piece + '(' + identifier + ')';
           }
 
-          converter = EvaluatorParser.parse(piece, prototype, identifiers.concat([identifier]));
+          converter = EvaluatorParser.parse(piece, prototype, identifiers.concat([identifier]), arguments[0]);
           converters = converters || [];
           converters.push(converter);
         }

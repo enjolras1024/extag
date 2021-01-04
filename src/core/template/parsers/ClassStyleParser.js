@@ -3,7 +3,6 @@
 import PrimitiveLiteralParser from 'src/core/template/parsers/PrimitiveLiteralParser'
 import TextBindingParser from 'src/core/template/parsers/TextBindingParser'
 import TextBinding from 'src/core/bindings/TextBinding'
-import DataBinding from 'src/core/bindings/DataBinding'
 import Expression from 'src/core/template/Expression'
 import { 
   throwError

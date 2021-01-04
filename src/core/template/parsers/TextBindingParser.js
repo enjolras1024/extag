@@ -2,6 +2,7 @@
 
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
+import FuncBinding from 'src/core/bindings/FuncBinding'
 import DataBinding from 'src/core/bindings/DataBinding'
 import Expression from 'src/core/template/Expression'
 import { BINDING_OPERATORS, BINDING_BRACKETS } from 'src/share/constants'
@@ -58,7 +59,7 @@ export default {
                 pattern = DataBindingParser.parse(expr.slice(stop + 2, i), prototype, identifiers);
                 pattern.target = 'text';
               }
-              template.push(new Expression(DataBinding, pattern));
+              template.push(new Expression(pattern.target === 'frag' ? FuncBinding : DataBinding, pattern));
               start = stop = i + 1;
               b2 = false;
             }

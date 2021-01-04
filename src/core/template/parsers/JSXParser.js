@@ -3,11 +3,11 @@ import Slot from 'src/core/shells/Slot'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import HTMXEngine from 'src/core/template/HTMXEngine'
-import FuncEvaluator from 'src/core/template/FuncEvaluator'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 import DataBindingParser from "src/core/template/parsers/DataBindingParser";
 import EventBindingParser from "src/core/template/parsers/EventBindingParser";
 import PrimitiveLiteralParser from 'src/core/template/parsers/PrimitiveLiteralParser'
+import FuncBinding from 'src/core/bindings/FuncBinding'
 import DataBinding from 'src/core/bindings/DataBinding'
 import TextBinding from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
@@ -15,7 +15,8 @@ import logger from 'src/share/logger'
 import { 
   EXTAG_VNODE,
   CAPITAL_REGEXP,
-  BINDING_OPERATORS
+  BINDING_OPERATORS,
+  WHITE_SPACES_REGEXP
  } from 'src/share/constants'
 import { 
   slice, 
@@ -40,6 +41,9 @@ function parseJsxNode(node, prototype) {
     node.xif = parseJsxExpr(args, node, prototype);
   }
   if (node.xfor) {
+    if (!Array.isArray(node.xfor[0])) {
+      node.xfor[0] = node.xfor[0].replace(WHITE_SPACES_REGEXP, '').split(',');
+    }
     args = node.xfor[1].args;
     checkExprMode(args[0]);
     node.xfor[1] = parseJsxExpr(args, node, prototype);
@@ -116,7 +120,7 @@ function parseEvaluater(expr, prototype, identifiers) {
   if (type === 'string') {
     return EvaluatorParser.parse(expr, prototype, identifiers);
   } else if (type === 'function') {
-    return new FuncEvaluator(expr);
+    return expr;
   } else {
     throwError('evaluator must be string or function');
   }
@@ -181,7 +185,7 @@ function parseJsxExpr(args, node, prototype) {
       }
       pattern = DataBindingParser.parse(expr, prototype, node.identifiers);
       pattern.target = target;
-      return new Expression(DataBinding, pattern);
+      return new Expression(target === 'frag' ? FuncBinding : DataBinding, pattern);
     } else {
       switch (args[args.length - 1]) {
         case BINDING_OPERATORS.ASSIGN:
@@ -208,7 +212,7 @@ function parseJsxExpr(args, node, prototype) {
         converters: args.length <= 2 ? null :
                       parseConverters(args.slice(2), prototype, node.identifiers)
       };
-      return new Expression(DataBinding, pattern);
+      return new Expression(target === 'frag' ? FuncBinding : DataBinding, pattern);
     }
   } else if (mode === BINDING_OPERATORS.EVENT) {
     if (type === 'string' && args.length === 2) {
@@ -260,10 +264,11 @@ function parseJsxChildren(node, prototype) {
   if (!children || !children.length) {
     return;
   }
-  var i, child;
+  var i, type, child;
   for (i = children.length - 1; i >= 0; --i) {
     child = children[i];
-    if (typeof child === 'object') {
+    type = typeof child;
+    if (type === 'object') {
       if (child.__extag_node__ === EXTAG_VNODE) {
         child.useExpr = true;
         child.identifiers = node.identifiers;
