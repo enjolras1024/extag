@@ -4,13 +4,32 @@ import Path from 'src/base/Path'
 import Accessor from 'src/base/Accessor'
 import Dependency from 'src/core/Dependency'
 import Binding from 'src/core/bindings/Binding'
-import { defineClass } from 'src/share/functions'
+import { defineClass, append } from 'src/share/functions'
+import logger from 'src/share/logger'
 
 var MODES = { ASSIGN: -1, ONE_TIME: 0, ONE_WAY: 1, TWO_WAY: 2, ANY_WAY: 3 };
 
+var _applyEvaluator;
+if (__ENV__ === 'development') { 
+  _applyEvaluator = function _applyEvaluator(evaluator, scopes) {
+    try {
+      return evaluator.apply(scopes[0], scopes);
+    } catch (e) {
+      var constructor = scopes[0].constructor;
+      logger.warn('The expression `' + (this.expr || this.toString()) + 
+                  '` maybe illegal in the template of component ' + (constructor.fullname || constructor.name));
+      throw e;
+    }
+  }
+} else {
+  _applyEvaluator = function _applyEvaluator(evaluator, scopes) {
+    return evaluator.apply(scopes[0], scopes);
+  }
+}
+
 export function applyConverters(converters, scopes, value) {
   for (var i = 0; i < converters.length; ++i) {
-    value = converters[i].execute(scopes, value);
+    value = _applyEvaluator(converters[i], append(scopes, value));
   }
   return value;
 }
@@ -20,10 +39,10 @@ export function applyEvaluator(pattern, scopes) {
     return applyConverters(
       pattern.converters, 
       scopes, 
-      pattern.evaluator.execute(scopes)
+      _applyEvaluator(pattern.evaluator, scopes)
     );
   } else {
-    return pattern.evaluator.execute(scopes);
+    return _applyEvaluator(pattern.evaluator, scopes) ;//pattern.evaluator.apply(scopes[0], scopes);
   }
 }
 

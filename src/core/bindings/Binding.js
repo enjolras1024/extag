@@ -1,31 +1,17 @@
 // src/core/bindings/Binding.js
 
-import  { defineProp, defineClass } from 'src/share/functions'
+import  { defineClass } from 'src/share/functions'
 import Dependency from 'src/core/Dependency'
 
-function Binding(scope, target, property, collect, reflect) {
+function Binding(scope, produce, consume) {
   this.scope = scope;
-  this.target = target;
-  this.property = property;
-
-  if (typeof collect === 'function') {
-    this.invalidate = this.invalidate.bind(this);
-    this.execute = this.execute.bind(this);
-    this.collect = collect;
-    this.flag = 1;
-    this.execute();
-    
-    if (this.keys && this.keys.length) {
-      Binding.record(target, this);
-      this.scope.on('updating', this.execute);
-    }
-
-    if (typeof reflect === 'function') {
-      this.reflect = reflect;
-      this.backward = this.backward.bind(this);
-      target.on('changed', this.backward);
-    }
-  }
+  this.produce = produce;
+  this.consume = consume;
+  this.execute = this.execute.bind(this);
+  this.invalidate = this.invalidate.bind(this);
+  this.flag = 1;
+  this.execute();
+  this.scope.on('updating', this.execute);
 }
 
 defineClass({
@@ -38,10 +24,10 @@ defineClass({
       if (_bindings) {
         _bindings.push(binding);
       } else {
-        // target._bindings = [binding];
-        defineProp(target, '_bindings', {
-          value: [binding], writable: false, enumerable: false, configurable: true
-        });
+        target._bindings = [binding];
+        // defineProp(target, '_bindings', {
+        //   value: [binding], writable: false, enumerable: false, configurable: true
+        // });
       }
     },
 
@@ -53,41 +39,14 @@ defineClass({
       }
     },
 
-    create: function(scope, target, property, collect, reflect) {
-      return new Binding(scope, target, property, collect, reflect);
-    },
-
-    destroy: function(binding) {
-      var target = binding.target, scope = binding.scope;
-
-      if (typeof binding.reflect === 'function') {
-        target.off('changed', binding.backward);
-      }
-      
-      if (typeof binding.collect === 'function' && binding.keys) {
-        scope.off('updating', binding.execute);
-      }
-
-      Dependency.clean(binding);
-
-      // Binding.remove(scope, binding);
+    create: function(scope, produce, consume) {
+      return new Binding(scope, produce, consume);
     }
   },
 
   destroy: function() {
-    var target = this.target, scope = this.scope;
-
-    if (typeof this.reflect === 'function') {
-      target.off('changed', this.backward);
-    }
-    
-    if (typeof this.collect === 'function' && this.keys) {
-      scope.off('updating', this.execute);
-    }
-
+    this.scope.off('updating', this.execute);
     Dependency.clean(this);
-
-    // Binding.remove(scope, binding);
   },
 
   execute: function() {
@@ -95,16 +54,10 @@ defineClass({
       return;
     }
     Dependency.begin(this);
-    var value = this.collect.call(this.scope);
+    var value = this.produce.call(this.scope);
     Dependency.end();
-    this.target.set(this.property, value);
+    this.consume.call(this.scope, value);
     this.flag = 0;
-  },
-
-  backward: function(key) {
-    if (key === this.property) {
-      this.reflect.call(this.scope, this.target[this.property]);
-    }
   },
 
   invalidate: function(key) {

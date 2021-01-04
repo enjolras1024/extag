@@ -1,14 +1,8 @@
 // src/core/bindings/EventBinding.js
 
 import Binding from 'src/core/bindings/Binding'
-import { defineClass } from 'src/share/functions'
+import { append, defineClass } from 'src/share/functions'
 import logger from 'src/share/logger'
-
-function append(scopes, event) {
-  scopes = scopes.slice(0);
-  scopes.push(event);
-  return scopes;
-}
 
 export default function EventBinding(pattern) {
   this.pattern = pattern;
@@ -62,12 +56,12 @@ defineClass({
     } else if (scopes.length <= 1) {
       if (!modifiers || !modifiers.length) {
         this.handler = function(event) {
-          evaluator.execute(append(scopes, event));
+          evaluator.apply(scopes[0], append(scopes, event));
         };
       } else {
         this.handler = function(event) {
           processModifiers(modifiers, event);
-          evaluator.execute(append(scopes, event));
+          evaluator.apply(scopes[0], append(scopes, event));
         };
         this.options = extractOptions(modifiers);
       }
@@ -76,12 +70,12 @@ defineClass({
       this.scopes = scopes; // the 2nd scope may be replaced later in x:for loop.
       if (!modifiers || !modifiers.length) {
         this.handler = (function(event) {
-          evaluator.execute(append(scopes, event));
+          evaluator.apply(scopes[0], append(scopes, event));
         }).bind(this);
       } else {
         this.handler = (function(event) {
           processModifiers(modifiers, event);
-          evaluator.execute(append(scopes, event));
+          evaluator.apply(scopes[0], append(scopes, event));
         }).bind(this);
         this.options = extractOptions(modifiers);
       }
