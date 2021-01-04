@@ -1,6 +1,8 @@
 import {
   query,
   invoke,
+  getTagName,
+  getNameSpace,
   hasNameSpace
 } from './utils'
 
@@ -23,6 +25,8 @@ var ExtagDOM = {
   attachShell: attachShell,
   detachShell: detachShell,
   renderShell: renderShell,
+  getTagName: getTagName,
+  getNameSpace: getNameSpace,
   hasNameSpace: hasNameSpace,
   mayDispatchEvent: mayDispatchEvent,
   addEventListener: addEventListener,
