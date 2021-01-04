@@ -7,7 +7,6 @@ import HTMXEngine from 'src/core/template/HTMXEngine'
 import DirtyMarker from 'src/base/DirtyMarker'
 import { defineClass } from 'src/share/functions'
 import {
-  EMPTY_ARRAY,
   FLAG_CHANGED_CHILDREN,
   FLAG_WAITING_UPDATING,
   FLAG_WAITING_DIGESTING
@@ -41,27 +40,26 @@ defineClass({
         HTMXEngine.driveComponent(fragment, scopes, template, props);
       }
     }
-
-    // create: function create(props, scopes, template) {
-    //   return new Fragment(props, scopes, template);
-    // }
   },
+
+  /**
+   * accept virtual node(s) from scopes
+   * @param {Array|VNOde} vnodes - some virtual node(s) created by Extag.node()
+   * @param {Array} scopes 
+   */
+  accept: function accept(vnodes, scopes) {
+    if (vnodes != null && !Array.isArray(vnodes)) {
+      vnodes = [vnodes];
+    }
+    HTMXEngine.driveChildren(this, scopes, vnodes, false);
+  },
+
   /**
    * Update this shell and insert it into the schedule for rendering.
    */
   update: function update() {
     if ((this.$flag & FLAG_WAITING_UPDATING) == 0) {
       return;
-    }
-
-    if (this.scopes && this.hasDirty('children')) {
-      var children = this.get('children') || [];
-      this.set('children', EMPTY_ARRAY);
-      DirtyMarker.clean(this, 'children');
-      if (!Array.isArray(children)) {
-        children = [children];
-      }
-      HTMXEngine.driveChildren(this, this.scopes, children, false);
     }
 
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
@@ -76,20 +74,16 @@ defineClass({
       this.$flag |= FLAG_WAITING_DIGESTING;
       Schedule.insertDigestQueue(this);
     }
-
-    // this.$flag ^= FLAG_WAITING_UPDATING;
-    // this.digest();
   },
 
+  /**
+   * clean dirty parts
+   */
   digest: function digest() {
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       return false;
     }
     this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
-    // if (this.$flag === FLAG_NORMAL) {
-    //   return false;
-    // }
-    // this.$flag = FLAG_NORMAL;
     DirtyMarker.clean(this);
   }
 });

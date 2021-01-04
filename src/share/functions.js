@@ -96,6 +96,14 @@ function flatten(list, array) {
   return array ? array : list;
 }
 
+function append(array, value) {
+  if (value != null) {
+    array = array.slice(0);
+    array.push(value);
+  }
+  return array;
+}
+
 function isNativeFunc(func) {
   return typeof func === 'function' && /native code/.test(func.toString())
 }
@@ -272,6 +280,7 @@ export {
   help,
   slice,
   assign,
+  append,
   flatten,
   toClasses,
   throwError,

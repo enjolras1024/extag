@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 // src/Extag.js 
+
 import Path from 'src/base/Path'
 // import Parent from 'src/base/Parent'
 import Watcher from 'src/base/Watcher'
@@ -28,8 +29,6 @@ import TextBinding from 'src/core/bindings/TextBinding'
 
 
 import Expression from 'src/core/template/Expression'
-import FuncEvaluator from 'src/core/template/FuncEvaluator'
-import PathEvaluator from 'src/core/template/PathEvaluator'
 import { createContent } from 'src/core/template/drivers/index.js'
 // import JSXEngine from 'src/core/template/engines/JSXEngine'
 import HTMXEngine from 'src/core/template/HTMXEngine'
@@ -42,8 +41,6 @@ import TextBindingParser from 'src/core/template/parsers/TextBindingParser'
 
 import config from 'src/share/config'
 import { 
-  copy, 
-  help,
   slice,
   assign, 
   flatten,
@@ -73,9 +70,8 @@ var Extag = {
     }
     config.set(key, val);
   },
-
+  
   // functions
-  help: help,
   defineClass: defineClass, 
   
   setImmediate: Schedule.setImmediate,
@@ -121,9 +117,6 @@ if (__TEST__) {
     Generator: Generator,
     Path: Path,
     DirtyMarker: DirtyMarker,
-
-    FuncEvaluator: FuncEvaluator,
-    PathEvaluator: PathEvaluator,
 
     DataBinding: DataBinding,
 

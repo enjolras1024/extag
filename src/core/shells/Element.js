@@ -1,6 +1,5 @@
 // src/core/shells/Element.js
 
-
 import Schedule from 'src/core/Schedule'
 import Shell from 'src/core/shells/Shell'
 import Parent from 'src/core/shells/Parent'
@@ -15,12 +14,6 @@ import {
   FLAG_SHOULD_RENDER_TO_VIEW
 } from 'src/share/constants'
 // import config from 'src/share/config'
-
-// function buildCache(element) {
-//   var cache = new Cache(element);
-//   cache.owner = element;
-//   return cache;
-// }
 
 /**
  * 
@@ -58,6 +51,18 @@ defineClass({
         element.assign(props);
       }
     }
+  },
+
+  /**
+   * accept virtual node(s) from scopes
+   * @param {Array|VNOde} vnodes - some virtual node(s) created by Extag.node()
+   * @param {Array} scopes 
+   */
+  accept: function accept(vnodes, scopes) {
+    if (vnodes != null && !Array.isArray(vnodes)) {
+      vnodes = [vnodes];
+    }
+    HTMXEngine.driveChildren(this, scopes, vnodes, false);
   },
 
   /**

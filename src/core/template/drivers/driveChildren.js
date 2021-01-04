@@ -13,7 +13,6 @@ import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
 import Component from 'src/core/shells/Component'
 import Expression from 'src/core/template/Expression'
-import DataBinding from 'src/core/bindings/DataBinding'
 import ClassBinding from 'src/core/bindings/ClassBinding'
 import driveEvents from "./driveEvents";
 import driveProps from './driveProps'
@@ -32,12 +31,6 @@ function matchChild(child, vnode) {
           (vnode.type ? child.constructor === vnode.type : 
             (meta.tag === vnode.tag && meta.ns === vnode.ns));
 }
-
-// function withScopes(content, scopes) {
-//   content = assign({}, content);
-//   content.scopes = scopes;
-//   return content;
-// }
 
 export function driveContent(target, vnode, scopes) {
   if (isVNode(vnode)) {
@@ -65,13 +58,9 @@ export function createContent(vnode, scopes) {
     content = new Block(null, scopes, vnode);
   } else if (useExpr && vnode.type === Expression) {
     expr = vnode.expr;
-    if (expr.binding === DataBinding && expr.pattern.target === 'frag') {
-      content = new Fragment(null, scopes, {
-        useExpr: true,
-        props: {
-          children: expr
-        }
-      });
+    if (expr.pattern.target === 'frag') {
+      content = new Fragment(null, scopes);
+      expr.connect('accept', content, scopes);
     } else {
       content = new Text('');
       expr.connect('content', content, scopes);
@@ -268,15 +257,22 @@ function flattenVNodes(children, array, ns) {
 function driveChildren(target, scopes, children, useExpr, areContents) {
   var contents;
   if (areContents) {
-    contents = target.get('contents');
-    if ((!children || !children.length) && (!contents || !contents.length)) {
-      return;
-    }
-    contents = children ? children.slice(0) : [];
-    contents.scopes = scopes;
-    target.set('contents', contents);
+    target.accept(children, scopes);
   } else {
     if (useExpr) {
+      if (children && children.length === 1) {
+        var expr = children[0];
+        if (expr instanceof Expression && expr.pattern.target === 'frag') {
+          if (target instanceof Component) {
+            expr.connect(function(children, scopes) {
+              driveChildren(this, scopes, children, false);
+            }, target, scopes);
+          } else {
+            expr.connect('accept', target, scopes);
+          }
+          return;
+        }
+      }
       contents = createContents(children, scopes);
     } else {
       contents = collectContents(children, scopes, target);

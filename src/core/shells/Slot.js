@@ -13,57 +13,24 @@ defineClass({
 
   statics: {
     initialize: function initialize(slot, props, scopes, template) {
-      var name = template && template.props && template.props.name;
-
-      Component.initialize(slot, props, scopes, {
-        props: {
-          name: name || ''
-        }
-      });
-      
-      scopes[0].on('updating', slot.onScopeUpdating.bind(slot));
+      Component.initialize(slot, props, scopes, template);
+      scopes[0].on('contents', slot.onScopeContents.bind(slot));
       slot.on('updating', slot.onUpdating.bind(slot));
-
-      if (template.children) {
-        var contents = template.children.slice(0);
-        contents.scopes = scopes;
-        slot.set('contents', contents);
-      }
-
       slot.scopes = scopes;
+      slot.collect();
     },
     template: '<x:frag></x:frag>'
   },
 
-  onUpdating: function onUpdating() {
-    if (this.hasDirty('collection') || this.hasDirty('contents')) {
-      var scopes = this.scopes;
-      var contents = this.get('contents');
-      var collection = this.get('collection');
-      if (collection && collection.length) {
-        scopes = collection.scopes;
-        HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
-      } else if (contents && contents.length) {
-        scopes = contents.scopes;
-        collection = contents.slice(0);
-        HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
-      } else {
-        this.setChildern([]);
-      }
-    }
-  },
-
-  onScopeUpdating: function onScopeUpdating() {
+  collect: function() {
     var scopes = this.scopes;
     var content, name, n, i
     var scopeContents;
     var collection;
-    
-    // var selfContents = this.get('contents');
 
-    if (scopes[0].hasDirty('contents')) {
+    if (scopes[0]._contents) {
       collection = [];
-      scopeContents = scopes[0].get('contents');
+      scopeContents = scopes[0]._contents;
       collection.scopes = scopeContents.scopes;
       if (scopeContents && scopeContents.length > 0) {
         name = this.get('name') || '';
@@ -74,41 +41,40 @@ defineClass({
           }
         }
       }
-      this.set('collection', collection);
+      this._collection = collection;
+      this.invalidate();
     }
+  },
 
-    // if (scopeContents && scopeContents.length > 0) {
-    //   var name = this.get('name') || '';
-    //   for (i = 0, n = scopeContents.length; i < n; ++i) {
-    //     content = scopeContents[i];
-    //     if (content != null && name === (content.slot || '')) {
-    //       collection.push(content);
-    //     }
-    //   }
-    //   this.set('collection', collection);
-    //   // if (collection.length) {
-    //   //   scopes = scopeContents.scopes;
-    //   //   HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
-    //   // }
-    //   // this.useDefault = false;
-    // }
+  onUpdating: function onUpdating() {
+    if (this._collection || this._contents) {
+      var scopes = this.scopes;
+      var contents = this._contents;
+      var collection = this._collection;
+      if (collection && collection.length) {
+        scopes = collection.scopes;
+        HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
+      } else if (contents && contents.length) {
+        scopes = contents.scopes;
+        collection = contents.slice(0);
+        HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
+      } else {
+        this.setChildren([]);
+      }
+      this._collection = null;
+      if (this._contents) {
+        if (this._contents.length) {
+          this._contents.length = 0;
+        } else {
+          this._contents = null;
+        }
+      }
+    } else {
+      this.setChildren([]);
+    }
+  },
 
-    // if (!collection.length && selfContents) {
-    //   // use the default template to slot here
-    //   if (this.useDefault) {
-    //     return;
-    //   }
-    //   for (i = 0, n = selfContents.length; i < n; ++i) {
-    //     content = selfContents[i];
-    //     if (content != null) {
-    //       collection.push(content);
-    //     }
-    //   }
-    //   if (collection.length) {
-    //     scopes = selfContents.scopes;
-    //     HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
-    //   }
-    //   this.useDefault = true;
-    // }
+  onScopeContents: function onScopeContents() {
+    this.collect();
   }
 });

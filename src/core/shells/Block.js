@@ -1,7 +1,6 @@
 // src/core/shells/Block.js
 
-// import RES from 'src/base/RES'
-// import List from 'src/core/models/List'
+import Model from 'src/core/models/Model'
 // import Shell from 'src/core/shells/Shell'
 // import Fragment from 'src/core/shells/Fragment'
 import Component from 'src/core/shells/Component'
@@ -25,6 +24,8 @@ function replaceScopes(content, newScopes) {
     }
   }
 }
+
+// function getData(item, variables) 
 
 /**
  * Block for x:if and x:for
@@ -69,6 +70,7 @@ defineClass({
 
       if (template.xfor) {
         block.mode = 2;
+        block.varaibles = template.xfor[0];
         expression = template.xfor[1];
         expression.connect('iterable', block, scopes);
         if (template.xkey) {
@@ -83,13 +85,24 @@ defineClass({
         expression.connect('component', block, scopes);
       }
 
-      block.on('updating', block.onUpdating.bind(block));
+      block.refresh();
+
+      scopes[0].on('updating', function() {
+        block.refresh();
+      });
     },
     template: '<x:frag></x:frag>'
   },
 
-  onUpdating: function onUpdating() {
+  refresh: function refresh() {
     if (!this.mode) {
+      return;
+    }
+
+    if (!this.hasDirty('condintion') && 
+        !this.hasDirty('component') &&
+        !this.hasDirty('iterable') &&
+        !this.hasDirty('xtype')) {
       return;
     }
 
@@ -124,12 +137,13 @@ defineClass({
     var indices = {}, index, content, item, key, n, i;
     var iterable = this.get('iterable') || [];
     var children = this._children || [];
+    var varaibles = this.varaibles;
     var keyExpr = this.keyExpr;
     var newScopes;
-  
+
     for (i = 0, n = children.length; i < n; ++i) {
-      key = children[i].__extag_key__;
-      if (key) {
+      if ('__extag_key__' in children[i]) {
+        key = children[i].__extag_key__;
         indices[key] = i;
       }
     }
@@ -138,7 +152,14 @@ defineClass({
       key = null;
       content = null;
       item = iterable[i];
-      newScopes = scopes.concat([item]);
+      // newScopes = scopes.concat([item]);
+
+      var data = {}, model;
+      data[varaibles[0]] = item;
+      if (varaibles[1]) {
+        data[varaibles[1]] = i;
+      }
+      newScopes = scopes.concat([data]);
 
       if (keyExpr) {
         key = applyEvaluator(keyExpr.pattern, newScopes);
@@ -149,11 +170,16 @@ defineClass({
       }
   
       if (!content) {
+        model = new Model(data);
+        newScopes[newScopes.length - 1] = model;
         content = HTMXEngine.makeContent(template, newScopes);
         content.__extag_key__ = key;
+        content.__extag_scopes__ = newScopes;
       } else {
-        replaceScopes(content, newScopes);
-        // content.__extag_key__ = key;
+        // replaceScopes(content, newScopes);
+        newScopes = content.__extag_scopes__;
+        model = newScopes[newScopes.length - 1];
+        model.assign(data);
       }
   
       contents.push(content);

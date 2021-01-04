@@ -10,6 +10,7 @@ import logger from 'src/share/logger'
 import { VIEW_ENGINE } from 'src/share/constants'
 import { 
   slice, 
+  throwError,
   hasOwnProp, 
   defineProp,
   defineClass 
@@ -30,7 +31,7 @@ var shellGuid = 0;
 var defaultViewEngine = null;
 
 export default function Shell() {
-  throw new Error('Shell is a base class and can not be instantiated');
+  throwError('Shell is a base class and can not be instantiated');
 }
 
 defineClass({
@@ -53,11 +54,11 @@ defineClass({
   },
 
   update: function() {
-    throw new Error('The method `update` must be implemented by sub-class');
+    throwError('The method `update` must be implemented by sub-class');
   },
 
   digest: function() {
-    throw new Error('The method `digest` must be implemented by sub-class');
+    throwError('The method `digest` must be implemented by sub-class');
   },
 
   /**
@@ -69,7 +70,7 @@ defineClass({
    */
   attach: function attach($skin) {
     if (this.$meta.type === 0) {
-      throw new Error('Fragment and component using <x:frag> as root tag, can not attach a skin.')
+      throwError('Fragment and component using <x:frag> as root tag, can not attach a skin.')
     }
     
     var viewEngine = Shell.getViewEngine(this);

@@ -16,13 +16,13 @@ import {
   getOwnPropDesc 
 } from 'src/share/functions'
 import {
-  EMPTY_ARRAY,
   TYPE_FRAG,
   TYPE_ELEM,
+  FLAG_STARTED,
   FLAG_MOUNTED,
   FLAG_DESTROYED,
   FLAG_CHANGED_CACHE,
-  // FLAG_CHANGED_COMMANDS,
+  FLAG_CHANGED_CONTENTS,
   FLAG_CHANGED_CHILDREN,
   FLAG_WAITING_UPDATING,
   FLAG_WAITING_DIGESTING,
@@ -115,7 +115,7 @@ defineClass({
         try {
           if (!constructor.template) {
             if (typeof prototype.render === 'function') {
-              constructor.template = '<x:frag children@="this.render(this._props) ^"></x:frag>';
+              constructor.template = '<x:frag>@{{this.render(this._props) ^}}</x:frag>';
             } else {
               constructor.template = '<x:frag></x:frag>';
             }
@@ -171,16 +171,10 @@ defineClass({
 
       // building
       try {
-        HTMXEngine.driveComponent(component, scopes, template, props, _template);
+        // HTMXEngine.driveComponent(component, scopes, template, props, _template);
+        HTMXEngine.driveComponent(component, scopes, template, props, null);
       } catch (e) {
         captureError(e, component, 'building');
-      }
-
-      // created
-      try {
-        component.emit('created');
-      } catch (e) {
-        captureError(e, component, 'created');
       }
 
       component.invalidate();
@@ -256,9 +250,8 @@ defineClass({
     }
   },
 
-  bind: function(target, property, collect, reflect) {
-    var binding = Binding.create(this, target, property, collect, reflect);
-    Binding.record(target, binding);
+  bind: function(produce, consume) {
+    return Binding.create(this, produce, consume);
   },
 
   /**
@@ -285,33 +278,40 @@ defineClass({
       captureError(e, this, 'updating');
     }
 
+    if ((this.$flag & FLAG_STARTED) === 0) {
+      try {
+        var _template = this.constructor.__extag_template__;
+        HTMXEngine.driveComponent(this, null, null, null, _template);
+      } catch (e) {
+        captureError(e, this, 'building');
+      }
+      try {
+        this.emit('started');
+      } catch (e) {
+        captureError(e, this, 'started');
+      }
+      this.$flag |= FLAG_STARTED;
+    } 
+
     var type = this.$meta.type;
     if (type !== 0) {
       if ((this.$flag & FLAG_CHANGED_CACHE)) {
         HTMXEngine.transferProps(this);
       }
-    } /*else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-      this._parent.invalidate(FLAG_CHANGED_CHILDREN);
-    }*/ 
-    else {
-      if (this.$props && this.$props.hasDirty('children')) {
-        var children = this.$props.get('children') || [];
-        this.$props.set('children', EMPTY_ARRAY);
-        DirtyMarker.clean(this.$props, 'children');
-        if (!Array.isArray(children)) {
-          children = [children];
-        }
-        HTMXEngine.driveChildren(this, [this], children, false);
-      }
     }
 
-    DirtyMarker.clean(this, 'contents');
+    if (this._contents) {
+      if (this._contents.length) {
+        this._contents.length = 0;
+      } else {
+        this._contents = null;
+      }
+    }
 
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       // If this type is 0, we should ask its parent to render parent's children,
       // since its children are belong to its parent actually.
       if (type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-        // this._parent.invalidate(2); 
         var parent = this.getParent(true);
         parent.$flag |= FLAG_CHANGED_CHILDREN;
         if ((parent.$flag & FLAG_WAITING_DIGESTING) === 0) {
@@ -384,6 +384,21 @@ defineClass({
     }
 
     this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
+  },
+
+  /**
+   * accept contents from scopes
+   * @param {Array} contents - some virtual nodes created by Extag.node(), not null
+   * @param {Array} scopes 
+   */
+  accept: function accept(contents, scopes) {
+    if (this._contents == null && contents.length === 0) {
+      return;
+    }
+    this._contents = contents.slice(0);
+    this._contents.scopes = scopes;
+    this.emit('contents');
+    this.invalidate(FLAG_CHANGED_CONTENTS);
   },
 
   /**
