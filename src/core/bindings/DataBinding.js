@@ -16,8 +16,8 @@ if (__ENV__ === 'development') {
       return evaluator.apply(scopes[0], scopes);
     } catch (e) {
       var constructor = scopes[0].constructor;
-      logger.warn('The expression `' + (this.expr || this.toString()) + 
-                  '` maybe illegal in the template of component ' + (constructor.fullname || constructor.name));
+      logger.warn('The expression `' + (evaluator.expr || evaluator.toString()) + 
+                  '` failed in the template of component ' + (constructor.fullname || constructor.name));
       throw e;
     }
   }
