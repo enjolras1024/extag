@@ -27,11 +27,12 @@ var FLAG_DESTROYED = 512;
 var EXTAG_VNODE = Object.freeze({});
 
 var VIEW_ENGINE = 'view-engine';
+var HOOK_ENGINE = 'hook-engine';
 
 // empty things
 var EMPTY_FUNCTION = function() {};
-var EMPTY_OBJECT = {};
-var EMPTY_ARRAY = [];
+var EMPTY_OBJECT = Object.freeze({});
+var EMPTY_ARRAY = Object.freeze([]);
 
 // template symbols
 var EVENT_SYMBOL = 'event';
@@ -85,6 +86,7 @@ export {
   EXTAG_VNODE,
   
   VIEW_ENGINE,
+  HOOK_ENGINE,
 
   EMPTY_ARRAY,
   EMPTY_OBJECT,

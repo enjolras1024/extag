@@ -12,6 +12,7 @@ import {
   decodeHTML, 
   throwError
 } from 'src/share/functions'
+import config from 'src/share/config'
 import logger from 'src/share/logger'
 import Path from 'src/base/Path'
 import Slot from 'src/core/shells/Slot'
@@ -85,11 +86,6 @@ var SELF_CLOSING_TAGS = {
   wbr: true
 };
 
-var SPECIAL_CASES = {
-  // 'class': 'classes',
-  'inner-html': 'innerHTML'
-};
-
 var DIRECTIVES = {
   'x:ns': true,
   'x:if': true,
@@ -110,12 +106,12 @@ function getGroup(node, name) {
   return group;
 }
 
-function getPropName(attrName) {
-  if (attrName in SPECIAL_CASES) {
-    return SPECIAL_CASES[attrName];
-  }
-  return attrName;// toCamelCase(attrName);
-}
+// function getPropName(attrName) {
+//   if (attrName in SPECIAL_CASES) {
+//     return SPECIAL_CASES[attrName];
+//   }
+//   return attrName;// toCamelCase(attrName);
+// }
 
 function isDirective(name) {
   return name.charCodeAt(0) === 120 // 'x'
@@ -133,34 +129,22 @@ function parseDirective(name, expr, node, prototype, identifiers) {
   } else if (name === 'x:style') {
     node.style = ClassStyleParser.parse(expr, prototype, identifiers, true);
   } else if (name === 'x:type') {
-    // if (node.tag === 'x:output') {
-    //   // <x:output x:type="Buuton"/> just like <input type="button">
-    //   parseAttribute('xtype@', expr, node, prototype, identifiers);
-    //   return;
-    // } else if (node.tag === 'x:slot') {
-    //   throwError('Unexpected x:type on <x:slot>', {
-    //     code: 1001,
-    //     expr: expr,
-    //     desc: 'Do not use x:type on <x:slot>'
-    //   });
-    // }
     var ctor = Path.search(expr, prototype.constructor.resources);
-    // if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
-    //   // if (__ENV__ === 'development') {
-    //   //   logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in static resources.');
-    //   // }
-    //   // throw new TypeError('Can not find such component type `' + expr + '`');
-    //   throwError('Illegal x:type="' + expr + '"', {
-    //     code: 1001,
-    //     expr: expr,
-    //     desc: 'Can not find such component type `' + expr 
-    //           + '`. Make sure it extends Component and please register `' + expr 
-    //           + '` in static resources.'
-    //   });
-    // }
-    // node.type = ctor;
-    if (typeof ctor === 'function' && ctor.__extag_component_class__) {
-      node.type = ctor;
+    if (typeof ctor === 'function') {
+      if (ctor.__extag_component_class__ || ctor === Fragment) {
+        node.type = ctor;
+      } else {
+        var hookEngine = config.get('hook-engine');
+        if (hookEngine) {
+          node.type = hookEngine.getComponentClass(ctor);
+        }
+      }
+      // eslint-disable-next-line no-undef
+      if (__ENV__ === 'development') {
+        if (node.type == null) {
+          logger.warn('`' + node.tag + '` maybe component, but the class is not found.');
+        } 
+      }
     } else {
       result = DataBindingParser.parse(expr, prototype, identifiers);
       node.xtype = new Expression(DataBinding, result);
@@ -234,9 +218,9 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
   var result, group, key;
 
   if (attrValue == null) {
-    key = getPropName(attrName);
+    // key = getPropName(attrName);
     group = getGroup(node, 'props');
-    group[key] = true;
+    group[attrName] = true;
     return;
   }
 
@@ -251,7 +235,8 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
     group = getGroup(node, 'props');
     switch (lastChar) {
       case BINDING_OPERATORS.DATA: // last char is '@'
-        key = getPropName(attrName.slice(0, -1));
+        // key = getPropName(attrName.slice(0, -1));
+        key = attrName.slice(0, -1);
         result = PrimitiveLiteralParser.tryParse(attrValue.trim());
         if (result != null) {
           group[key] = result;
@@ -261,7 +246,8 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         }
         break;
       case BINDING_OPERATORS.TEXT: // last char is '#'
-        key = getPropName(attrName.slice(0, -1));
+        // key = getPropName(attrName.slice(0, -1));
+        key = attrName.slice(0, -1);
         try {
           result = TextBindingParser.parse(attrValue, prototype, identifiers);
         } catch (e) {
@@ -284,8 +270,8 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         }
         break;
       default:
-        key = getPropName(attrName);
-        group[key] = attrValue;
+        // key = getPropName(attrName);
+        group[attrName] = attrValue;
     }
   }
 }
@@ -535,28 +521,29 @@ function parseHTMX(htmx, prototype) {
             case 'x:slot':
               node.type = Slot;
               break;
-            // case 'x:view':
-            //   node.type = View;
-            //   break;
             case 'x:frag':
               node.type = Fragment;
               break;
-            // case 'x:block':
-            //   node.type = Block;
-            //   break;
-            // case 'x:ouput':
-            //   node.type = Output;
-            //   break;
           }
         }
 
         if (node.type == null && node.xtype == null && CAPITAL_REGEXP.test(tagName)) {
           var ctor = Path.search(tagName, prototype.constructor.resources);
-          if (typeof ctor === 'function' && ctor.__extag_component_class__) {
-            node.type = ctor;
+          if (typeof ctor === 'function') {
+            if (ctor.__extag_component_class__ || ctor === Fragment) {
+              node.type = ctor;
+            } else {
+              var hookEngine = config.get('hook-engine');
+              if (hookEngine) {
+                node.type = hookEngine.getComponentClass(ctor);
+              }
+            }
+          }
           // eslint-disable-next-line no-undef
-          } else if (__ENV__ === 'development') {
-            logger.warn('`' + node.tag + '` maybe component but not found.');
+          if (__ENV__ === 'development') {
+            if (node.type == null) {
+              logger.warn('`' + node.tag + '` maybe component, but the class is not found.');
+            } 
           }
         }
 

@@ -24,6 +24,7 @@ import {
   throwError,
   hasOwnProp
  } from 'src/share/functions'
+ import config from 'src/share/config'
 
  var DATA_BINDING_MODES = DataBinding.MODES;
 
@@ -70,25 +71,41 @@ function parseJsxNode(node, prototype) {
       }
     }
   }
-  if (node.type && typeof node.type === 'string') {
-    ctor = Path.search(node.type, prototype.constructor.resources);
-    if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
-      // eslint-disable-next-line no-undef
-      if (__ENV__ === 'development') {
-        logger.warn('Can not find such component type `' + expr + '`. ' + 
-                    'Make sure it extends Component and please register `' + expr  + '` in static resources.');
-      }
-      throwError('Can not find such component type `' + expr + '`');
-    }
-    node.type = ctor;
-  }
+  // if (node.type && typeof node.type === 'string') {
+  //   ctor = Path.search(node.type, prototype.constructor.resources);
+  //   if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
+  //     // eslint-disable-next-line no-undef
+  //     if (__ENV__ === 'development') {
+  //       logger.warn('Can not find such component type `' + expr + '`. ' + 
+  //                   'Make sure it extends Component and please register `' + expr  + '` in static resources.');
+  //     }
+  //     throwError('Can not find such component type `' + expr + '`');
+  //   }
+  //   node.type = ctor;
+  // }
   if (node.type == null && CAPITAL_REGEXP.test(node.tag)) {
-    ctor = Path.search(node.tag, prototype.constructor.resources);
-    if (typeof ctor === 'function' && ctor.__extag_component_class__) {
-      node.type = ctor;
+    // ctor = Path.search(node.tag, prototype.constructor.resources);
+    // if (typeof ctor === 'function' && ctor.__extag_component_class__) {
+    //   node.type = ctor;
+    // // eslint-disable-next-line no-undef
+    // } else if (__ENV__ === 'development') {
+    //   logger.warn('`' + node.tag + '` maybe component type but not found.');
+    // }
+    if (typeof ctor === 'function') {
+      if (ctor.__extag_component_class__ || ctor === Fragment) {
+        node.type = ctor;
+      } else {
+        var hookEngine = config.get('hook-engine');
+        if (hookEngine) {
+          node.type = hookEngine.getComponentClass(ctor);
+        }
+      }
+    }
     // eslint-disable-next-line no-undef
-    } else if (__ENV__ === 'development') {
-      logger.warn('`' + node.tag + '` maybe component type but not found.');
+    if (__ENV__ === 'development') {
+      if (node.type == null) {
+        logger.warn('`' + node.tag + '` maybe component, but the class is not found.');
+      } 
     }
   }
   if (node.type == null) {
@@ -96,18 +113,9 @@ function parseJsxNode(node, prototype) {
       case 'x:slot':
         node.type = Slot;
         break;
-      // case 'x:view':
-      //   node.type = View;
-      //   break;
       case 'x:frag':
         node.type = Fragment;
         break;
-      // case 'x:block':
-      //   node.type = Block;
-      //   break;
-      // case 'x:output':
-      //   node.type = Output;
-      //   break;
     }
   }
   if (node.events) {
@@ -333,10 +341,6 @@ function node(type, options, children) {
             node.tag = type;
             node.type = Fragment;
             break;
-          // case 'x:output':
-          //   node.tag = type;
-          //   node.type = Output;
-          //   break;
         }
       } 
       if (!node.type) {
@@ -344,10 +348,21 @@ function node(type, options, children) {
         node.tag = type.slice(i + 1);
       }
     }
-  } else if (t === 'function' && type.__extag_component_class__) {
-    node.type = type;
+  } else if (t === 'function') {
+    if (type.__extag_component_class__ || type === Fragment) {
+      node.type = type;
+    } else {
+      var hookEngine = config.get('hook-engine');
+      if (hookEngine) {
+        node.type = hookEngine.getComponentClass(type);
+      }
+      if (!node.type || !node.type.__extag_component_class__) {
+        throwError('component class is not found.');
+      }
+    }
+    
   } else {
-    throwError('The first argument must be string, component class or constructor.');
+    throwError('The first argument must be string, function, component class or constructor.');
   }
 
   if (options != null) {
@@ -446,14 +461,13 @@ var JSXParser = {
     parseJsxChildren(_node, prototype);
 
     if (_node.type) {
-      if (_node.tag === 'x:frag') {
+      if (_node.type === Fragment) {
         _node.type = null;
-      } else if (_node.tag === 'x:slot' || _node.tag === 'x:view') {
-        throwError(_node.tag + ' can not be used as root tag of component template.')
       } else {
         throwError('component can not be used as root tag of another component template.')
       }
-    } else if (_node.xif || _node.xfor || _node.xkey) {
+    } 
+    if (_node.xif || _node.xfor || _node.xkey) {
       throwError('`xif`, `xfor`, `xkey` can not be used on root tag of component template.')
     }
 
