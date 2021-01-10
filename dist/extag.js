@@ -1,5 +1,5 @@
 /**
- * Extag v0.4.1
+ * Extag v0.5.1
  * (c) 2017-present enjolras.chen
  * Released under the MIT License.
  */
@@ -100,19 +100,21 @@
   // change flags
   var FLAG_CHANGED_CACHE = 1;
   var FLAG_CHANGED_CHILDREN = 2;
-  var FLAG_CHANGED_COMMANDS = 4;
-  var FLAG_WAITING_UPDATING = 8;
-  var FLAG_WAITING_DIGESTING = 16;
+  var FLAG_CHANGED_CONTENTS = 4;
+  var FLAG_CHANGED_COMMANDS = 8;
+  var FLAG_WAITING_UPDATING = 16;
+  var FLAG_WAITING_DIGESTING = 32;
   var FLAG_SHOULD_RENDER_TO_VIEW = (FLAG_CHANGED_CACHE | FLAG_CHANGED_CHILDREN | FLAG_CHANGED_COMMANDS);
-  var FLAG_MOUNTED = 32;
-  var FLAG_DESTROYED = 64;
+  var FLAG_STARTED = 128;
+  var FLAG_MOUNTED = 256;
+  var FLAG_DESTROYED = 512;
 
   // symbols
   var EXTAG_VNODE = Object.freeze({});
 
   var VIEW_ENGINE = 'view-engine';
-  var EMPTY_OBJECT = {};
-  var EMPTY_ARRAY = [];
+  var EMPTY_OBJECT = Object.freeze({});
+  var EMPTY_ARRAY = Object.freeze([]);
   var BINDING_FORMAT = '@{0}';
   var BINDING_BRACKETS = '{}';
   var BINDING_OPERATORS = {
@@ -142,25 +144,6 @@
   var defineProp = Object.defineProperty;
   var hasOwnProp = Object.prototype.hasOwnProperty;
   var getOwnPropDesc = Object.getOwnPropertyDescriptor;
-
-  function Helper(target) {
-    this.target = target;
-  }
-
-  Helper.prototype.bind = function() {
-    var name, method, target = this.target;
-    for (var i = 0; i < arguments.length; ++i) {
-      name = arguments[i];
-      method = target[name];
-      if (typeof method === 'function') {
-        target[name] = method.bind(target);
-      }
-    }
-  };
-
-  function help(target) {
-    return new Helper(target);
-  }
 
   var assign = function assign(target/*,..sources*/) {
     var source, key, i, n = arguments.length;
@@ -199,6 +182,14 @@
       }
     }
     return array ? array : list;
+  }
+
+  function append(array, value) {
+    if (value != null) {
+      array = array.slice(0);
+      array.push(value);
+    }
+    return array;
   }
 
   function isNativeFunc(func) {
@@ -1579,16 +1570,28 @@
     },
 
     reset: function(props) {
-      var _props = this._props, key;
+      var _props = this._props, value, key;
       if (_props) {
         for (key in _props) {
-          if (!props || !(key in props)) {
-            this.set(key, null);
+          if (hasOwnProp.call(_props, key)) {
+            if (!props || !hasOwnProp.call(props, key)) {
+              DirtyMarker.check(this, key, null, _props[key]);
+            }
           }
         }
       }
       if (props) {
-        this.assign(props);
+        for (key in props) {
+          if (hasOwnProp.call(props, key)) {
+            value = props[key];
+            if (value !== _props[key]) {
+              DirtyMarker.check(this, key, value, _props[key]);
+            }
+          }
+        }
+        this._props = props;
+      } else {
+        this._props = {};
       }
     }
   });
@@ -1613,7 +1616,7 @@
   var defaultViewEngine = null;
 
   function Shell() {
-    throw new Error('Shell is a base class and can not be instantiated');
+    throwError('Shell is a base class and can not be instantiated');
   }
 
   defineClass({
@@ -1636,11 +1639,11 @@
     },
 
     update: function() {
-      throw new Error('The method `update` must be implemented by sub-class');
+      throwError('The method `update` must be implemented by sub-class');
     },
 
     digest: function() {
-      throw new Error('The method `digest` must be implemented by sub-class');
+      throwError('The method `digest` must be implemented by sub-class');
     },
 
     /**
@@ -1652,7 +1655,7 @@
      */
     attach: function attach($skin) {
       if (this.$meta.type === 0) {
-        throw new Error('Fragment and component using <x:frag> as root tag, can not attach a skin.')
+        throwError('Fragment and component using <x:frag> as root tag, can not attach a skin.');
       }
       
       var viewEngine = Shell.getViewEngine(this);
@@ -1699,13 +1702,6 @@
      * detach the skin from this shell, and destroy itself firstly.
      */
     detach: function detach() {
-      // var parent = this._parent;
-      // if (parent && !parent._parent) {
-      //   this._parent = null;
-      //   parent.detach();
-      //   return;
-      // }
-
       if (this.$owner) {
         this.$owner = null;
       }
@@ -1719,14 +1715,6 @@
         this.$skin = null;
       }
     },
-
-    // getSkin: function getSkin() {
-    //   return this.$skin;
-    // },
-
-    // getParent: function getParent(actual) {
-    //   return actual ? Parent.findParent(this) : this._parent;
-    // },
 
     /**
      * return this shell's name, tag and guid.
@@ -1915,6 +1903,22 @@
         }
       }
     }
+  });
+
+  defineProp(Shell.prototype, 'style', {
+    get: function() {
+      if (!this._style) {
+        this._style = new Cache(this);
+        // defineProp(this, '_style', {
+        //   value: new Cache(this), 
+        //   configurable: true
+        // });
+      }
+      return this._style;
+    }//,
+    // set: function(value) {
+    //   resetCache(this.style, value);
+    // }
   });
 
   // src/base/Parent.js
@@ -2298,212 +2302,17 @@
     }
   });
 
-  // src/core/template/HTMXEngine.js
-
-  var HTMXEngine = {
-    driveComponent: null,
-    transferProps: null,
-    createContent: null,
-    makeContent: null,
-    parseHTMX: null,
-    parseJSX: null
-  };
-
-  // src/core/shells/Element.js
-  // import config from 'src/share/config'
-
-  // function buildCache(element) {
-  //   var cache = new Cache(element);
-  //   cache.owner = element;
-  //   return cache;
-  // }
-
-  /**
-   * 
-   * @param {string} tag      - tag name, with a namespace as prefix, e.g. 'svg:rect'
-   * @param {Object} props 
-   */
-  function Element(tag, props) {
-    var idx = tag.indexOf(':'), ns = '';
-    if (idx > 0) {
-      ns = tag.slice(0, idx);
-      tag = tag.slice(idx + 1);
-    }
-    Element.initialize(this, ns, tag, props);
-  }
-
-  defineClass({
-    constructor: Element, extends: Shell, mixins: [Parent.prototype],
-
-    statics: {
-      __extag_element_class__: true,
-
-      initialize: function initialize(element, ns, tag, props) {
-        // eslint-disable-next-line no-undef
-        {
-          if (element.constructor !== Element) {
-            throw new TypeError('Element is final class and can not be extended');
-          }
-        }
-
-        Shell.initialize(element, TYPE_ELEM, tag, ns);
-
-        Element.defineMembers(element);
-
-        if (props) {
-          element.assign(props);
-        }
-      },
-      // /**
-      //  * 
-      //  * @param {string} tag      - tag name, maybe with a namespace as prefix, e.g. 'svg:rect'
-      //  * @param {Object} props    - DOM properties
-      //  */
-      // create: function create(tag, props) {
-      //   return new Element(tag, props);
-      // },
-
-      /**
-       * Define getter/setter for attrs, style and classes
-       * @param {Element|Component} element 
-       */
-      defineMembers: function defineMembers(element) {
-        var prototype = element.constructor.prototype;
-        if (!('classes' in prototype)) {
-          // defineProp(prototype, 'attrs', {
-          //   get: function() {
-          //     if (!this._attrs) {
-          //       this._attrs = new Cache(this);
-          //       // defineProp(this, '_attrs', {
-          //       //   value: new Cache(this), 
-          //       //   configurable: true
-          //       // });
-          //     }
-          //     return this._attrs;
-          //   }//,
-          //   // set: function(value) {
-          //   //   resetCache(this.attrs, value);
-          //   // }
-          // });
-          defineProp(prototype, 'style', {
-            get: function() {
-              if (!this._style) {
-                this._style = new Cache(this);
-                // defineProp(this, '_style', {
-                //   value: new Cache(this), 
-                //   configurable: true
-                // });
-              }
-              return this._style;
-            }//,
-            // set: function(value) {
-            //   resetCache(this.style, value);
-            // }
-          });
-          defineProp(prototype, 'classes', {
-            get: function() {
-              if (!this._classes) {
-                this._classes = new Cache(this);
-                // defineProp(this, '_classes', {
-                //   value: new Cache(this), 
-                //   configurable: true
-                // });
-              }
-              return this._classes;
-            }//,
-            // set: function(value) {
-            //   resetCache(this.classes, value);
-            // }
-          });
-        }
-      }    
-    },
-
-    /**
-     * Update this element and insert it into the schedule for rendering.
-     */
-    update: function update() {
-      if ((this.$flag & FLAG_WAITING_UPDATING) === 0) {
-        return false;
-      }
-      // if (this.$flag === FLAG_NORMAL) {
-      //   return false;
-      // }
-
-      HTMXEngine.transferProps(this);
-
-      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
-        this.$flag |= FLAG_WAITING_DIGESTING;
-        Schedule.insertDigestQueue(this);
-      }
-
-      // this.$flag ^= FLAG_WAITING_UPDATING;
-      // this.digest();
-    },
-
-    /**
-     * Render the dirty parts of this element to the attached skin 
-     */
-    digest: function digest() {
-      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
-        return false;
-      }
-
-      // if (this.$flag === FLAG_NORMAL) {
-      //   return false;
-      // }
-
-      if (this.$skin && (this.$flag & FLAG_SHOULD_RENDER_TO_VIEW)) {
-        var viewEngine = Shell.getViewEngine(this);
-
-        viewEngine.renderShell(this.$skin, this);
-
-        DirtyMarker.clean(this);
-    
-        // this._attrs && DirtyMarker.clean(this._attrs);
-        this._style && DirtyMarker.clean(this._style);
-        this._classes && DirtyMarker.clean(this._classes);
-
-        if (this._commands) {
-          this._commands = null;
-        }
-
-        this.$flag &= ~FLAG_SHOULD_RENDER_TO_VIEW;
-      }
-      
-      if (this.$skin && (this.$flag & FLAG_MOUNTED === 0)) {
-        this.$flag |= FLAG_MOUNTED;
-      }
-
-      this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
-    }
-  });
-
   // src/core/bindings/Binding.js
 
-  function Binding(scope, target, property, collect, reflect) {
+  function Binding(scope, produce, consume) {
     this.scope = scope;
-    this.target = target;
-    this.property = property;
-
-    if (typeof collect === 'function') {
-      this.invalidate = this.invalidate.bind(this);
-      this.execute = this.execute.bind(this);
-      this.collect = collect;
-      this.flag = 1;
-      this.execute();
-      
-      if (this.keys && this.keys.length) {
-        Binding.record(target, this);
-        this.scope.on('updating', this.execute);
-      }
-
-      if (typeof reflect === 'function') {
-        this.reflect = reflect;
-        this.backward = this.backward.bind(this);
-        target.on('changed', this.backward);
-      }
-    }
+    this.produce = produce;
+    this.consume = consume;
+    this.execute = this.execute.bind(this);
+    this.invalidate = this.invalidate.bind(this);
+    this.flag = 1;
+    this.execute();
+    this.scope.on('updating', this.execute);
   }
 
   defineClass({
@@ -2516,10 +2325,10 @@
         if (_bindings) {
           _bindings.push(binding);
         } else {
-          // target._bindings = [binding];
-          defineProp(target, '_bindings', {
-            value: [binding], writable: false, enumerable: false, configurable: true
-          });
+          target._bindings = [binding];
+          // defineProp(target, '_bindings', {
+          //   value: [binding], writable: false, enumerable: false, configurable: true
+          // });
         }
       },
 
@@ -2531,41 +2340,14 @@
         }
       },
 
-      create: function(scope, target, property, collect, reflect) {
-        return new Binding(scope, target, property, collect, reflect);
-      },
-
-      destroy: function(binding) {
-        var target = binding.target, scope = binding.scope;
-
-        if (typeof binding.reflect === 'function') {
-          target.off('changed', binding.backward);
-        }
-        
-        if (typeof binding.collect === 'function' && binding.keys) {
-          scope.off('updating', binding.execute);
-        }
-
-        Dependency.clean(binding);
-
-        // Binding.remove(scope, binding);
+      create: function(scope, produce, consume) {
+        return new Binding(scope, produce, consume);
       }
     },
 
     destroy: function() {
-      var target = this.target, scope = this.scope;
-
-      if (typeof this.reflect === 'function') {
-        target.off('changed', this.backward);
-      }
-      
-      if (typeof this.collect === 'function' && this.keys) {
-        scope.off('updating', this.execute);
-      }
-
+      this.scope.off('updating', this.execute);
       Dependency.clean(this);
-
-      // Binding.remove(scope, binding);
     },
 
     execute: function() {
@@ -2573,16 +2355,10 @@
         return;
       }
       Dependency.begin(this);
-      var value = this.collect.call(this.scope);
+      var value = this.produce.call(this.scope);
       Dependency.end();
-      this.target.set(this.property, value);
+      this.consume.call(this.scope, value);
       this.flag = 0;
-    },
-
-    backward: function(key) {
-      if (key === this.property) {
-        this.reflect.call(this.scope, this.target[this.property]);
-      }
     },
 
     invalidate: function(key) {
@@ -2593,26 +2369,28 @@
     }
   });
 
-  // src/core/captureError.js
+  // src/core/template/HTMXEngine.js
 
-  function getParentComponent(component) {
-    var parent = component.getParent();
-    while (parent) {
-      if (parent.constructor.__extag_component_class__) {
-        return parent;
-      }
-      parent = parent.getParent();
-    }
-  }
+  var HTMXEngine = {
+    driveComponent: null,
+    transferProps: null,
+    createContent: null,
+    makeContent: null,
+    parseHTMX: null,
+    parseJSX: null
+  };
+
+  // src/core/captureError.js
 
   function captureError(error, component, phase) {
     var _stop;
     function stop() {
       _stop = true;
     }
+    var scopes;
     var solver = null;
     var target = component;
-    var targets = [target];
+    var targets = [component];
     while (component) {
       if (!_stop) {
         component.emit('throwed', {
@@ -2626,19 +2404,20 @@
           solver = component;
         }
       }
-      var parent = getParentComponent(component);
-      if (parent) {
-        component = parent;
-        targets.push(parent);
+      scopes = component.__extag_scopes__;
+      if (scopes && scopes[0]) {
+        component = scopes[0];
+        targets.push(component);
       } else {
         component.emit('error', {
           targets: targets.slice(0),
           target: target,
           solver: solver,
           phase: phase,
-          error: error
+          error: error,
+          stop: stop
         });
-        if (!solver) {
+        if (!_stop) {
           logger.error('Unsolved error in phase `' + phase + '` from ', target);
           throw error;
         }
@@ -2649,18 +2428,16 @@
 
   // src/core/shells/Component.js
 
-  var shellProto = Shell.prototype;
-
   var KEYS_PRESERVED = [
-    '$meta', '$flag', '$skin', 
-    'style', 'classes', 'contents', 'children', 
-    '_dirty', '_props', '_style', '_classes', '_children', '_vnodes'
+    '$meta', '$flag', '$skin', '$props', '$style',
+    'style', 'contents', 'children', 
+    '_dirty', '_props', '_style', '_children', '_contents'
   ];
   var METHODS_PRESERVED = [
     'on', 'off', 'emit',
     'getParent', 'getChildren', 'setChildren',
     'appendChild', 'insertChild', 'removeChild', 'replaceChild', 
-    'get', 'set', 'cmd', 'bind', 'assign', 'update', 'digest', 'attach', 'detach', 'invalidate'
+    'get', 'set', 'cmd', 'bind', 'assign', 'accept', 'update', 'digest', 'attach', 'detach', 'invalidate'
   ];
 
   /**
@@ -2680,17 +2457,6 @@
       
       __extag_component_class__: true,
 
-      // /**
-      //  * Creating a component
-      //  *
-      //  * @param {Function}  ctor        - component constructor or class
-      //  * @param {Object}    props       - component attributes and DOM properties
-      //  * @returns {Component}
-      //  */
-      // create: function create(ctor, props) {
-      //   return new ctor(props);
-      // },
-
       destroy: function destroy(component) {
         if (component.$flag & FLAG_DESTROYED) { return; }
         component.emit('destroying');
@@ -2705,6 +2471,8 @@
         var prototype = constructor.prototype;
         var attributes = constructor.attributes;
         var _template = constructor.__extag_template__;
+
+        component.__extag_scopes__ = scopes;
 
         // eslint-disable-next-line no-undef
         {
@@ -2746,7 +2514,11 @@
         if (!_template) {
           try {
             if (!constructor.template) {
-              constructor.template = '<x:frag></x:frag>';
+              if (typeof prototype.render === 'function') {
+                constructor.template = '<x:frag>@{{this.render(this._props) ^}}</x:frag>';
+              } else {
+                constructor.template = '<x:frag></x:frag>';
+              }
             }
             if (typeof constructor.template === 'string') {
               _template = HTMXEngine.parseHTMX(constructor.template, prototype);
@@ -2770,11 +2542,11 @@
         // 4. initialize the component as normal element
         Shell.initialize(component, _template.tag !== 'x:frag' ? TYPE_ELEM : TYPE_FRAG, _template.tag, _template.ns || '');
 
-        Element.defineMembers(component);
+        // Element.defineMembers(component);
 
         // 6. setup
         var model;
-        if (scopes && scopes[0].context) {
+        if (scopes && scopes[0] && scopes[0].context) {
           model = component.setup(scopes[0].context);
           if (component.context == null) {
             component.context = scopes[0].context;
@@ -2797,25 +2569,12 @@
           }
         }
 
-        // building
+        // injecting
         try {
-          HTMXEngine.driveComponent(component, scopes, template, props, _template);
-          // if (typeof component.render === 'function' && 
-          //   constructor.template == '<x:frag></x:frag>') {
-          //   component.$meta.render = true;
-          //   component.bind(component, '_vnodes', function() {
-          //     return component.render(component._props);
-          //   });
-          // }
+          // HTMXEngine.driveComponent(component, scopes, template, props, _template);
+          HTMXEngine.driveComponent(component, scopes, template, props, null);
         } catch (e) {
-          captureError(e, component, 'building');
-        }
-
-        // created
-        try {
-          component.emit('created');
-        } catch (e) {
-          captureError(e, component, 'created');
+          captureError(e, component, 'injecting');
         }
 
         component.invalidate();
@@ -2848,46 +2607,51 @@
      */
     set: function set(key, val) {
       var desc = Accessor.getAttrDesc(this, key);//this.__extag_descriptors__[key];
-      // DOM property, stored in _props
-      if (!desc) {
-        return shellProto.set.call(this, key, val);
-      }
-      // validation in development 
-      // eslint-disable-next-line no-undef
-      {
-        Validator.validate(this, key, val, true);
-      }
-      // // Unbindable custom prpoerty
-      // if (!desc.bindable) {
-      //   this[key] = val;
-      //   return;
-      // }
-      // Custom attribute, stored in _props
       var props = this._props, old;
-
-      if (!desc.get) { // usually, no custom `get` and `set`, checking if the property value is changed firstly.
+      if (desc) {
+        // validation in development 
+        // eslint-disable-next-line no-undef
+        {
+          Validator.validate(this, key, val, true);
+        }
+        // // Unbindable custom prpoerty
+        // if (!desc.bindable) {
+        //   this[key] = val;
+        //   return;
+        // }
+        // Custom attribute, stored in _props
+        if (!desc.get) { // usually, no custom `get` and `set`, checking if the property value is changed firstly.
+          old = props[key];
+          if (old !== val) {
+            props[key] = val;
+            this.invalidate();
+            this.emit('changed', key, val);
+            // DirtyMarker.check(this, key, val, old);
+          }
+        } else if (desc.set) { // else, `get`, `set` and `get` again, then check if the property value is changed.
+          old = desc.get.call(this, props);
+          desc.set.call(this, val, props);
+          val = desc.get.call(this, props);
+          if (old !== val) {
+            this.invalidate();
+            this.emit('changed', key, val);
+            // DirtyMarker.check(this, key, val, old);
+          }
+        }
+      } else {
+        // DOM property, stored in _props
+        // shellProto.set.call(this, key, val);
         old = props[key];
         if (old !== val) {
           props[key] = val;
-          this.invalidate();
-          this.emit('changed', key, val);
-        }
-      } else if (desc.set) { // else, `get`, `set` and `get` again, then check if the property value is changed.
-        old = desc.get.call(this, props);
-        desc.set.call(this, val, props);
-        val = desc.get.call(this, props);
-        if (old !== val) {
-          this.invalidate();
-          this.emit('changed', key, val);
+          this.invalidate(FLAG_CHANGED_CACHE);
+          DirtyMarker.check(this, key, val, old);
         }
       }
-
-      // return this;
     },
 
-    bind: function(target, property, collect, reflect) {
-      var binding = Binding.create(this, target, property, collect, reflect);
-      Binding.record(target, binding);
+    bind: function(produce, consume) {
+      return Binding.create(this, produce, consume);
     },
 
     /**
@@ -2900,52 +2664,6 @@
       }
     },
 
-    // /**
-    //  * attach a skin to this shell.
-    //  * You should use this method for a root component in browser. 
-    //  * For the child texts, elements and components, the viewEngine (ExtagSkin as default) help them attach the skins.
-    //  * On the server-side, the shell do not need to attach some skin, since there is no skin on server-side actually.
-    //  * @param {HTMLElement} $skin
-    //  */
-    // attach: function attach($skin) {
-    //   if (shellProto.attach.call(this, $skin)) {
-    //     try {
-    //       this.emit('attached', $skin);
-    //     } catch (e) {
-    //       captureError(e, this, 'attached');
-    //     }
-    //     // if (this.onAttached) {
-    //     //   this.onAttached($skin);
-    //     // }
-    //     return true;
-    //   }
-    //   return false;
-    // },
-
-    // /**
-    //  * detach the skin from this shell, and destroy itself firstly.
-    //  * You can config('prevent-detach', true) to prevent detaching and destroying.
-    //  * @param {boolean} force - if not, detaching can be prevented, so this shell and the skin can be reused.
-    //  */
-    // detach: function detach(force) {
-    //   if (Shell.prototype.detach.call(this, force)) {
-    //     if (this.$skin) {
-    //       try {
-    //         this.emit('detached', this.$skin);
-    //       } catch (e) {
-    //         captureError(e, this, 'detached');
-    //       }
-    //     }
-    //     try {
-    //       this.emit('destroyed');
-    //     } catch (e) {
-    //       captureError(e, this, 'destroyed');
-    //     }
-    //     return true;
-    //   }
-    //   return false;
-    // },
-
     /**
      * Update this shell and append it to the schedule for digesting.
      */
@@ -2953,66 +2671,47 @@
       if ((this.$flag & FLAG_WAITING_UPDATING) === 0) {
         return;
       }
-      // if (this.$flag === FLAG_NORMAL) {
-      //   return false;
-      // }
+
       try {
         this.emit('updating');
       } catch (e) {
         captureError(e, this, 'updating');
       }
 
+      if ((this.$flag & FLAG_STARTED) === 0) {
+        try {
+          var _template = this.constructor.__extag_template__;
+          HTMXEngine.driveComponent(this, null, null, null, _template);
+        } catch (e) {
+          captureError(e, this, 'starting');
+        }
+        try {
+          this.emit('started');
+        } catch (e) {
+          captureError(e, this, 'started');
+        }
+        this.$flag |= FLAG_STARTED;
+      } 
+
       var type = this.$meta.type;
       if (type !== 0) {
         if ((this.$flag & FLAG_CHANGED_CACHE)) {
           HTMXEngine.transferProps(this);
         }
-      } /*else if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-        this._parent.invalidate(FLAG_CHANGED_CHILDREN);
-      }*/ 
-      // else {
-      //   if (this.__props && this.__props.hasDirty('children')) {
-      //     var children = this.__props.get('children') || [];
-      //     DirtyMarker.clean(this.__props, 'children');
-      //     if (!Array.isArray(children)) {
-      //       children = [children];
-      //     }
-      //     HTMXEngine.driveChildren(this, [this], children, false);
-      //   }
-      //   // if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-      //   //   this._parent.invalidate(FLAG_CHANGED_CHILDREN);
-      //   // }
-      // }
-
-      if (this.render && typeof this.render === 'function') {
-        var children = this.render(this._props) || [];
-        if (!Array.isArray(children)) {
-          children = [children];
-        }
-        HTMXEngine.driveChildren(this, [this], children, false, false);
       }
-      // if (this.$meta.render) {
-      //   var children;
-      //   if (this.hasDirty('_vnodes')) {
-      //     DirtyMarker.clean(this, '_vnodes');
-      //     children = this.get('_vnodes') || [];
-      //   } else {
-      //     children = this.render(this._props) || [];
-      //   }
-        
-      //   if (!Array.isArray(children)) {
-      //     children = [children];
-      //   }
-      //   HTMXEngine.driveChildren(this, [this], children, false, false);
-      // }
 
-      DirtyMarker.clean(this, 'contents');
+      if (this._contents) {
+        if (this._contents.length) {
+          this._contents.length = 0;
+        } else {
+          this._contents = null;
+        }
+      }
 
       if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
         // If this type is 0, we should ask its parent to render parent's children,
         // since its children are belong to its parent actually.
         if (type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
-          // this._parent.invalidate(2); 
           var parent = this.getParent(true);
           parent.$flag |= FLAG_CHANGED_CHILDREN;
           if ((parent.$flag & FLAG_WAITING_DIGESTING) === 0) {
@@ -3022,11 +2721,7 @@
         }
         this.$flag |= FLAG_WAITING_DIGESTING;
         Schedule.insertDigestQueue(this);
-        // this.digest();
       }
-
-      // this.$flag ^= FLAG_WAITING_UPDATING;
-      // this.digest();
     },
 
     /**
@@ -3036,28 +2731,18 @@
       if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
         return;
       }
-      // if (this.$flag === FLAG_NORMAL) {
-      //   return false;
-      // }
-      // if (this.$meta.type !== 0) {
-      //   elementPropto.digest.call(this);
-      // } else {
-      //   fragmentProto.digest.call(this);
-      // }
+
       if (this.$skin && this.$meta.type !== 0 && (this.$flag & FLAG_SHOULD_RENDER_TO_VIEW)) {
         var viewEngine = Shell.getViewEngine(this);
 
         viewEngine.renderShell(this.$skin, this);
    
         DirtyMarker.clean(this);
+        
     
-        // this._attrs && DirtyMarker.clean(this._attrs);
         this._style && DirtyMarker.clean(this._style);
-        this._classes && DirtyMarker.clean(this._classes);
-
-        // this.__attrs && DirtyMarker.clean(this.__attrs);
-        this.__style && DirtyMarker.clean(this.__style);
-        this.__classes && DirtyMarker.clean(this.__classes);
+        this.$style && DirtyMarker.clean(this.$style);
+        this.$props && DirtyMarker.clean(this.$props);
 
         if (this._commands) {
           this._commands = null;
@@ -3102,6 +2787,21 @@
     },
 
     /**
+     * accept contents from scopes
+     * @param {Array} contents - some virtual nodes created by Extag.node(), not null
+     * @param {Array} scopes 
+     */
+    accept: function accept(contents, scopes) {
+      if (this._contents == null && contents.length === 0) {
+        return;
+      }
+      this._contents = contents.slice(0);
+      this._contents.scopes = scopes || [this];
+      this.emit('contents', this._contents);
+      this.invalidate(FLAG_CHANGED_CONTENTS);
+    },
+
+    /**
      * @param {string} name
      * @param {Shell} part
      */
@@ -3121,58 +2821,25 @@
 
     statics: {
       initialize: function initialize(slot, props, scopes, template) {
-        var name = template && template.props && template.props.name;
-
-        Component.initialize(slot, props, scopes, {
-          props: {
-            name: name || ''
-          }
-        });
-        
-        scopes[0].on('updating', slot.onScopeUpdating.bind(slot));
-
-        if (template.children) {
-          var contents = template.children.slice(0);
-          contents.scopes = scopes;
-          slot.set('contents', contents);
-        }
-
+        Component.initialize(slot, props, scopes, template);
+        scopes[0].on('contents', slot.onScopeContents.bind(slot));
+        slot.on('updating', slot.onUpdating.bind(slot));
         slot.scopes = scopes;
+        slot.collect();
       },
       template: '<x:frag></x:frag>'
     },
 
-    update: function update() {
-      if (this.hasDirty('collection') || this.hasDirty('contents')) {
-        var scopes = this.scopes;
-        var contents = this.get('contents');
-        var collection = this.get('collection');
-        if (collection && collection.length) {
-          scopes = collection.scopes;
-          HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
-        } else if (contents && contents.length) {
-          scopes = contents.scopes;
-          collection = contents.slice(0);
-          HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
-        } else {
-          this.setChildern([]);
-        }
-        
-        Component.prototype.update.call(this);
-      }
-    },
-
-    onScopeUpdating: function onScopeUpdating() {
+    collect: function() {
       var scopes = this.scopes;
       var content, name, n, i;
       var scopeContents;
       var collection;
-      
-      // var selfContents = this.get('contents');
 
-      if (scopes[0].hasDirty('contents')) {
+      if (scopes[0]._contents) {
         collection = [];
-        scopeContents = scopes[0].get('contents');
+        scopeContents = scopes[0]._contents;
+        collection.scopes = scopeContents.scopes;
         if (scopeContents && scopeContents.length > 0) {
           name = this.get('name') || '';
           for (i = 0, n = scopeContents.length; i < n; ++i) {
@@ -3182,140 +2849,42 @@
             }
           }
         }
-        this.set('collection', collection);
+        this._collection = collection;
+        this.invalidate();
       }
+    },
 
-      // if (scopeContents && scopeContents.length > 0) {
-      //   var name = this.get('name') || '';
-      //   for (i = 0, n = scopeContents.length; i < n; ++i) {
-      //     content = scopeContents[i];
-      //     if (content != null && name === (content.slot || '')) {
-      //       collection.push(content);
-      //     }
-      //   }
-      //   this.set('collection', collection);
-      //   // if (collection.length) {
-      //   //   scopes = scopeContents.scopes;
-      //   //   HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
-      //   // }
-      //   // this.useDefault = false;
-      // }
-
-      // if (!collection.length && selfContents) {
-      //   // use the default template to slot here
-      //   if (this.useDefault) {
-      //     return;
-      //   }
-      //   for (i = 0, n = selfContents.length; i < n; ++i) {
-      //     content = selfContents[i];
-      //     if (content != null) {
-      //       collection.push(content);
-      //     }
-      //   }
-      //   if (collection.length) {
-      //     scopes = selfContents.scopes;
-      //     HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
-      //   }
-      //   this.useDefault = true;
-      // }
-    }
-  });
-
-  // import config from 'src/share/config'
-  /**
-   * Output dynamic component, <x:output x:type="Button"/>, just like <input type="button">
-   * @param {Object} props 
-   * @param {Array} scopes 
-   * @param {Object} template 
-   */
-  function Output(props, scopes, template) {
-    Output.initialize(this, props, scopes, template);
-  }
-
-  defineClass({
-      constructor: Output,
-      extends: Component,
-      statics: {
-        template: '<x:frag></x:frag>',
-        initialize: function initialize(output, props, scopes, template) {
-          var xtype = template && template.props && template.props.xtype;
-
-          Component.initialize(output, props, scopes, {
-            props: {
-              xtype: xtype
-            }
-          });
-
-          output.cache = new Cache(output);
-
-          output.template = assign({}, template);
-          output.template.props = assign({}, template.props);
-          delete output.template.props.xtype;
-
-          output.scopes = scopes;
-          
-          output.invalidate();
-          output.on('updating', output.onUpdating.bind(output));
-        }
-      },
-      onUpdating: function onUpdating() {
-        var child, ctor, type;
-        var cache = this.cache;
+    onUpdating: function onUpdating() {
+      if (this._collection || this._contents) {
         var scopes = this.scopes;
-        var template = this.template;
-
-        if (this.hasDirty('xtype')) {
-          type = this.get('xtype');
-          if (typeof type === 'function') {
-            if (type.__extag_component_class__) {
-              cache.set('xctor', ctor);
-            } else {
-              var output = this;
-              var promise = type();
-              if (typeof promise === 'object' && promise instanceof Promise) {
-                // cache.set('sign', sign);
-                promise.then(function(ctor) {
-                  cache.set('xctor', ctor);
-                }).catch(function(error) {
-                  cache.set('xctor', null);
-                  output.emitError(error);
-                });
-              } else {
-                cache.set('xctor', null);
-                output.emitError();
-              }
-            }
+        var contents = this._contents;
+        var collection = this._collection;
+        if (collection && collection.length) {
+          scopes = collection.scopes;
+          HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
+        } else if (contents && contents.length) {
+          scopes = contents.scopes;
+          collection = contents.slice(0);
+          HTMXEngine.driveChildren(this, scopes, collection, !!scopes);
+        } else {
+          this.setChildren([]);
+        }
+        this._collection = null;
+        if (this._contents) {
+          if (this._contents.length) {
+            this._contents.length = 0;
           } else {
-            cache.set('xctor', null);
-            output.emitError();
+            this._contents = null;
           }
         }
-        if (cache.hasDirty('xctor')) {
-          ctor = cache.get('xctor');
-          if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
-            this.setChildren([]);
-            return;
-          }
-          try {
-            template.tag = '?';
-            template.type = ctor;
-            child = HTMXEngine.createContent(template, scopes);
-            this.setChildren([child]);
-          } catch (e) {
-            this.setChildren([]);
-            this.emitError(e);
-          }
-        }
-        DirtyMarker.clean(cache);
-      },
-      emitError: function(error) {
-        if (!error) {
-          error = new TypeError('`' + this.get('xtype') + '` is not a component class, constructor or a function that returns promise!');
-        }
-        if (error instanceof Error) {
-          this.emit('error', error);
-        }
+      } else {
+        this.setChildren([]);
       }
+    },
+
+    onScopeContents: function onScopeContents() {
+      this.collect();
+    }
   });
 
   // src/core/shells/Fragment.js
@@ -3345,36 +2914,29 @@
         fragment.scopes = scopes;
         
         if (scopes && template) {
-          template.connect('_vnodes', fragment, scopes);
+          HTMXEngine.driveComponent(fragment, scopes, template, props);
         }
       }
-
-      // create: function create(props, scopes, template) {
-      //   return new Fragment(props, scopes, template);
-      // }
     },
+
+    /**
+     * accept virtual node(s) from scopes
+     * @param {Array|VNOde} vnodes - some virtual node(s) created by Extag.node()
+     * @param {Array} scopes 
+     */
+    accept: function accept(vnodes, scopes) {
+      if (vnodes != null && !Array.isArray(vnodes)) {
+        vnodes = [vnodes];
+      }
+      HTMXEngine.driveChildren(this, scopes || EMPTY_ARRAY, vnodes, false);
+    },
+
     /**
      * Update this shell and insert it into the schedule for rendering.
      */
     update: function update() {
       if ((this.$flag & FLAG_WAITING_UPDATING) == 0) {
         return;
-      }
-      // if (this.$flag === FLAG_NORMAL) {
-      //   return false;
-      // }
-
-      // if (this.onUpdating) {
-      //   this.onUpdating();
-      // }
-
-      if (this.scopes && this.hasDirty('_vnodes')) {
-        var children = this.get('_vnodes') || [];
-        DirtyMarker.clean(this, '_vnodes');
-        if (!Array.isArray(children)) {
-          children = [children];
-        }
-        HTMXEngine.driveChildren(this, this.scopes, children, false);
       }
 
       if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
@@ -3389,21 +2951,215 @@
         this.$flag |= FLAG_WAITING_DIGESTING;
         Schedule.insertDigestQueue(this);
       }
-
-      // this.$flag ^= FLAG_WAITING_UPDATING;
-      // this.digest();
     },
 
+    /**
+     * clean dirty parts
+     */
     digest: function digest() {
       if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
         return false;
       }
       this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
-      // if (this.$flag === FLAG_NORMAL) {
-      //   return false;
-      // }
-      // this.$flag = FLAG_NORMAL;
       DirtyMarker.clean(this);
+    }
+  });
+
+  // src/core/shells/Portal.js
+
+  function Portal() {
+    Component.apply(this, arguments);
+  }
+
+  var name2pool = {};
+
+  defineClass({
+    constructor: Portal,
+    extends: Component,
+    setup: function() {
+      var portal = this;
+      portal.on('contents', function(contents) {
+        if (!portal.fragment) {
+          portal.fragment = new Fragment();
+        }
+        portal.fragment.accept(contents, contents.scopes);
+      });
+      portal.on('started', function() {
+        var pool = portal.getPool();
+        if (pool.target) {
+          pool.target.append(portal);
+        } else {
+          pool.portals.push(portal);
+        }
+      });
+      portal.on('destroying', function() {
+        var pool = portal.getPool();
+        if (pool.target) {
+          pool.target.remove(portal);
+        }
+        if (portal.fragment) {
+          portal.fragment.setChildren([]);
+        }
+      });
+    },
+
+    getPool: function getPool() {
+      var target = this.get('target');
+      var pool = name2pool[target];
+      if (!pool) {
+        pool = name2pool[target] = {
+          portals: []
+        };
+      }
+      return pool;
+    }
+  });
+
+  Portal.Target = defineClass({
+    extends: Component,
+    statics:{
+      fullname: 'Portal.Target'
+    },
+    setup: function setup() {
+      var target = this;
+      target.on('started', function() {
+        var name = target.get('name');
+        var pool = name2pool[name];
+        if (!pool) {
+          name2pool[name] = {
+            target: target,
+            portals: []
+          };
+        } else if (!pool.target && pool.portals.length) {
+          for (var i = 0; i < pool.portals.length; ++i) {
+            if (pool.portals[i].fragment) {
+              target.append(pool.portals[i]);
+            }
+          }
+          pool.portals.length = 0;
+        } else {
+          throwError('A portal target with the same name="' + name + '" already exists');
+        }
+      });
+      target.on('destroying', function() {
+        var name = target.get('name');
+        delete name2pool[name];
+      });
+    },
+    append: function append(portal) {
+      if (!portal.fragment) {
+        portal.fragment = new Fragment();
+      }
+      this.appendChild(portal.fragment);
+    },
+    remove: function remove(portal) {
+      if (!portal.fragment) {
+        return
+      }
+      this.removeChild(portal.fragment);
+    }
+  });
+
+  // src/core/shells/Element.js
+  // import config from 'src/share/config'
+
+  /**
+   * 
+   * @param {string} tag      - tag name, with a namespace as prefix, e.g. 'svg:rect'
+   * @param {Object} props 
+   */
+  function Element(tag, props) {
+    var idx = tag.indexOf(':'), ns = '';
+    if (idx > 0) {
+      ns = tag.slice(0, idx);
+      tag = tag.slice(idx + 1);
+    }
+    Element.initialize(this, ns, tag, props);
+  }
+
+  defineClass({
+    constructor: Element, extends: Shell, mixins: [Parent.prototype],
+
+    statics: {
+      __extag_element_class__: true,
+
+      initialize: function initialize(element, ns, tag, props) {
+        // eslint-disable-next-line no-undef
+        {
+          if (element.constructor !== Element) {
+            throw new TypeError('Element is final class and can not be extended');
+          }
+        }
+
+        Shell.initialize(element, TYPE_ELEM, tag, ns);
+
+        // Element.defineMembers(element);
+
+        if (props) {
+          element.assign(props);
+        }
+      }
+    },
+
+    /**
+     * accept virtual node(s) from scopes
+     * @param {Array|VNOde} vnodes - some virtual node(s) created by Extag.node()
+     * @param {Array} scopes 
+     */
+    accept: function accept(vnodes, scopes) {
+      if (vnodes != null && !Array.isArray(vnodes)) {
+        vnodes = [vnodes];
+      }
+      HTMXEngine.driveChildren(this, scopes || EMPTY_ARRAY, vnodes, false);
+    },
+
+    /**
+     * Update this element and insert it into the schedule for rendering.
+     */
+    update: function update() {
+      if ((this.$flag & FLAG_WAITING_UPDATING) === 0) {
+        return false;
+      }
+
+      HTMXEngine.transferProps(this);
+
+      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
+        this.$flag |= FLAG_WAITING_DIGESTING;
+        Schedule.insertDigestQueue(this);
+      }
+    },
+
+    /**
+     * Render the dirty parts of this element to the attached skin 
+     */
+    digest: function digest() {
+      if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
+        return false;
+      }
+
+      if (this.$skin && (this.$flag & FLAG_SHOULD_RENDER_TO_VIEW)) {
+        var viewEngine = Shell.getViewEngine(this);
+
+        viewEngine.renderShell(this.$skin, this);
+
+        DirtyMarker.clean(this);
+
+        if (this._style) {
+          DirtyMarker.clean(this._style);
+        }
+
+        if (this._commands) {
+          this._commands = null;
+        }
+
+        this.$flag &= ~FLAG_SHOULD_RENDER_TO_VIEW;
+      }
+      
+      if (this.$skin && (this.$flag & FLAG_MOUNTED === 0)) {
+        this.$flag |= FLAG_MOUNTED;
+      }
+
+      this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
     }
   });
 
@@ -3411,17 +3167,44 @@
 
   var MODES = { ASSIGN: -1, ONE_TIME: 0, ONE_WAY: 1, TWO_WAY: 2, ANY_WAY: 3 };
 
+  var _applyEvaluator;
+  { 
+    _applyEvaluator = function _applyEvaluator(evaluator, scopes) {
+      try {
+        return evaluator.apply(scopes[0], scopes);
+      } catch (e) {
+        var constructor = scopes[0].constructor;
+        logger.warn('The expression `' + (evaluator.expr || evaluator.toString()) + 
+                    '` failed in the template of component ' + (constructor.fullname || constructor.name));
+        throw e;
+      }
+    };
+  }
+
   function applyConverters(converters, scopes, value) {
     for (var i = 0; i < converters.length; ++i) {
-      value = converters[i].execute(scopes, value);
+      value = _applyEvaluator(converters[i], append(scopes, value));
     }
     return value;
   }
 
+  function applyEvaluator(pattern, scopes) {
+    if (pattern.converters && pattern.converters.length) {
+      return applyConverters(
+        pattern.converters, 
+        scopes, 
+        _applyEvaluator(pattern.evaluator, scopes)
+      );
+    } else {
+      return _applyEvaluator(pattern.evaluator, scopes) ;//pattern.evaluator.apply(scopes[0], scopes);
+    }
+  }
+
   function DataBinding(pattern) {
-    this.mode = pattern.mode;
-    this.evaluator = pattern.evaluator;
-    this.converters = pattern.converters;
+    this.pattern = pattern;
+    // this.mode = pattern.mode;
+    // this.evaluator = pattern.evaluator;
+    // this.converters = pattern.converters;
   }
 
   defineClass({
@@ -3439,87 +3222,102 @@
       this.target = target;
       this.targetProp = property;
 
-      if (this.mode === MODES.ASSIGN) {
-        this.target.set(this.targetProp, this.evaluate());
+      var pattern = this.pattern;
+
+      if (pattern.mode === MODES.ASSIGN) {
+        this.target.set(this.targetProp, applyEvaluator(pattern, scopes));
         return;
       }
 
       this.execute = this.execute.bind(this);
       this.invalidate = this.invalidate.bind(this);
 
-      if (this.mode === MODES.TWO_WAY) {
+      if (pattern.mode === MODES.TWO_WAY) {
         this.backward = this.backward.bind(this);
         if (Accessor.getAttrDesc(this.target, this.targetProp)) {
           this.target.on('changed', this.backward);
         }
       }
 
-      if (this.mode === MODES.ANY_WAY) {
-        this.scopes[0].on('updating', this.execute);
-        this.target.set(this.targetProp, this.evaluate());
-      } else {
-        this.flag = 1;
-        this.execute();
-        if (this.keys && this.keys.length) {
-          scopes[0].on('updating', this.execute);
-        }
-      }
+      // if (pattern.mode === MODES.ANY_WAY) {
+      //   this.scopes[0].on('updating', this.execute);
+      //   this.target.set(this.targetProp, applyEvaluator(pattern, scopes));
+      // } else {
+      //   this.flag = 1;
+      //   this.execute();
+      //   if (this.keys && this.keys.length) {
+      //     scopes[0].on('updating', this.execute);
+      //   }
+      // }
+      this.flag = 1;
+      this.execute();
+      scopes[0].on('updating', this.execute);
 
       Binding.record(target, this);
     },
 
     replace: function replace(scopes) {
       if (scopes.length > 1 && scopes.length === this.scopes.length) {
-        this.scopes = scopes;
-        this.flag = 1;
-        this.execute();
+        var diff;
+        for (var i = scopes.length - 1; i >= 0; --i) {
+          if (scopes[i] !== this.scopes[i]) {
+            diff = true;
+            break;
+          }
+        }
+        if (diff) {
+          this.scopes = scopes;
+          this.flag = 1;
+          this.execute();
+        }
       }
     },
 
     destroy: function destroy() {
       var scopes = this.scopes;
 
-      if (this.mode === MODES.TWO_WAY)  {
+      if (this.pattern.mode === MODES.TWO_WAY)  {
         if (Accessor.getAttrDesc(this.target, this.targetProp)) {
           this.target.off('changed', this.backward);
         }
       }
 
-      if (this.keys && this.keys.length) {
+      // if (this.keys && this.keys.length) {
         scopes[0].off('updating', this.execute);
-      }
+      // }
       
       Dependency.clean(this);
     },
 
-    evaluate: function() {
-      if (this.converters && this.converters.length) {
-        return applyConverters(
-          this.converters, 
-          this.scopes, 
-          this.evaluator.execute(this.scopes)
-        );
-      } else {
-        return this.evaluator.execute(this.scopes);
-      }
-    },
+    // evaluate: function() {
+    //   if (this.converters && this.converters.length) {
+    //     return applyConverters(
+    //       this.converters, 
+    //       this.scopes, 
+    //       this.evaluator.execute(this.scopes)
+    //     );
+    //   } else {
+    //     return this.evaluator.execute(this.scopes);
+    //   }
+    // },
 
     execute: function execute() {
-      if (this.mode === MODES.ANY_WAY) {
-        this.target.set(this.targetProp, this.evaluate());
-        return;
-      }
-      if (this.flag === 0) {
+      var pattern = this.pattern;
+      // if (pattern.mode === MODES.ANY_WAY) {
+      //   this.target.set(this.targetProp, applyEvaluator(pattern, this.scopes));
+      //   return;
+      // }
+      if (this.flag === 0 && pattern.mode !== MODES.ANY_WAY) {
         return;
       }
 
       Dependency.begin(this);
-      var value = this.evaluate();
+      var value = applyEvaluator(pattern, this.scopes);
       Dependency.end();
       this.target.set(this.targetProp, value);
 
       this.flag = 0;
-      if (this.mode === MODES.ONE_TIME) {
+      if (pattern.mode === MODES.ONE_TIME) {
         this.destroy();
       }
     },
@@ -3528,7 +3326,7 @@
       if (key === this.targetProp) {
         var value = this.target[this.targetProp];
 
-        var path = this.evaluator.path;
+        var path = this.pattern.evaluator.path;
         var from = path.from;
         var n = path.length;
         var scopes = this.scopes;
@@ -3552,7 +3350,7 @@
     },
 
     invalidate: function invalidate(key) {
-      if (this.keys.indexOf(key) >= 0) {
+      if (this.keys && this.keys.indexOf(key) >= 0) {
         this.scopes[0].invalidate();
         this.flag = 1;
       }
@@ -3612,13 +3410,13 @@
         }
       } else if (scopes.length <= 1) {
         if (!modifiers || !modifiers.length) {
-          this.handler = function() {
-            evaluator.execute(scopes);
+          this.handler = function(event) {
+            evaluator.apply(scopes[0], append(scopes, event));
           };
         } else {
           this.handler = function(event) {
             processModifiers(modifiers, event);
-            evaluator.execute(scopes);
+            evaluator.apply(scopes[0], append(scopes, event));
           };
           this.options = extractOptions(modifiers);
         }
@@ -3626,13 +3424,13 @@
       } else {
         this.scopes = scopes; // the 2nd scope may be replaced later in x:for loop.
         if (!modifiers || !modifiers.length) {
-          this.handler = (function() {
-            evaluator.execute(this.scopes);
+          this.handler = (function(event) {
+            evaluator.apply(scopes[0], append(scopes, event));
           }).bind(this);
         } else {
           this.handler = (function(event) {
             processModifiers(modifiers, event);
-            evaluator.execute(this.scopes);
+            evaluator.apply(scopes[0], append(scopes, event));
           }).bind(this);
           this.options = extractOptions(modifiers);
         }
@@ -3650,7 +3448,10 @@
     replace: function replace(scopes) {
       if (this.scopes && scopes.length > 1 
           && this.scopes.length === scopes.length) {
-        this.scopes = scopes;
+        // this.scopes = scopes;
+        for (var i = 1; i < scopes.length; ++i) {
+          this.scopes[i] = scopes[i];
+        }
       }
     },
 
@@ -3718,15 +3519,10 @@
 
   // src/core/bindings/TextBinding.js
 
+  var DATA_BINDING_MODES = DataBinding.MODES;
+
   function TextBinding(pattern) {
-    var pieces = this.pieces = [];
-    for (var i = 0; i < pattern.length; ++i) {
-      if (typeof pattern[i] === 'object' && !(pattern[i] instanceof Expression)) {
-        pieces.push(new Expression(DataBinding, pattern[i]));
-      } else {
-        pieces.push(pattern[i]);
-      }
-    }
+    this.pattern = pattern;
   }
 
   defineClass({
@@ -3743,28 +3539,33 @@
     },
 
     connect: function connect(property, target, scopes) {
-      var i, n, piece, pieces = this.pieces;
-
       this.scopes = scopes;
       this.target = target;
       this.property = property;
 
-      var cache = this.cache = new Cache(scopes[0]);
+      this.flag = 1;
 
-      for (i = 0, n = pieces.length; i < n; ++i) {
-        piece = pieces[i];
-        if (piece instanceof Expression) {
-          piece.connect(i, cache, scopes);
-        } else {
-          cache.set(i, piece);
-        } 
+      var i, n, expr, pattern = this.pattern;
+
+      for (i = 0, n = pattern.length; i < n; ++i) {
+        expr = pattern[i];
+        if (expr instanceof Expression) {
+          if (this.mode != null && this.mode !== expr.pattern.mode) {
+            throwError('all embedded expressions must have same data-binding mode for TextBinding');
+          }
+          this.mode = expr.pattern.mode;
+        }
       }
 
-      cache.set('length', n);
+      if (this.mode == null || this.mode === DATA_BINDING_MODES.ASSIGN) {
+        this.execute();
+        return;
+      }
 
-      this.execute();
-
+      this.invalidate = this.invalidate.bind(this);
       this.execute = this.execute.bind(this);
+      
+      this.execute();
 
       scopes[0].on('updating', this.execute);
 
@@ -3772,153 +3573,56 @@
     },
 
     replace: function replace(scopes) {
-      var bindings = this.cache._bindings;
-      if (bindings) {
-        for (var i = 0; i < bindings.length; ++i) {
-          bindings[i].replace(scopes);
-        }
+      if (scopes.length > 1 && scopes.length === this.scopes.length) {
+        this.scopes = scopes;
+        this.flag = 1;
+        this.execute();
       }
     },
 
     destroy: function destroy() {
       this.scopes[0].off('updating', this.execute);
-
-      var bindings = this.cache._bindings;
-
-      if (bindings) {
-        for (var i = bindings.length - 1; i >= 0; --i) {
-          bindings[i].destroy();
-        }
-        bindings.length = 0;
-      }
-      
-      // Binding.remove(this.target, binding);
+      Dependency.clean(this);
     },
 
     execute: function execute() {
-      var cache = this.cache;
-
-      if (!cache.hasDirty()) { return; }
-
-      var value = slice.call(cache._props, 0);
-
-      this.target.set(this.property, value.join(''));
-
-      DirtyMarker.clean(cache);
-    }
-  });
-
-  // src/core/template/FuncEvaluator.js
-
-  /**
-   * @class
-   * @constructor
-   * @param {Function} func 
-   * @param {string} expr
-   */
-  function FuncEvaluator(func, expr) {
-    this.func = func;    // function to be applied
-    this.expr = expr;
-  }
-
-  defineClass({
-    constructor: FuncEvaluator,
-
-    /**
-     * @param {Array} scopes  - local varaibles
-     * @param {*} value       - value returned by the prevoius evluator/converter in data-binding expression.
-     */
-    execute: function execute(scopes, value) {
-      var args = scopes;
-      if (arguments.length > 1) {
-        args = scopes.slice(0);
-        args.push(value);
+      if (this.flag === 0 && this.mode !== DATA_BINDING_MODES.ANY_WAY) {
+        return;
       }
-      
-      // eslint-disable-next-line no-undef
-      { 
-        try {
-          return this.func.apply(scopes[0], args);
-        } catch (e) {
-          var constructor = scopes[0].constructor;
-          logger.warn('The expression `' + (this.expr || this.func.toString()) + 
-                      '` maybe illegal in the template of component ' + (constructor.fullname || constructor.name));
-          throw e;
+
+      Dependency.begin(this);
+
+      var i, n, expr, cache = [], pattern = this.pattern;
+
+      for (i = 0, n = pattern.length; i < n; ++i) {
+        expr = pattern[i];
+        if (expr instanceof Expression) {
+          expr = applyEvaluator(expr.pattern, this.scopes);
         }
+        cache.push(expr);
+      }
+
+      Dependency.end();
+
+      this.target.set(this.property, cache.join(''));
+
+      this.flag = 0;
+      if (this.mode === DATA_BINDING_MODES.ONE_TIME) {
+        this.destroy();
+      }
+    },
+
+    invalidate: function invalidate(key) {
+      if (this.keys && this.keys.indexOf(key) >= 0) {
+        this.scopes[0].invalidate();
+        this.flag = 1;
       }
     }
   });
-
-  // src/core/template/PathEvaluator.js
-
-  /**
-   * @class
-   * @constructor
-   * @param {Function} func 
-   * @param {string} expr
-   */
-  function PathEvaluator(path, expr) {
-    this.path = path;
-    this.expr = expr;
-  }
-
-  function execute(scopes) {
-    var path = this.path;
-    var n = path.length;
-    var i = path.from;
-    var value;
-    
-    if (i >= 0) {
-      value = scopes[i];
-    } else {
-      value = scopes[0].constructor.resources;
-      value = value[path[0]];
-    }
-
-    if (n === 2) {
-      return value[path[1]];
-    } else {
-      i = 0;
-      while(++i < n) {
-        value = value[path[i]];
-      }
-      return value;
-    }
-  }
-
-  PathEvaluator.prototype.execute = execute;
-
-  // eslint-disable-next-line no-undef
-  { 
-    PathEvaluator.prototype.execute = function(scopes) {
-      try {
-        return execute.call(this, scopes);
-      } catch (e) {
-        var constructor = scopes[0].constructor;
-        logger.warn('The expression `' + (this.expr || this.path.join('.')) + 
-                    '` maybe illegal in the template of component ' + (constructor.fullname || constructor.name));
-        throw e;
-      }
-    };
-  }
 
   // src/core/shells/Block.js
-  // import config from 'src/share/config'
 
-  function replaceScopes(content, newScopes) {
-    var bindings = content._bindings;
-    var numScopes = newScopes.length;
-    if (bindings) {
-      for (var i = 0; i < bindings.length; ++i) {
-        var binding = bindings[i];
-        var oldScopes = binding.scopes;
-        if (oldScopes && oldScopes.length === numScopes && 
-            oldScopes[numScopes - 1] !== newScopes[numScopes - 1]) {
-          binding.replace(newScopes);
-        }
-      }
-    }
-  }
+  // function getData(item, variables) 
 
   /**
    * Block for x:if and x:for
@@ -3963,26 +3667,39 @@
 
         if (template.xfor) {
           block.mode = 2;
+          block.varaibles = template.xfor[0];
           expression = template.xfor[1];
           expression.connect('iterable', block, scopes);
           if (template.xkey) {
-            block.keyEval = template.xkey;//.evaluator;
+            block.keyExpr = template.xkey;//.evaluator;
           }
         }
 
         if (template.xtype) {
+          block.mode = block.mode || 1;
           block.xtype = true;
           expression = template.xtype;
           expression.connect('component', block, scopes);
         }
 
-        block.on('updating', block.onUpdating.bind(block));
+        block.refresh();
+
+        scopes[0].on('updating', function() {
+          block.refresh();
+        });
       },
       template: '<x:frag></x:frag>'
     },
 
-    onUpdating: function onUpdating() {
+    refresh: function refresh() {
       if (!this.mode) {
+        return;
+      }
+
+      if (!this.hasDirty('condintion') && 
+          !this.hasDirty('component') &&
+          !this.hasDirty('iterable') &&
+          !this.hasDirty('xtype')) {
         return;
       }
 
@@ -4017,12 +3734,13 @@
       var indices = {}, index, content, item, key, n, i;
       var iterable = this.get('iterable') || [];
       var children = this._children || [];
-      var keyEval = this.keyEval;
+      var varaibles = this.varaibles;
+      var keyExpr = this.keyExpr;
       var newScopes;
-    
+
       for (i = 0, n = children.length; i < n; ++i) {
-        key = children[i].__key__;
-        if (key) {
+        if ('__extag_key__' in children[i]) {
+          key = children[i].__extag_key__;
           indices[key] = i;
         }
       }
@@ -4031,10 +3749,17 @@
         key = null;
         content = null;
         item = iterable[i];
-        newScopes = scopes.concat([item]);
+        // newScopes = scopes.concat([item]);
 
-        if (keyEval) {
-          key = keyEval.execute(newScopes);
+        var data = {}, model;
+        data[varaibles[0]] = item;
+        if (varaibles[1]) {
+          data[varaibles[1]] = i;
+        }
+        newScopes = scopes.concat([data]);
+
+        if (keyExpr) {
+          key = applyEvaluator(keyExpr.pattern, newScopes);
           index = indices[key];
           if (index != null) {
             content = children[index];
@@ -4042,17 +3767,126 @@
         }
     
         if (!content) {
+          model = new Model(data);
+          newScopes[newScopes.length - 1] = model;
           content = HTMXEngine.makeContent(template, newScopes);
-          content.__key__ = key;
+          content.__extag_key__ = key;
+          content.__extag_scopes__ = newScopes;
         } else {
-          replaceScopes(content, newScopes);
-          // content.__key__ = key;
+          // replaceScopes(content, newScopes);
+          newScopes = content.__extag_scopes__;
+          model = newScopes[newScopes.length - 1];
+          model.assign(data);
         }
     
         contents.push(content);
       }
 
       this.setChildren(contents);
+    }
+  });
+
+  // src/core/bindings/ClassBinding.js
+
+  var DATA_BINDING_MODES$1 = DataBinding.MODES;
+
+  function ClassBinding(pattern) {
+    this.pattern = pattern;
+  }
+
+  defineClass({
+    /**
+     * ClassBinding is composed of strings and data-binding expressions.
+     * e.g. <a href#="https://www.abc.com/@{page}">Goto @{page}</a>
+     */
+    constructor: ClassBinding,
+
+    statics: {
+      create: function(pattern) {
+        return new ClassBinding(pattern);
+      }
+    },
+
+    connect: function connect(property, target, scopes) {
+      this.scopes = scopes;
+      this.target = target;
+      this.property = property;
+
+      this.flag = 1;
+
+      var pattern = this.pattern;
+
+      var name, expr;
+      for (name in pattern) {
+        expr = pattern[name];
+        if (expr instanceof Expression) {
+          if (this.mode != null && this.mode !== expr.pattern.mode) {
+            throwError('all embedded expressions must have same data-binding mode for ClassBinding');
+          }
+          this.mode = expr.pattern.mode;
+        }
+      }
+
+      if (this.mode == null || this.mode === DATA_BINDING_MODES$1.ASSIGN) {
+        this.execute();
+        return;
+      }
+
+      this.invalidate = this.invalidate.bind(this);
+      this.execute = this.execute.bind(this);
+      
+      this.execute();
+
+      scopes[0].on('updating', this.execute);
+
+      Binding.record(target, this);
+    },
+
+    replace: function replace(scopes) {
+      if (scopes.length > 1 && scopes.length === this.scopes.length) {
+        this.scopes = scopes;
+        this.flag = 1;
+        this.execute();
+      }
+    },
+
+    destroy: function destroy() {
+      this.scopes[0].off('updating', this.execute);
+      Dependency.clean(this);
+    },
+
+    execute: function execute() {
+      if (this.flag === 0 && this.mode !== DATA_BINDING_MODES$1.ANY_WAY) {
+        return;
+      }
+
+      Dependency.begin(this);
+
+      var name, expr, cache = {}, pattern = this.pattern;
+
+      for (name in pattern) {
+        expr = pattern[name];
+        if (expr instanceof Expression) {
+          expr = applyEvaluator(expr.pattern, this.scopes);
+        }
+        cache[name] = expr;
+      }
+
+      Dependency.end();
+
+      this.target.set(this.property, cache);
+
+      this.flag = 0;
+      if (this.mode === DATA_BINDING_MODES$1.ONE_TIME) {
+        this.destroy();
+      }
+    },
+
+    invalidate: function invalidate(key) {
+      if (this.keys && this.keys.indexOf(key) >= 0) {
+        this.scopes[0].invalidate();
+        this.flag = 1;
+      }
     }
   });
 
@@ -4093,6 +3927,14 @@
   function driveProps(target, scopes, newProps, useExpr) {
     var oldProps = target._props;
     var name, desc, value;
+
+    // eslint-disable-next-line no-undef
+    {
+      if (target instanceof Component) {
+        Validator.validate0(target, newProps);
+      }
+    }
+
     // firstly, remove redundant properties, or reset default property values.
     if (oldProps) { 
       if (target instanceof Component) {
@@ -4144,17 +3986,11 @@
               (meta.tag === vnode.tag && meta.ns === vnode.ns));
   }
 
-  // function withScopes(content, scopes) {
-  //   content = assign({}, content);
-  //   content.scopes = scopes;
-  //   return content;
-  // }
-
   function driveContent(target, vnode, scopes) {
     if (isVNode(vnode)) {
       driveProps(target, scopes, vnode.props);
       driveEvents(target, scopes, vnode.events);
-      driveChildren(target, scopes, vnode.children, target instanceof Component);
+      driveChildren(target, scopes, vnode.children, vnode.useExpr, target instanceof Component);
       // if (target instanceof Component && target !== scopes[0]) {
       // } else {
 
@@ -4176,8 +4012,9 @@
       content = new Block(null, scopes, vnode);
     } else if (useExpr && vnode.type === Expression) {
       expr = vnode.expr;
-      if (expr.binding === DataBinding && expr.pattern.target === 'frag') {
-        content = new Fragment(null, scopes, expr);
+      if (expr.pattern.target === 'frag') {
+        content = new Fragment(null, scopes);
+        expr.connect('accept', content, scopes);
       } else {
         content = new Text('');
         expr.connect('content', content, scopes);
@@ -4188,21 +4025,19 @@
         content = new ctor(null, scopes, vnode);
       } else {
         content = new Element(vnode.ns ? vnode.ns + ':' + vnode.tag : vnode.tag);
-        
+
         if (vnode.events) {
           driveEvents(content, scopes, vnode.events, useExpr);
         }
+
         if (vnode.props) {
           driveProps(content, scopes, vnode.props, useExpr);
         }
-        // if (vnode.attrs) {
-        //   driveProps(content.attrs, scopes, vnode.attrs, useExpr);
-        // }
         if (vnode.style) {
           driveProps(content.style, scopes, vnode.style, useExpr);
         }
         if (vnode.classes) {
-          driveProps(content.classes, scopes, vnode.classes, useExpr);
+          ClassBinding.create(vnode.classes).connect('class', content, scopes);
         }
         if (vnode.children) {
           driveChildren(content, scopes, vnode.children, useExpr);
@@ -4290,7 +4125,7 @@
         if (!indices) {
           indices = {};
           for (i = oldBeginIndex; i <= oldEndIndex; ++i) {
-            key = oldShells[oldBeginIndex].__key__;
+            key = oldShells[i].__extag_key__;
             if (key) {
               indices[key] = i;
             }
@@ -4305,6 +4140,7 @@
         } else {
           content = createContent(newBeginVNode, scopes);
           if (content) {
+            content.__extag_key__ = key;
             contents[newBeginIndex] = content;
           } else {
             throw new Error('Can not create content from ', newBeginVNode);
@@ -4323,6 +4159,7 @@
         content = createContent(newBeginVNode, scopes);
         if (content) {
           contents[newBeginIndex] = content;
+          content.__extag_key__ = newBeginVNode.xkey;
         } else {
           throw new Error('Can not create content from ', newBeginVNode);
         }
@@ -4371,31 +4208,25 @@
     return array ? array : children;
   }
 
-  // function driveChildren(target, scopes, children, useExpr) { 
-  //   var contents;
-
-  //   if (useExpr) {
-  //     contents = createContents(children, scopes);
-  //   } else {
-  //     contents = collectContents(children, scopes, target);
-  //   }
-    
-  //   if (target instanceof Component && target !== scopes[0]) {
-  //     target.setContents(contents);
-  //   } else {
-  //     target.setChildren(contents);
-  //   }
-  // }
-
   function driveChildren(target, scopes, children, useExpr, areContents) {
     var contents;
     if (areContents) {
-      // target.setContents(contents);
-      contents = children.slice(0);
-      contents.scopes = scopes;
-      target.set('contents', contents);
+      target.accept(children, scopes);
     } else {
       if (useExpr) {
+        if (children && children.length === 1) {
+          var expr = children[0];
+          if (expr instanceof Expression && expr.pattern.target === 'frag') {
+            if (target instanceof Component) {
+              expr.connect(function(children, scopes) {
+                driveChildren(this, scopes, children, false);
+              }, target, scopes);
+            } else {
+              expr.connect('accept', target, scopes);
+            }
+            return;
+          }
+        }
         contents = createContents(children, scopes);
       } else {
         contents = collectContents(children, scopes, target);
@@ -4415,37 +4246,19 @@
       var style = {};
       var pieces = source.split(';');
       var piece, index, i, name, value;
-      for (i = pieces.length - 1; i >= 0; --i) {
+      for (i = 0; i < pieces.length; ++i) {
         piece = pieces[i];
         index = piece.indexOf(':');
         if (index > 0) {
           name = piece.slice(0, index).trim();
           value = piece.slice(index + 1).trim();
-          // style[toCamelCase(name)] = value;
-          style[name] = value;
+          if (name) {
+            style[name] = value;
+          }
         }
       }
       return style;
     } 
-  }
-
-  function toClassObject(source) {
-    var type = typeof source;
-    if (type === 'object') {
-      return source;
-    }
-    if (type === 'string') {
-      source = source.trim().split(WHITE_SPACES_REGEXP);
-    }
-    if (Array.isArray(source)) {
-      var i, classes = {};
-      for (i = 0; i < source.length; ++i) {
-        if (source[i]) {
-          classes[source[i]] = true;
-        }
-      }
-      return classes;
-    }
   }
 
   function getOrCreateCache(shell, name) {
@@ -4462,57 +4275,26 @@
       return;
     }
 
-    var style, classes;
+    var style;
 
-    // if (shell.hasDirty('attrs')) {
-    //   DirtyMarker.clean(shell, 'attrs');
-    //   attrs = shell.get('attrs');
-    //   if (typeof attrs === 'object') {
-    //     shell.attrs.reset(attrs);
-    //   } else {
-    //     shell.attrs.reset(null);
-    //   }
-    // }
     if (shell.hasDirty('style')) {
       DirtyMarker.clean(shell, 'style');
       style = toStyleObject(shell.get('style'));
       shell.style.reset(style);
     }
-    if (shell.hasDirty('class')) {
-      DirtyMarker.clean(shell, 'class');
-      classes = toClassObject(shell.get('class'));
-      shell.classes.reset(classes);
-    }
 
-    if (!shell.__props || !shell.constructor.__extag_component_class__) { 
+    if (!shell.$props || !shell.constructor.__extag_component_class__) { 
         return; 
     }
 
-    var __props = shell.__props;
-    
-    // if (__props.hasDirty('attrs')) {
-    //   var __attrs = getOrCreateCache(shell, '__attrs');
-    //   DirtyMarker.clean(__props, 'attrs');
-    //   attrs = __props.get('attrs');
-    //   if (typeof attrs === 'object') {
-    //     __attrs.reset(attrs);
-    //   } else {
-    //     __attrs.reset(null);
-    //   }
-    // }
-    if (__props.hasDirty('style')) {
-      var __style = getOrCreateCache(shell, '__style');
-      DirtyMarker.clean(__props, 'style');
-      style = __props.get('style');
+    var $props = shell.$props;
+
+    if ($props.hasDirty('style')) {
+      var $style = getOrCreateCache(shell, '$style');
+      DirtyMarker.clean($props, 'style');
+      style = $props.get('style');
       style = toStyleObject(style);
-      __style.reset(style);
-    }
-    if (__props.hasDirty('class')) {
-      var __classes = getOrCreateCache(shell, '__classes');
-      DirtyMarker.clean(__props, 'class');
-      classes = __props.get('class');
-      classes = toClassObject(classes);
-      __classes.reset(classes);
+      $style.reset(style);
     }
   }
 
@@ -4529,23 +4311,20 @@
         props = vnode.props;
       }
       // eslint-disable-next-line no-undef
-      {
-        Validator.validate0(target, props);
-      }
+      // if ("development" === 'development') {
+      //   Validator.validate0(target, props);
+      // }
       driveProps(target, scopes, props, useExpr);
 
       if (vnode.events) {
         driveEvents(target, scopes, vnode.events, useExpr);
       }
       if (useExpr) {
-        // if (vnode.attrs) {
-        //   driveProps(target.attrs, scopes, vnode.attrs, useExpr);
-        // }
         if (vnode.style) {
           driveProps(target.style, scopes, vnode.style, useExpr);
         }
         if (vnode.classes) {
-          driveProps(target.classes, scopes, vnode.classes, useExpr);
+          ClassBinding.create(vnode.classes).connect('class', target, scopes);
         }
       }
       if (vnode.children) {
@@ -4553,9 +4332,9 @@
       }
     } else if (props) {
       // eslint-disable-next-line no-undef
-      {
-        Validator.validate0(target, props);
-      }
+      // if ("development" === 'development') {
+      //   Validator.validate0(target, props);
+      // }
       driveProps(target, scopes, props);
     }
     
@@ -4569,26 +4348,17 @@
       driveEvents(target, _scopes, template.events, useExpr);
     }
     if (template.props) {
-      target.__props = new Cache(target);
-      driveProps(target.__props, _scopes, template.props, useExpr);
+      target.$props = new Cache(target);
+      driveProps(target.$props, _scopes, template.props, useExpr);
     }
     if (useExpr) {
-      // if (template.attrs) {
-      //   target.__attrs = new Cache(target);
-      //   driveProps(target.__attrs, _scopes, template.attrs, useExpr);
-      // }
       if (template.style) {
-        target.__style = new Cache(target);
-        driveProps(target.__style, _scopes, template.style, useExpr);
-      }
-      if (template.classes) {
-        target.__classes = new Cache(target);
-        driveProps(target.__classes, _scopes, template.classes, useExpr);
+        target.$style = new Cache(target);
+        driveProps(target.$style, _scopes, template.style, useExpr);
       }
     }
     if (template.children) {
       driveChildren(target, _scopes, template.children, useExpr);
-      // TODO: check for <x:frag children@="render(_props)"></x:frag>
     }
   }
 
@@ -4626,6 +4396,29 @@
       }
       --index;
     }
+  }
+
+  function newParameter(expr, index) {
+    var identifier = '$' + index;
+    while (expr.indexOf(identifier) >= 0) {
+      identifier = '$' + identifier;
+    }
+    return identifier;
+  }
+
+  function identifierIndexOf(identifier, identifiers) {
+    for (var i = identifiers.length - 1; i >= 0; --i) {
+      if (typeof identifiers[i] === 'string') {
+        if (identifier === identifiers[i]) {
+          return i;
+        }
+      } else { // array, like ['item', 'index'] from x:for="(item, index) of items"
+        if (identifiers[i].indexOf(identifier) >= 0) {
+          return i;
+        }
+      }
+    }
+    return -1;
   }
 
   function gotoPathEnding(expr, index) {
@@ -4757,6 +4550,27 @@
     return indices;
   }
 
+  function makeEvaluator(parameters, lines, path, expr) {
+    try {
+      parameters.push(lines.join('\n'));
+      var evaluator = Function.apply(null, parameters);
+      if (path) {
+        evaluator.path = path;
+      }
+      // eslint-disable-next-line no-undef
+      if ("development" === 'development') {
+        evaluator.expr = expr;
+      }
+      return evaluator;
+    } catch (e) {
+      throwError(e, {
+        code: 1001,
+        expr: expr,
+        desc: 'Illegal expression `' + expr + '`.'
+      });
+    }
+  }
+
   var EvaluatorParser = {
     regexStarts: regexStarts,
 
@@ -4767,80 +4581,84 @@
      * @param {string} expr - e.g. "a + b" in @{a + b} or value@="a + b".
      * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
      * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
-     * @returns {PropEvaluator|FuncEvaluator}
+     * @param {string} wholeExpr
+     * @returns {Function}
      */
-    parse: function parse(expr, prototype, identifiers) {
+    parse: function parse(expr, prototype, identifiers, wholeExpr) {
+      var i, j;
+      var lines = [];
+      var parameters = [];
+      for (i = 0; i < identifiers.length; ++i) {
+        if (identifiers[i][0] === '$') { 
+          parameters.push(identifiers[i]);
+        } else {
+          parameters.push(newParameter(expr, i));
+        }
+        
+      }
+      var varaibles = parameters.slice(0);
+
       var resources = prototype.constructor.resources;
       var path = Path.parse(expr);
       if (path && path.length) {
-        path.from = identifiers.indexOf(path[0]);
-        if (path.from < 0 && (!resources|| !hasOwnProp.call(resources, path[0]))) {
-          path.unshift('this');
-          path.from = 0;
+        if (!hasOwnProp.call(JS_KEYWORD_MAP, path[0]) || path[0] === 'this') {
+          // path.from = identifiers.indexOf(path[0]);
+          path.from = identifierIndexOf(path[0], identifiers);
+          if (path.from < 0) {
+            if (resources && hasOwnProp.call(resources, path[0])) {
+              lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
+            } else {
+              path.unshift('this');
+              path.from = 0;
+            }
+          } else {
+            if (typeof identifiers[path.from] !== 'string') {
+              path.unshift(parameters[path.from]);
+            }
+          }
+          lines.push('return ' + path.join('.'));
+          // return new PathEvaluator(path, expr, identifiers);
+          return makeEvaluator(parameters, lines, path, wholeExpr);
         }
-        return new PathEvaluator(path, expr);
       }
 
-      var args = identifiers.slice(1);
-      var vars = identifiers.slice(1);
       var expanded = 0, piece;
-      var lines = [], i, j;
       // get start-index and stop-index of all prop chains, like `a` or `a.b.c`
       var indices = getPropChainIndices(expr);
 
       for (j = 0; j < indices.length; j += 2) {
         if (indices[j+1] < 0) { continue; }
         piece = expr.slice(indices[j] + expanded, indices[j+1] + expanded);
-        path = Path.parse(piece.replace(WHITE_SPACE_REGEXP, ''));
+        path = Path.parse(piece.replace(WHITE_SPACES_REGEXP, ''));
         if (hasOwnProp.call(JS_KEYWORD_MAP, path[0])) {
           continue;
         }
         
-        i = identifiers.indexOf(path[0]);
+        i = identifierIndexOf(path[0], identifiers);
         if (i < 0) {
           if (resources && hasOwnProp.call(resources, path[0])) {
             lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
-            vars.push(path[0]);
+            varaibles.push(path[0]);
           } else {
             expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
             expanded += 5;
           }
+        } else if (typeof identifiers[i] !== 'string') {
+          // array, like ['item', 'index'] from x:for="(item, index) of items"
+          expr = expr.slice(0, indices[j] + expanded) + parameters[i] + '.' + piece + expr.slice(indices[j+1] + expanded);
+          expanded += parameters[i].length + 1;
         }
       }
 
       lines.push('return ' + expr);
-      args.push(lines.join('\n'));
 
-      var self = '$';
-      while (vars.indexOf(self) >= 0) {
-        self += '$';
-      }
-      args.unshift(self);
-
-      try {
-        var func = Function.apply(null, args);
-        return new FuncEvaluator(func, arguments[0]);
-      } catch (e) {
-        throwError(e, {
-          code: 1001,
-          expr: arguments[0],
-          desc: 'Illegal expression `' + arguments[0] + '`.'
-        });
-      }
+      return makeEvaluator(parameters, lines, null, wholeExpr);
     }
   };
 
   // src/core/template/parsers/DataBindingParser.js
 
-  var DATA_BINDING_MODES = DataBinding.MODES;
-
-  function newIdentifier(expr, identifiers) {
-    var identifier = '$' + identifiers.length;
-    while (expr.indexOf(identifier) >= 0) {
-      identifier = '$' + identifier;
-    }
-    return identifier;
-  }
+  var DATA_BINDING_MODES$2 = DataBinding.MODES;
 
   var DataBindingParser = {
     /**
@@ -4854,23 +4672,23 @@
       var mode = -1, n = expr.length, i;
 
       if (expr[0] === BINDING_OPERATORS.TWO_WAY) {              // <text-box model@="@text"/>
-        mode = DATA_BINDING_MODES.TWO_WAY;
+        mode = DATA_BINDING_MODES$2.TWO_WAY;
         expr = expr.slice(1, n); 
       } else if (expr[n-1] === BINDING_OPERATORS.ANY_WAY) {     // <h1 title@="title ^">@{title ^}</h1>
-        mode = DATA_BINDING_MODES.ANY_WAY;
+        mode = DATA_BINDING_MODES$2.ANY_WAY;
         expr = expr.slice(0, n-1);
       } else if (expr[n-1] === BINDING_OPERATORS.ASSIGN) {      // <h1 title@="title!">@{title !}</h1>
-        mode = DATA_BINDING_MODES.ASSIGN;
+        mode = DATA_BINDING_MODES$2.ASSIGN;
         expr = expr.slice(0, n-1);
       } else if (expr[n-1] === BINDING_OPERATORS.ONE_TIME) {    // <div x:type="Panel" x:if="showPanel ?"></div>
-        mode = DATA_BINDING_MODES.ONE_TIME;
+        mode = DATA_BINDING_MODES$2.ONE_TIME;
         expr = expr.slice(0, n-1);
       } else {                                                  // <h1 title@="title">@{title}</h1>
-        mode = DATA_BINDING_MODES.ONE_WAY;
+        mode = DATA_BINDING_MODES$2.ONE_WAY;
       }
 
       var converters, converter, evaluator, pieces, piece;
-      if (mode === DATA_BINDING_MODES.TWO_WAY) {
+      if (mode === DATA_BINDING_MODES$2.TWO_WAY) {
         if (!Path.test(expr.trim())) {
           throwError('Invalid two-way binding expression!', {
             code: 1001,
@@ -4878,12 +4696,12 @@
             desc: '`' + arguments[0] + '` is not a valid two-way binding expression. Must be a property name or path.'
           });
         }
-        evaluator = EvaluatorParser.parse(expr, prototype, identifiers);
+        evaluator = EvaluatorParser.parse(expr, prototype, identifiers, arguments[0]);
       } else if (expr.indexOf(BINDING_OPERATORS.CONVERTER) < 0) {
-        evaluator = EvaluatorParser.parse(expr, prototype, identifiers);
+        evaluator = EvaluatorParser.parse(expr, prototype, identifiers, arguments[0]);
       } else {
         pieces = expr.split(BINDING_OPERATORS.CONVERTER);
-        evaluator = EvaluatorParser.parse(pieces[0], prototype, identifiers);
+        evaluator = EvaluatorParser.parse(pieces[0], prototype, identifiers, arguments[0]);
         if (pieces.length > 1) {
           for (i = 1; i < pieces.length; ++i) {
             piece = pieces[i].trim();
@@ -4896,26 +4714,18 @@
               });
             }
 
-            var identifier = newIdentifier(expr, identifiers);
+            var identifier = '$value';
+            while (expr.indexOf(identifier) >= 0) {
+              identifier = '$' + identifier;
+            }
             var index = piece.indexOf('(');
             if (index > 0) {
               piece = piece.slice(0, index + 1) + identifier + ',' + piece.slice(index + 1);
             } else {
-              // if (piece.indexOf('.') < 0 && identifiers.indexOf(piece) < 0) {
-              //   resources = prototype.constructor.resources;
-              //   if (resources) {
-              //     var func = Path.search(piece, resources);
-              //     if (typeof func === 'function') {
-              //       converters = converters || [];
-              //       converters.push(new FuncEvaluator(func, piece));
-              //       continue;
-              //     } 
-              //   }
-              // }
               piece = piece + '(' + identifier + ')';
             }
 
-            converter = EvaluatorParser.parse(piece, prototype, identifiers.concat([identifier]));
+            converter = EvaluatorParser.parse(piece, prototype, identifiers.concat([identifier]), arguments[0]);
             converters = converters || [];
             converters.push(converter);
           }
@@ -4932,128 +4742,6 @@
       }
 
       return pattern;
-    }
-  };
-
-  // src/core/template/parsers/FragmentBindingParser.js
-
-  var LF_IN_BLANK = /\s*\n\s*/g;
-
-  var BINDING_LIKE_REGEXP = new RegExp(
-    BINDING_OPERATORS.DATA +'\\' + BINDING_BRACKETS[0] + '(\\s|.)*?\\' + BINDING_BRACKETS[1]
-  );
-
-  var TextBindingParser = {
-    /**
-     * check if the fragment expression contains `@{...}`
-     * @param {string} expr - content of text node in template.
-     */
-    like: function like(expr) {
-      return BINDING_LIKE_REGEXP.test(expr);
-    },
-
-     /**
-     * parse an fragment expression that contains  `@{...}`
-     * @param {string} expr - fragment expression that contains  `@{...}`
-     * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
-     * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
-     */
-    parse: function parse(expr, prototype, identifiers) {
-      var template = [], start = 0, stop;
-      var n = expr.length, i = 0;
-      var cc, cb, ct = 0, b2;
-      var pattern, text;
-      while (i < n) {
-        cb = cc;
-        cc = expr.charCodeAt(i);
-        switch (cc) {
-          case 125: // 125: }
-            if (b2) {
-              --ct;
-              if (ct === 0) {
-                if (start < stop) {
-                  text = expr.slice(start, stop);
-                  text = text.replace(LF_IN_BLANK, ' ');
-                  if (text) {
-                    text = decodeHTML(text);
-                    template.push(text);
-                  }
-                }
-                if (expr.charCodeAt(stop + 2) === 123 && expr.charCodeAt(i - 1) === 125) {
-                  // @{{...}}
-                  pattern = DataBindingParser.parse(expr.slice(stop + 3, i - 1), prototype, identifiers);
-                  pattern.target = 'frag';
-                } else {
-                  // @{...}
-                  pattern = DataBindingParser.parse(expr.slice(stop + 2, i), prototype, identifiers);
-                  pattern.target = 'text';
-                }
-                template.push(pattern);
-                start = stop = i + 1;
-                b2 = false;
-              }
-            }
-            break;
-          case 123: // 123: {
-            if (b2) {
-              if (cb === 64) {
-                throwError("Unclosed @{ .", {
-                  code: 1001, 
-                  expr: expr
-                });
-              }
-              ++ct;
-            } else {
-              if (cb === 64) { // 64: @
-                stop = i - 1;
-                b2 = true;
-                ct = 1;
-              }
-            }
-            break;
-          case 39: // 39: '
-          case 34: // 34: "
-            i = EvaluatorParser.gotoEnding(cc, expr, i + 1);
-            if (i === n) {
-              throwError("Unclosed " + String.fromCharCode(cc) + " .", {
-                code: 1001, 
-                expr: expr
-              });
-            }
-            break;
-        case 47: // 47: /, maybe regexp
-          if (EvaluatorParser.regexStarts(expr, i)) {
-            i = EvaluatorParser.gotoEnding(cc, expr, i + 1);
-            if (i === n) {
-              throwError("Unclosed " + String.fromCharCode(cc) + " .", {
-                code: 1001, 
-                expr: expr
-              });
-            }
-          }
-          break;
-        }
-
-        ++i;
-      }
-
-      if (b2) {
-        throwError("Unclosed @{ .", {
-          code: 1001, 
-          expr: expr
-        });
-      }
-
-      if (0 < start && start < n) {
-        text = expr.slice(start, n);
-        text = text.replace(LF_IN_BLANK, ' ');
-        if (text) {
-          text = decodeHTML(text);
-          template.push(text);
-        }
-      }
-      
-      return template.length ? template : null;
     }
   };
 
@@ -5077,6 +4765,8 @@
       if (HANDLER_REGEXP.test(pieces[0])) {
         template.handler = pieces[0].replace(CONTEXT_REGEXP, ''); 
       }  else {
+        identifiers = identifiers.slice(0);
+        identifiers.push('$event');
         template.evaluator = EvaluatorParser.parse(pieces[0], prototype, identifiers);
       }
 
@@ -5112,7 +4802,79 @@
     }
   };
 
-  var DATA_BINDING_MODES$1 = DataBinding.MODES;
+  // src/core/bindings/FuncBinding.js
+
+  var DATABIDING_MODES = DataBinding.MODES;
+
+  function FuncBinding(pattern) {
+    this.pattern = pattern;
+  }
+
+  defineClass({
+    constructor: FuncBinding,
+    statics: {
+      create: function create(pattern) {
+        return new FuncBinding(pattern);
+      }
+    },
+
+    connect: function connect(method, target, scopes) {
+      this.flag = 0;
+      this.scopes = scopes;
+      this.target = target;
+      this.method = typeof method === 'function' ? method : target[method];
+
+      var pattern = this.pattern;
+
+      if (pattern.mode === DATABIDING_MODES.ASSIGN) {
+        this.target.set(this.targetProp, applyEvaluator(pattern, scopes));
+        return;
+      }
+
+      this.execute = this.execute.bind(this);
+      this.invalidate = this.invalidate.bind(this);
+
+      this.flag = 1;
+      this.execute();
+      scopes[0].on('updating', this.execute);
+
+      Binding.record(target, this);
+    },
+
+    destroy: function destroy() {
+      // if (this.keys && this.keys.length) {
+        this.scopes[0].off('updating', this.execute);
+      // }
+      
+      Dependency.clean(this);
+    },
+
+    execute: function execute() {
+      var pattern = this.pattern;
+      if (this.flag === 0 && pattern.mode !== DATABIDING_MODES.ANY_WAY) {
+        return;
+      }
+
+      Dependency.begin(this);
+      var value = applyEvaluator(pattern, this.scopes);
+      Dependency.end();
+      this.method.call(this.target, value, this.scopes);
+
+      this.flag = 0;
+      if (pattern.mode === DATABIDING_MODES.ONE_TIME) {
+        this.destroy();
+      }
+    },
+
+    invalidate: function invalidate(key) {
+      if (this.keys && this.keys.indexOf(key) >= 0) {
+        this.scopes[0].invalidate();
+        this.flag = 1;
+      }
+    }
+  });
+
+  var DATA_BINDING_MODES$3 = DataBinding.MODES;
 
   function checkExprMode(mode) {
     if (mode !== BINDING_OPERATORS.DATA && mode !== BINDING_OPERATORS.TEXT) {
@@ -5121,13 +4883,16 @@
   }
 
   function parseJsxNode(node, prototype) {
-    var props = node.props, value, key, ctor, args;
+    var props = node.props, value, key, args;
     if (node.xif) {
       args = node.xif.args;
       checkExprMode(args[0]);
       node.xif = parseJsxExpr(args, node, prototype);
     }
     if (node.xfor) {
+      if (!Array.isArray(node.xfor[0])) {
+        node.xfor[0] = node.xfor[0].replace(WHITE_SPACES_REGEXP, '').split(',');
+      }
       args = node.xfor[1].args;
       checkExprMode(args[0]);
       node.xfor[1] = parseJsxExpr(args, node, prototype);
@@ -5147,32 +4912,31 @@
             args = value.args;
             checkExprMode(args[0]);
             props[key] = parseJsxExpr(args, node, prototype);
-          } else if (key === 'class' || key === 'style') {
+          } else if (key === 'style') {
             node[key] = parseJsxData(value, node, prototype);
             delete props[key];
           }
         }
       }
     }
-    if (node.type && typeof node.type === 'string') {
-      ctor = Path.search(node.type, prototype.constructor.resources);
-      if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
-        // eslint-disable-next-line no-undef
-        {
-          logger.warn('Can not find such component type `' + expr + '`. ' + 
-                      'Make sure it extends Component and please register `' + expr  + '` in static resources.');
-        }
-        throwError('Can not find such component type `' + expr + '`');
-      }
-      node.type = ctor;
-    }
+    // if (node.type && typeof node.type === 'string') {
+    //   ctor = Path.search(node.type, prototype.constructor.resources);
+    //   if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
+    //     // eslint-disable-next-line no-undef
+    //     if ("development" === 'development') {
+    //       logger.warn('Can not find such component type `' + expr + '`. ' + 
+    //                   'Make sure it extends Component and please register `' + expr  + '` in static resources.');
+    //     }
+    //     throwError('Can not find such component type `' + expr + '`');
+    //   }
+    //   node.type = ctor;
+    // }
     if (node.type == null && CAPITAL_REGEXP.test(node.tag)) {
-      ctor = Path.search(node.tag, prototype.constructor.resources);
-      if (typeof ctor === 'function' && ctor.__extag_component_class__) {
-        node.type = ctor;
       // eslint-disable-next-line no-undef
-      } else {
-        logger.warn('`' + node.tag + '` maybe component type but not found.');
+      {
+        if (node.type == null) {
+          logger.warn('`' + node.tag + '` maybe component, but the class is not found.');
+        } 
       }
     }
     if (node.type == null) {
@@ -5180,17 +4944,8 @@
         case 'x:slot':
           node.type = Slot;
           break;
-        // case 'x:view':
-        //   node.type = View;
-        //   break;
         case 'x:frag':
           node.type = Fragment;
-          break;
-        // case 'x:block':
-        //   node.type = Block;
-        //   break;
-        case 'x:output':
-          node.type = Output;
           break;
       }
     }
@@ -5204,7 +4959,7 @@
     if (type === 'string') {
       return EvaluatorParser.parse(expr, prototype, identifiers);
     } else if (type === 'function') {
-      return new FuncEvaluator(expr);
+      return expr;
     } else {
       throwError('evaluator must be string or function');
     }
@@ -5258,7 +5013,7 @@
             });
           }
           pattern = {
-            mode: DATA_BINDING_MODES$1.TWO_WAY,
+            mode: DATA_BINDING_MODES$3.TWO_WAY,
             evaluator: parseEvaluater(expr.slice(1), prototype, node.identifiers)
           };
           return new Expression(DataBinding, pattern);
@@ -5269,23 +5024,23 @@
         }
         pattern = DataBindingParser.parse(expr, prototype, node.identifiers);
         pattern.target = target;
-        return new Expression(DataBinding, pattern);
+        return new Expression(target === 'frag' ? FuncBinding : DataBinding, pattern);
       } else {
         switch (args[args.length - 1]) {
           case BINDING_OPERATORS.ASSIGN:
-            mode = DATA_BINDING_MODES$1.ASSIGN;
+            mode = DATA_BINDING_MODES$3.ASSIGN;
             args = args.slice(0, -1);
             break;
           case BINDING_OPERATORS.ANY_WAY:
-            mode = DATA_BINDING_MODES$1.ANY_WAY;
+            mode = DATA_BINDING_MODES$3.ANY_WAY;
             args = args.slice(0, -1);
             break;
           case BINDING_OPERATORS.ONE_TIME:
-            mode = DATA_BINDING_MODES$1.ONE_TIME;
+            mode = DATA_BINDING_MODES$3.ONE_TIME;
             args = args.slice(0, -1);
             break;
           default:
-            mode = DATA_BINDING_MODES$1.ONE_WAY;
+            mode = DATA_BINDING_MODES$3.ONE_WAY;
             break;
         }
 
@@ -5296,7 +5051,7 @@
           converters: args.length <= 2 ? null :
                         parseConverters(args.slice(2), prototype, node.identifiers)
         };
-        return new Expression(DataBinding, pattern);
+        return new Expression(target === 'frag' ? FuncBinding : DataBinding, pattern);
       }
     } else if (mode === BINDING_OPERATORS.EVENT) {
       if (type === 'string' && args.length === 2) {
@@ -5348,10 +5103,11 @@
     if (!children || !children.length) {
       return;
     }
-    var i, child;
+    var i, type, child;
     for (i = children.length - 1; i >= 0; --i) {
       child = children[i];
-      if (typeof child === 'object') {
+      type = typeof child;
+      if (type === 'object') {
         if (child.__extag_node__ === EXTAG_VNODE) {
           child.useExpr = true;
           child.identifiers = node.identifiers;
@@ -5416,10 +5172,6 @@
               node.tag = type;
               node.type = Fragment;
               break;
-            case 'x:output':
-              node.tag = type;
-              node.type = Output;
-              break;
           }
         } 
         if (!node.type) {
@@ -5427,10 +5179,21 @@
           node.tag = type.slice(i + 1);
         }
       }
-    } else if (t === 'function' && type.__extag_component_class__) {
-      node.type = type;
+    } else if (t === 'function') {
+      if (type.__extag_component_class__ || type === Fragment) {
+        node.type = type;
+      } else {
+        var hookEngine = config.get('hook-engine');
+        if (hookEngine) {
+          node.type = hookEngine.getComponentClass(type);
+        }
+        if (!node.type || !node.type.__extag_component_class__) {
+          throwError('component class is not found.');
+        }
+      }
+      
     } else {
-      throwError('The first argument must be string, component class or constructor.');
+      throwError('The first argument must be string, function, component class or constructor.');
     }
 
     if (options != null) {
@@ -5453,12 +5216,10 @@
         node.slot = options.xslot;
       }
       if (options.xtype) {
-        if (!node.type) {
+        if (options.xtype instanceof Expression) {
+          node.xtype = options.xtype;
+        } else {
           node.type = options.xtype;
-        } else if (node.type === Output) {
-          node.props = {
-            xtype: options.xtype
-          };
         }
       }
 
@@ -5488,17 +5249,6 @@
         children = [children];
       }
       node.children = children;
-
-      // if (node.props) {
-      //   props = node.props;
-      // } else {
-      //   props = node.props = {};
-      // }
-      // if (node.type) {
-      //   props.contents = children;
-      // } else {
-      //   props.children = children;
-      // }
     }
 
     return node;
@@ -5542,14 +5292,13 @@
       parseJsxChildren(_node, prototype);
 
       if (_node.type) {
-        if (_node.tag === 'x:frag') {
+        if (_node.type === Fragment) {
           _node.type = null;
-        } else if (_node.tag === 'x:slot' || _node.tag === 'x:view') {
-          throwError(_node.tag + ' can not be used as root tag of component template.');
         } else {
           throwError('component can not be used as root tag of another component template.');
         }
-      } else if (_node.xif || _node.xfor || _node.xkey) {
+      } 
+      if (_node.xif || _node.xfor || _node.xkey) {
         throwError('`xif`, `xfor`, `xkey` can not be used on root tag of component template.');
       }
 
@@ -5559,14 +5308,134 @@
 
   HTMXEngine.parseJSX = JSXParser.parse;
 
+  // src/core/template/parsers/FragmentBindingParser.js
+
+  var LF_IN_BLANK = /\s*\n\s*/g;
+
+  var BINDING_LIKE_REGEXP = new RegExp(
+    BINDING_OPERATORS.DATA +'\\' + BINDING_BRACKETS[0] + '(\\s|.)*?\\' + BINDING_BRACKETS[1]
+  );
+
+  var TextBindingParser = {
+    /**
+     * check if the fragment expression contains `@{...}`
+     * @param {string} expr - content of text node in template.
+     */
+    like: function like(expr) {
+      return BINDING_LIKE_REGEXP.test(expr);
+    },
+
+     /**
+     * parse an fragment expression that contains  `@{...}`
+     * @param {string} expr - fragment expression that contains  `@{...}`
+     * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
+     * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
+     */
+    parse: function parse(expr, prototype, identifiers) {
+      var template = [], start = 0, stop;
+      var n = expr.length, i = 0;
+      var cc, cb, ct = 0, b2;
+      var pattern, text;
+      while (i < n) {
+        cb = cc;
+        cc = expr.charCodeAt(i);
+        switch (cc) {
+          case 125: // 125: }
+            if (b2) {
+              --ct;
+              if (ct === 0) {
+                if (start < stop) {
+                  text = expr.slice(start, stop);
+                  text = text.replace(LF_IN_BLANK, ' ');
+                  if (text) {
+                    text = decodeHTML(text);
+                    template.push(text);
+                  }
+                }
+                if (expr.charCodeAt(stop + 2) === 123 && expr.charCodeAt(i - 1) === 125) {
+                  // @{{...}}
+                  pattern = DataBindingParser.parse(expr.slice(stop + 3, i - 1), prototype, identifiers);
+                  pattern.target = 'frag';
+                } else {
+                  // @{...}
+                  pattern = DataBindingParser.parse(expr.slice(stop + 2, i), prototype, identifiers);
+                  pattern.target = 'text';
+                }
+                template.push(new Expression(pattern.target === 'frag' ? FuncBinding : DataBinding, pattern));
+                start = stop = i + 1;
+                b2 = false;
+              }
+            }
+            break;
+          case 123: // 123: {
+            if (b2) {
+              if (cb === 64) { // 64: @
+                throwError("Unclosed @{ .", {
+                  code: 1001, 
+                  expr: expr
+                });
+              }
+              ++ct;
+            } else {
+              if (cb === 64) { // 64: @
+                stop = i - 1;
+                b2 = true;
+                ct = 1;
+              }
+            }
+            break;
+          case 39: // 39: '
+          case 34: // 34: "
+            if (b2) {
+              i = EvaluatorParser.gotoEnding(cc, expr, i + 1);
+              if (i === n) {
+                throwError("Unclosed " + String.fromCharCode(cc) + " .", {
+                  code: 1001, 
+                  expr: expr
+                });
+              }
+            }
+            break;
+        case 47: // 47: /, maybe regexp
+          if (b2 && EvaluatorParser.regexStarts(expr, i)) {
+            i = EvaluatorParser.gotoEnding(cc, expr, i + 1);
+            if (i === n) {
+              throwError("Unclosed " + String.fromCharCode(cc) + " .", {
+                code: 1001, 
+                expr: expr
+              });
+            }
+          }
+          break;
+        }
+
+        ++i;
+      }
+
+      if (b2) {
+        throwError("Unclosed @{ .", {
+          code: 1001, 
+          expr: expr
+        });
+      }
+
+      if (0 < start && start < n) {
+        text = expr.slice(start, n);
+        text = text.replace(LF_IN_BLANK, ' ');
+        if (text) {
+          text = decodeHTML(text);
+          template.push(text);
+        }
+      }
+      
+      return template.length ? template : null;
+    }
+  };
+
   // src/core/template/parsers/ClassStyleParser.js
 
   var STYLE_DELIMITER = /;/g;
   var CSS_NAME_REGEXP = /^[a-z0-9\-_]+$/i;
-  // var SINGLE_BINDING_REGEXP = /^@\{[^@]*\}$/;
-  // var SINGLE_BINDING_REGEXP = new RegExp(
-  //   '^' + BINDING_OPERATORS.DATA +'\\' + BINDING_BRACKETS[0] + '[^' + BINDING_OPERATORS.DATA + ']*\\' + BINDING_BRACKETS[1] + '$'
-  // );
 
   var ClassStyleParser = {
     /**
@@ -5607,20 +5476,12 @@
             expr: name || arguments[0]
           });
         }
-        // if (forStyle && name.slice(0, 2) !== '--') { // not like --webkit-transform
-        //   name = toCamelCase(name);
-        // }
 
         try {
           if (!TextBindingParser.like(expr)) {
             group[name] = forStyle ? expr : PrimitiveLiteralParser.tryParse(expr);
             continue;
           }
-          // if (SINGLE_BINDING_REGEXP.test(expr)) {
-          //   result = DataBindingParser.parse(expr.slice(2, expr.length-1), prototype, identifiers);
-          //   group[name] = new Expression(DataBinding, result);
-          //   continue;
-          // }
           result = TextBindingParser.parse(expr, prototype, identifiers);
         } catch (e) {
           // eslint-disable-next-line no-undef
@@ -5633,7 +5494,7 @@
         }
         if (result) {
           if (result.length === 1) {
-            group[name] = new Expression(DataBinding, result[0]);
+            group[name] = result[0];
           } else if (forStyle) {
             group[name] = new Expression(TextBinding, result);
           } else {
@@ -5653,7 +5514,10 @@
 
   // src/core/template/parsers/HTMXParser.js
 
-  var FOR_LOOP_REGEXP = /^([_$\w]+)\s+of\s+(.+)$/;
+  var PARENTHESES_REGEXP = /^\(.+\)$/;
+  var FOR_OF_SPLITTER = /\s+of\s+/;
+  var COMMA_SPLITTER = /,/;
+  var VARNAME_REGEXP = /^[\w\$\_]+$/;
   var LETTER_REGEXP = /[a-zA-Z]/;
   var TAGNAME_STOP = /[\s/>]/;
   var ATTRNAME_SPLITTER = /[\s\/]+/;
@@ -5703,11 +5567,6 @@
     wbr: true
   };
 
-  var SPECIAL_CASES = {
-    // 'class': 'classes',
-    'inner-html': 'innerHTML'
-  };
-
   var DIRECTIVES = {
     'x:ns': true,
     'x:if': true,
@@ -5728,12 +5587,12 @@
     return group;
   }
 
-  function getPropName(attrName) {
-    if (attrName in SPECIAL_CASES) {
-      return SPECIAL_CASES[attrName];
-    }
-    return attrName;// toCamelCase(attrName);
-  }
+  // function getPropName(attrName) {
+  //   if (attrName in SPECIAL_CASES) {
+  //     return SPECIAL_CASES[attrName];
+  //   }
+  //   return attrName;// toCamelCase(attrName);
+  // }
 
   function isDirective(name) {
     return name.charCodeAt(0) === 120 // 'x'
@@ -5751,34 +5610,22 @@
     } else if (name === 'x:style') {
       node.style = ClassStyleParser.parse(expr, prototype, identifiers, true);
     } else if (name === 'x:type') {
-      // if (node.tag === 'x:output') {
-      //   // <x:output x:type="Buuton"/> just like <input type="button">
-      //   parseAttribute('xtype@', expr, node, prototype, identifiers);
-      //   return;
-      // } else if (node.tag === 'x:slot') {
-      //   throwError('Unexpected x:type on <x:slot>', {
-      //     code: 1001,
-      //     expr: expr,
-      //     desc: 'Do not use x:type on <x:slot>'
-      //   });
-      // }
       var ctor = Path.search(expr, prototype.constructor.resources);
-      // if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
-      //   // if ("development" === 'development') {
-      //   //   logger.warn('Can not find such component type `' + expr + '`. Make sure it extends Component and please register `' + expr  + '` in static resources.');
-      //   // }
-      //   // throw new TypeError('Can not find such component type `' + expr + '`');
-      //   throwError('Illegal x:type="' + expr + '"', {
-      //     code: 1001,
-      //     expr: expr,
-      //     desc: 'Can not find such component type `' + expr 
-      //           + '`. Make sure it extends Component and please register `' + expr 
-      //           + '` in static resources.'
-      //   });
-      // }
-      // node.type = ctor;
-      if (typeof ctor === 'function' && ctor.__extag_component_class__) {
-        node.type = ctor;
+      if (typeof ctor === 'function') {
+        if (ctor.__extag_component_class__ || ctor === Fragment) {
+          node.type = ctor;
+        } else {
+          var hookEngine = config.get('hook-engine');
+          if (hookEngine) {
+            node.type = hookEngine.getComponentClass(ctor);
+          }
+        }
+        // eslint-disable-next-line no-undef
+        {
+          if (node.type == null) {
+            logger.warn('`' + node.tag + '` maybe component, but the class is not found.');
+          } 
+        }
       } else {
         result = DataBindingParser.parse(expr, prototype, identifiers);
         node.xtype = new Expression(DataBinding, result);
@@ -5788,21 +5635,41 @@
     } else if (name === 'x:slot') {
       node.slot = expr;
     } else if (name === 'x:key') {
-      node.xkey = EvaluatorParser.parse(expr, prototype, identifiers);
+      result = DataBindingParser.parse(expr, prototype, identifiers);
+      node.xkey = new Expression(DataBinding, result);
     } else if (name === 'x:for') {
-      var matches = expr.trim().match(FOR_LOOP_REGEXP);
-
-      if (!matches || !matches[2].trim()) {
+      var pieces = expr.trim().split(FOR_OF_SPLITTER);
+      
+      if (pieces.length !== 2) {
         throwError('Illegal x:for="' + expr + '".', {
           code: 1001,
           expr: expr
         });
       }
 
-      result = DataBindingParser.parse(matches[2], prototype, identifiers);
+      result = pieces[1].trim();
+      pieces[0] = pieces[0].trim();
+      if (PARENTHESES_REGEXP.test(pieces[0])) { 
+        // x:for="(item, index) of items" 
+        pieces = pieces[0].slice(1, -1).split(COMMA_SPLITTER);
+      } else {
+        // x:for="item of items" 
+        pieces = [pieces[0]];
+      }
 
+      for (var i = 0; i < pieces.length; ++i) {
+        pieces[i] = pieces[i].trim();
+        if (!VARNAME_REGEXP.test(pieces[i])) {
+          throwError('Illegal x:for="' + expr + '".', {
+            code: 1001,
+            expr: expr
+          });
+        }
+      }
+
+      result = result && DataBindingParser.parse(result, prototype, identifiers);
       if (result) {
-        node.xfor = [matches[1], new Expression(DataBinding, result)];
+        node.xfor = [pieces, new Expression(DataBinding, result)];
       } else {
         throwError('Illegal x:for="' + expr + '".', {
           code: 1001,
@@ -5810,7 +5677,8 @@
         });
       }
 
-      node.identifiers = identifiers.concat([matches[1]]);
+      node.identifiers = identifiers.slice(0);
+      node.identifiers.push(pieces);
     } else if (name === 'x:if') {
       result = DataBindingParser.parse(expr, prototype, identifiers);
       if (result) {
@@ -5826,90 +5694,14 @@
     }
   }
 
-  // function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
-  //   var lastChar = attrName[attrName.length - 1];
-  //   var index = attrName.indexOf(':');
-  //   var result, group, key;
-
-  //   // // :title => title
-  //   // if (index === 0) {
-  //   //   attrName = attrName.slice(1);
-  //   // }
-
-  //   if (attrValue == null) {
-  //     if (index < 0) {
-  //       key = getPropName(attrName);
-  //       getGroup(node, 'props')[key] = true;
-  //       return;
-  //     }
-  //     attrValue = '';
-  //   }
-
-  //   if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
-  //     group = getGroup(node, 'events');
-  //     key = attrName.slice(0, -1);
-  //     // attrName = attrName.slice(0, -1);
-  //     // key = index < 0 ? toCamelCase(attrName) : attrName;
-  //     result = EventBindingParser.parse(attrValue, prototype, identifiers);
-  //     group[key] = new Expression(EventBinding, result);
-  //   } else {
-  //     if (index < 0) {
-  //       group = getGroup(node, 'props');
-  //     } else {
-  //       group = getGroup(node, 'attrs');
-  //     }
-  //     switch (lastChar) {
-  //       case BINDING_OPERATORS.DATA: // last char is '@'
-  //         attrName = attrName.slice(0, -1);
-  //         key = index < 0 ? getPropName(attrName) : attrName;
-  //         result = PrimitiveLiteralParser.tryParse(attrValue);
-  //         if (result != null) {
-  //           group[key] = result;
-  //         } else {
-  //           result = DataBindingParser.parse(attrValue, prototype, identifiers);
-  //           group[key] = new Expression(DataBinding, result);
-  //         }
-  //         break;
-  //       case BINDING_OPERATORS.TEXT: // last char is '#'
-  //         attrName = attrName.slice(0, -1);
-  //         key = index < 0 ? getPropName(attrName) : attrName;
-  //         try {
-  //           result = TextBindingParser.parse(attrValue, prototype, identifiers);
-  //         } catch (e) {
-  //           // eslint-disable-next-line no-undef
-  //           if ("development" === 'development') {
-  //             if (e.code === 1001) {
-  //               e.expr = BINDING_FORMAT.replace('0', e.expr);
-  //             }
-  //           }
-  //           throw e;
-  //         }
-  //         if (result) {
-  //           if (result.length === 1) {
-  //             group[key] = new Expression(DataBinding, result[0]);
-  //           } else {
-  //             group[key] = new Expression(TextBinding, result);
-  //           }
-  //         } else {
-  //           group[key] = attrValue;
-  //         }
-  //         break;
-  //       default:
-  //         key = index < 0 ? getPropName(attrName) : attrName;
-  //         // group[key] = viewEngine.isBoolProp(key) || attrValue;
-  //         group[key] = attrValue;
-  //     }
-  //   }
-  // }
-
   function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
     var lastChar = attrName[attrName.length - 1];
     var result, group, key;
 
     if (attrValue == null) {
-      key = getPropName(attrName);
+      // key = getPropName(attrName);
       group = getGroup(node, 'props');
-      group[key] = true;
+      group[attrName] = true;
       return;
     }
 
@@ -5924,7 +5716,8 @@
       group = getGroup(node, 'props');
       switch (lastChar) {
         case BINDING_OPERATORS.DATA: // last char is '@'
-          key = getPropName(attrName.slice(0, -1));
+          // key = getPropName(attrName.slice(0, -1));
+          key = attrName.slice(0, -1);
           result = PrimitiveLiteralParser.tryParse(attrValue.trim());
           if (result != null) {
             group[key] = result;
@@ -5934,7 +5727,8 @@
           }
           break;
         case BINDING_OPERATORS.TEXT: // last char is '#'
-          key = getPropName(attrName.slice(0, -1));
+          // key = getPropName(attrName.slice(0, -1));
+          key = attrName.slice(0, -1);
           try {
             result = TextBindingParser.parse(attrValue, prototype, identifiers);
           } catch (e) {
@@ -5948,7 +5742,7 @@
           }
           if (result) {
             if (result.length === 1) {
-              group[key] = new Expression(DataBinding, result[0]);
+              group[key] = result[0];
             } else {
               group[key] = new Expression(TextBinding, result);
             }
@@ -5957,8 +5751,8 @@
           }
           break;
         default:
-          key = getPropName(attrName);
-          group[key] = attrValue;
+          // key = getPropName(attrName);
+          group[attrName] = attrValue;
       }
     }
   }
@@ -6078,10 +5872,10 @@
       __extag_node__: EXTAG_VNODE,
       useExpr: true,
       type: Expression,
-      expr: new Expression(binding, pattern)
+      expr: pattern instanceof Expression ? 
+            pattern : new Expression(binding, pattern)
     }
   }
-
 
   function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
     var children = parent.children || [], result;
@@ -6107,23 +5901,24 @@
         throw e;
       }
       if (result) {
-        if (result.length === 1 && typeof result[0] === 'object') {
-          children.push(createExprNode(DataBinding, result[0]));
+        if (result.length === 1 && (result[0] instanceof Expression)) {
+          expr = result[0];
+          children.push(createExprNode(result[0].binding, result[0]));
         } else {
           var i = -1, j = 0 , n = result.length;
           for (; j < n; ++j) {
-            var pattern = result[j];
-            if (typeof pattern === 'object' && pattern.target === 'frag') {
+            var expr = result[j];
+            if ((expr instanceof Expression) && expr.pattern.target === 'frag') {
               if (j > i) {
                 if (j - i > 1) {
                   children.push(createExprNode(TextBinding, result.slice(i, j)));
-                } else if (typeof result[i] === 'object') {
-                  children.push(createExprNode(DataBinding, result[i]));
+                } else if (result[i] instanceof Expression) {
+                  children.push(createExprNode(result[i].binding, result[i]));
                 } else {
                   children.push(result[i]);
                 }
               }
-              children.push(createExprNode(DataBinding, pattern));
+              children.push(createExprNode(expr.binding, expr));
               i = -1;
             } else if (i < 0) {
               i = j;
@@ -6132,8 +5927,8 @@
           if (i >= 0 && j > i) {
             if (j - i > 1) {
               children.push(createExprNode(TextBinding, result.slice(i, j)));
-            } else if (typeof result[i] === 'object') {
-              children.push(createExprNode(DataBinding, result[i]));
+            } else if (result[i] instanceof Expression) {
+              children.push(createExprNode(result[i].binding, result[i]));
             } else {
               children.push(result[i]);
             }
@@ -6158,7 +5953,7 @@
     var idx = 0, end = htmx.length;
 
     parent = {
-      tag: '[]',
+      tag: '<>',
       children: [],
       identifiers: ['this']
     };
@@ -6207,28 +6002,29 @@
               case 'x:slot':
                 node.type = Slot;
                 break;
-              // case 'x:view':
-              //   node.type = View;
-              //   break;
               case 'x:frag':
                 node.type = Fragment;
                 break;
-              // case 'x:block':
-              //   node.type = Block;
-              //   break;
-              // case 'x:ouput':
-              //   node.type = Output;
-              //   break;
             }
           }
 
           if (node.type == null && node.xtype == null && CAPITAL_REGEXP.test(tagName)) {
             var ctor = Path.search(tagName, prototype.constructor.resources);
-            if (typeof ctor === 'function' && ctor.__extag_component_class__) {
-              node.type = ctor;
+            if (typeof ctor === 'function') {
+              if (ctor.__extag_component_class__ || ctor === Fragment) {
+                node.type = ctor;
+              } else {
+                var hookEngine = config.get('hook-engine');
+                if (hookEngine) {
+                  node.type = hookEngine.getComponentClass(ctor);
+                }
+              }
+            }
             // eslint-disable-next-line no-undef
-            } else {
-              logger.warn('`' + node.tag + '` maybe component but not found.');
+            {
+              if (node.type == null) {
+                logger.warn('`' + node.tag + '` maybe component, but the class is not found.');
+              } 
             }
           }
 
@@ -6389,9 +6185,8 @@
       }
       config.set(key, val);
     },
-
+    
     // functions
-    help: help,
     defineClass: defineClass, 
     
     setImmediate: Schedule.setImmediate,
@@ -6404,12 +6199,13 @@
 
     // models
     Model: Model,
+    Cache: Cache,
     
     
     // shells
     Text: Text, 
     Slot: Slot,
-    Output: Output,
+    Portal: Portal,
     Element: Element, 
     Fragment: Fragment,
     Component: Component,
@@ -6417,7 +6213,7 @@
     
 
     // eslint-disable-next-line no-undef
-    version: "0.4.1"
+    version: "0.5.1"
   };
 
   return Extag;

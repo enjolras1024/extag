@@ -61,7 +61,7 @@ defineClass({
 
     destroy: function destroy(component) {
       if (component.$flag & FLAG_DESTROYED) { return; }
-      component.emit('destroy');
+      component.emit('destroying');
       Shell.destroy(component);
     },
 

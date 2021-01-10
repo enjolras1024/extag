@@ -4,9 +4,8 @@ Extag是一个基于组件和事件驱动的JavaScript MVVM库，用于构建Web
 #### 快速开始
 使用script标签简单地引入Extag和ExtagDOM。
 ```html
-<div id="hello"></div>
-<script src="https://unpkg.com/extag@0.4.1/dist/extag.js"></script>
-<script src="https://unpkg.com/extag-dom@0.4.1/dist/extag-dom.js"></script>
+<script src="https://unpkg.com/extag/dist/extag.js"></script>
+<script src="https://unpkg.com/extag-dom/dist/extag-dom.js"></script>
 ```
 或通过npm安装后引入Extag和ExtagDOM。
 ```javascript
@@ -16,6 +15,9 @@ Extag.conf('view-engine', ExtagDOM);
 ```
 
 一个简单的Extag例子如下：
+```html
+<div id="hello"></div>
+```
 ```javascript
 // 定义一个组件子类
 class Hello extends Extag.Component {
@@ -33,7 +35,7 @@ const hello = new Hello({name: 'World'});
 // 附着到一个元素上
 hello.attach(ExtagDOM.query('#hello')); // hello.attach(document.getElementById('hello'));
 ```
-我们定义了一个Hello类，继承自Component。组件模板中使用了一个单向的数据绑定表达式 ```@{ name }```。包裹在 ```@{ }``` 内的自定义的特性 ```name``` 是可绑定的，其默认值为 ```'World'```。创建一个Hello类的实例，附着到页面上的一个元素上，```'Hello, World!'``` 的字样就会渲染到页面上。
+我们定义了一个Hello类，继承自Component。组件模板中使用了一个单向的数据绑定表达式 ```@{ name }```。包裹在 ```@{ }``` 内的自定义的特性 ```name``` 是可绑定的。创建一个Hello类的实例，附着到页面上的一个元素上，```'Hello, World!'``` 的字样就会渲染到页面上。
 #### 数据绑定 & 事件监听
 我们在标签上使用 ```@=``` 绑定属性和表达式，使用 ```+=``` 连接事件和处理函数：
 ```javascript

@@ -29,7 +29,7 @@ defineClass({
         pool.portals.push(portal);
       }
     });
-    portal.on('destroy', function() {
+    portal.on('destroying', function() {
       var pool = portal.getPool();
       if (pool.target) {
         pool.target.remove(portal);
@@ -78,7 +78,7 @@ Portal.Target = defineClass({
         throwError('A portal target with the same name="' + name + '" already exists')
       }
     });
-    target.on('destroy', function() {
+    target.on('destroying', function() {
       var name = target.get('name');
       delete name2pool[name];
     });
