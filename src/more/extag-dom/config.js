@@ -105,7 +105,7 @@ var DOM_PROPERTY_DESCRIPTORS = {
   icon: null,
   id: null,
   innerHTML: {
-    attributeName: '', // means no corresponding attribute
+    attributeName: 'inner-html',
     mustUseProperty: true
   },
   inputMode: null, // ? no support for now

@@ -1,5 +1,5 @@
 /**
- * ExtagDOM v0.4.1
+ * ExtagDOM v0.5.1
  * (c) 2017-present enjolras.chen
  * Released under the MIT License.
  */
@@ -132,7 +132,7 @@
     icon: null,
     id: null,
     innerHTML: {
-      attributeName: '', // means no corresponding attribute
+      attributeName: 'inner-html',
       mustUseProperty: true
     },
     inputMode: null, // ? no support for now
@@ -507,11 +507,53 @@
   var TYPE_ELEM = 1;
   var TYPE_TEXT = 3;
   var FLAG_CHANGED_CHILDREN = 2;
-  var FLAG_CHANGED_COMMANDS = 4;
+  var FLAG_CHANGED_COMMANDS = 8;
 
   // symbols
   var EXTAG_VNODE = Object.freeze({});
-  var EMPTY_ARRAY = [];
+  var EMPTY_OBJECT = Object.freeze({});
+  var EMPTY_ARRAY = Object.freeze([]);
+
+  function toClassName(classes) {
+    if (classes) {
+      var type = typeof classes;
+      if (type === 'string') {
+        return classes;
+      }
+      if (Array.isArray(classes)) {
+        return classes.join(' ');
+      }
+      if (type === 'object') {
+        var names = [];
+        for (var name in classes) {
+          if (classes[name] && 
+              hasOwnProp.call(classes, name)) {
+            names.push(name);
+          }
+        }
+        return names.join(' ');
+      }
+    }
+    return '';
+  }
+
+  function renderClassName($skin, newValue, oldValue) {
+    newValue = toClassName(newValue);
+    oldValue = toClassName(oldValue);
+    if (newValue !== oldValue) {
+      $skin.setAttribute('class', newValue);
+    }
+  }
+
+  (function() {
+    var desc;
+
+    desc = DOM_PROPERTY_DESCRIPTORS.className;
+    desc.render = renderClassName;
+
+    desc = DOM_PROPERTY_DESCRIPTORS['class'];
+    desc.render = renderClassName;
+  })();
 
   function renderProps($skin, props, dirty) {
     var key, desc, index, value, nsURI;
@@ -521,7 +563,9 @@
         value = props[key];
         desc = DOM_PROPERTY_DESCRIPTORS[key];
         if (desc) {
-          if (desc.mustUseProperty) {
+          if (desc.render) {
+            desc.render($skin, value, dirty[key]);
+          } else if (desc.mustUseProperty) {
             $skin[desc.propertyName] = value;
           } else if (value != null) {
             $skin.setAttribute(desc.attributeName, value);
@@ -595,39 +639,19 @@
     var key, name, $style = $skin.style;
     for (key in dirty) {
       if (hasOwnProp.call(dirty, key)) {
-        if (key.slice(0, 2) === '--') {
-          $style.setProperty(key, style[key]);
-        } else {
+        if (key[0] !== '-' || key[1] !== '-') {
           name = getStylePropName(key, $style);
           if (name) {
             $style[name] = style[key];
           }
-        }
-      }
-    }
-  }
-
-  function renderClasses($skin, classes, dirty) {
-    var key, classList = $skin.classList;
-    // if (!dirty) { return; }
-    if (classList) {
-      for (key in dirty) {
-        if (hasOwnProp.call(dirty, key)) {
-          if (classes[key]) {
-            classList.add(key);
+        } else {
+          if (style[key] != null) {
+            $style.setProperty(key, style[key]);
           } else {
-            classList.remove(key);
+            $style.removeProperty(key);
           }
         }
       }
-    } else {
-      var names = [];
-      for (key in classes) {
-        if (hasOwnProp.call(classes, key) && classes[key]) {
-          names.push(key);
-        }
-      }
-      $skin.setAttribute('class', names.join(' '));
     }
   }
 
@@ -825,25 +849,85 @@
     }
   }
 
-  function mergeProps(outerProps, innerProps) {
-    if (innerProps) {
-      var key, props = {};
-      assign(props, outerProps);
-      for (key in innerProps) {
-        if (props[key] == null) {
-          props[key] = innerProps[key];
-        }
-      }
-      return props;
+  function mergeClasses(outerClasses, innerClasses) {
+    var outerClassName = toClassName(outerClasses);
+    var innerClassName = toClassName(innerClasses);
+    if (!outerClassName) {
+      return innerClassName;
     }
-    return outerProps;
+    if (!innerClassName) {
+      return outerClassName;
+    }
+    return innerClassName + ' ' + outerClassName;
   }
 
-  function mergeDirty(outerDirty, innerDirty) {
-    if (innerDirty) {
-      return assign({}, innerDirty, outerDirty);
+  function mergeDirty(outerDirty, innerDirty, outerProps, innerProps) {
+    if (!innerDirty) {
+      return outerDirty;
     }
-    return outerDirty;
+    if (!outerDirty) {
+      return innerDirty;
+    }
+    var key, dirty = {};
+    for (key in outerDirty) {
+      dirty[key] = outerDirty[key];
+    }
+    for (key in innerDirty) {
+      if ((key in dirty) || (key in outerProps)) {
+        continue;
+      }
+      dirty[key] = innerDirty[key];
+    }
+    if ('class' in dirty) {
+      dirty['class'] = mergeClasses(outerDirty[key], innerDirty[key]);
+    }
+    return dirty;
+  }
+
+  function mergeProps(outerProps, innerProps, mergedDirty) {
+    if (!mergedDirty) {
+      return;
+    }
+    var key, props = {};
+    for (key in mergedDirty) {
+      props[key] = (key in outerProps) ? outerProps[key] : innerProps[key];
+    }
+    if ('class' in props) {
+      props['class'] = mergeClasses(outerProps[key], innerProps[key]);
+    }
+    return props;
+  }
+
+  function mergeStyle(outerStyle, innerStyle) {
+    var outerProps = outerStyle._props;
+    var outerDirty = outerStyle._dirty;
+    var innerProps = innerStyle._props;
+    var innerDirty = innerStyle._dirty;
+    var key, name, style = {};
+    if (outerDirty) {
+      for (key in outerDirty) {
+        if (key[0] !== '-' || key[1] !== '-') {
+          name = toCamelCase(key);
+        } else {
+          name = key;
+        }
+        style[name] = outerProps[key];
+      }
+    }
+    if (innerDirty) {
+      for (key in innerDirty) {
+        if (key[0] !== '-' || key[1] !== '-') {
+          name = toCamelCase(key);
+        } else {
+          name = key;
+        }
+        if ((name in style) || (key in outerProps) || (name in outerProps)) {
+          continue;
+        }
+        style[name] = innerProps[key];
+      }
+    }
+    return style;
   }
 
   function invokeCommands($skin, commands) {
@@ -908,70 +992,53 @@
         $skin.nodeValue = shell._content;
       }
     } else if (meta.type === TYPE_ELEM) {
-      var props, dirty;
-
-      props = shell._props;
-      dirty = shell._dirty;
-      if (shell.__props) {
-        props = mergeProps(props, shell.__props._props);
-        dirty = mergeDirty(dirty, shell.__props._dirty);
+      var $props = shell.$props, _props, _dirty;
+      // render props
+      if ($props) {
+        _dirty = mergeDirty(shell._dirty, $props._dirty, shell._props, $props._props);
+        if (_dirty === shell._dirty) {
+          _props = shell._props;
+        } else if (_dirty === $props._dirty) {
+          _props = $props._props;
+        } else {
+          _props = mergeProps(shell._props, $props._props, _dirty);
+        }
+      } else {
+        _props = shell._props;
+        _dirty = shell._dirty;
       }
-      if (props && dirty) {
-        renderProps($skin, props, dirty);
+      if (_props && _dirty) {
+        renderProps($skin, _props, _dirty);
       }
-
-      var shadowMode = props.shadowMode;
-
-      // var attrs = shell._attrs;
-      var style = shell._style;
-      var classes = shell._classes;
+      
+      var shadowMode = _props && _props.shadowMode;
       var children = shell._children;
-
-      // if (attrs) {
-      //   props = attrs._props;
-      //   dirty = attrs._dirty;
-      // } else {
-      //   props = null;
-      //   dirty = null;
-      // }
-      // if (shell.__attrs) {
-      //   props = mergeProps(props, shell.__attrs && shell.__attrs._props);
-      //   dirty = mergeDirty(dirty, shell.__attrs && shell.__attrs._dirty);
-      // }
-      // if (props && dirty) {
-      //   renderAttrs($skin, props, dirty);
-      // }
-      
-      if (style) {
-        props = style._props;
-        dirty = style._dirty;
+      // render style
+      var _style = shell._style;
+      var $style = shell.$style;
+      if (_style && $style) {
+        _props = mergeStyle(_style, $style);
+        if (_props === _style._props) {
+          _dirty = _style._dirty;
+        } else if (_props === $style._props) {
+          _dirty = $style._dirty;
+        } else {
+          _dirty = _props;
+        }
+      } else if (_style) {
+        _props = _style._props;
+        _dirty = _style._dirty;
+      } else if ($style) {
+        _props = $style._props;
+        _dirty = $style._dirty;
       } else {
-        props = null;
-        dirty = null;
+        _props = null;
+        _dirty = null;
       }
-      if (shell.__style) {
-        props = mergeProps(props, shell.__style._props);
-        dirty = mergeDirty(dirty, shell.__style._dirty);
-      }
-      if (props && dirty) {
-        renderStyle($skin, props, dirty);
-      }
-
-      if (classes) {
-        props = classes._props;
-        dirty = classes._dirty;
-      } else {
-        props = null;
-        dirty = null;
-      }
-      if (shell.__classes) {
-        props = mergeProps(props, shell.__classes._props);
-        dirty = mergeDirty(dirty, shell.__classes._dirty);
-      }
-      if (props && dirty) {
-        renderClasses($skin, props, dirty);
-      }        
-      
+      if (_props && _dirty) {
+        renderStyle($skin, _props, _dirty);
+      }      
+      // render children
       if (children && (shell.$flag & FLAG_CHANGED_CHILDREN)) {
         if (!shadowMode || !$skin.attachShadow) {
           renderChildren($skin, shell, children);
@@ -982,7 +1049,7 @@
           renderChildren($skin.shadowRoot, shell, children);
         }
       }
-
+      // invoke commands
       if (shell._commands && (shell.$flag & FLAG_CHANGED_COMMANDS)) {
         invokeCommands($skin, shell._commands);
       }
@@ -995,6 +1062,8 @@
     attachShell: attachShell,
     detachShell: detachShell,
     renderShell: renderShell,
+    getTagName: getTagName,
+    getNameSpace: getNameSpace,
     hasNameSpace: hasNameSpace,
     mayDispatchEvent: mayDispatchEvent,
     addEventListener: addEventListener,

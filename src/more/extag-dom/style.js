@@ -50,12 +50,16 @@ function renderStyle($skin, style, dirty) {
   var key, name, $style = $skin.style;
   for (key in dirty) {
     if (hasOwnProp.call(dirty, key)) {
-      if (key.slice(0, 2) === '--') {
-        $style.setProperty(key, style[key]);
-      } else {
+      if (key[0] !== '-' || key[1] !== '-') {
         name = getStylePropName(key, $style);
         if (name) {
           $style[name] = style[key];
+        }
+      } else {
+        if (style[key] != null) {
+          $style.setProperty(key, style[key]);
+        } else {
+          $style.removeProperty(key);
         }
       }
     }

@@ -80,7 +80,7 @@ function mergeStyle(outerStyle, innerStyle) {
   var key, name, style = {};
   if (outerDirty) {
     for (key in outerDirty) {
-      if (key.slice(0, 2) !== '--') {
+      if (key[0] !== '-' || key[1] !== '-') {
         name = toCamelCase(key);
       } else {
         name = key;
@@ -90,7 +90,7 @@ function mergeStyle(outerStyle, innerStyle) {
   }
   if (innerDirty) {
     for (key in innerDirty) {
-      if (key.slice(0, 2) !== '--') {
+      if (key[0] !== '-' || key[1] !== '-') {
         name = toCamelCase(key);
       } else {
         name = key;
