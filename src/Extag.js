@@ -17,7 +17,7 @@ import Cache from 'src/core/models/Cache'
 import Text from 'src/core/shells/Text'
 import Slot from 'src/core/shells/Slot'
 import Shell from 'src/core/shells/Shell'
-// import Output from 'src/core/shells/Output'
+import Portal from 'src/core/shells/Portal'
 import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
 import Component from 'src/core/shells/Component'
@@ -90,7 +90,7 @@ var Extag = {
   // shells
   Text: Text, 
   Slot: Slot,
-  // Output: Output,
+  Portal: Portal,
   Element: Element, 
   Fragment: Fragment,
   Component: Component,
