@@ -8,6 +8,7 @@ import HTMXEngine from 'src/core/template/HTMXEngine'
 import { defineClass } from 'src/share/functions'
 import {
   TYPE_ELEM,
+  EMPTY_ARRAY,
   FLAG_MOUNTED,
   FLAG_WAITING_UPDATING,
   FLAG_WAITING_DIGESTING,
@@ -62,7 +63,7 @@ defineClass({
     if (vnodes != null && !Array.isArray(vnodes)) {
       vnodes = [vnodes];
     }
-    HTMXEngine.driveChildren(this, scopes, vnodes, false);
+    HTMXEngine.driveChildren(this, scopes || EMPTY_ARRAY, vnodes, false);
   },
 
   /**

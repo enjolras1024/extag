@@ -1,12 +1,21 @@
 // src/core/template/drivers/driveProps.js
 
 import Accessor from 'src/base/Accessor'
+import Validator from 'src/base/Validator'
 import Component from 'src/core/shells/Component'
 import Expression from 'src/core/template/Expression'
 
 function driveProps(target, scopes, newProps, useExpr) {
   var oldProps = target._props;
   var name, desc, value;
+
+  // eslint-disable-next-line no-undef
+  if (__ENV__ === 'development') {
+    if (target instanceof Component) {
+      Validator.validate0(target, newProps);
+    }
+  }
+
   // firstly, remove redundant properties, or reset default property values.
   if (oldProps) { 
     if (target instanceof Component) {

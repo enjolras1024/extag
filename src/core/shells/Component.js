@@ -33,13 +33,13 @@ import captureError from 'src/core/captureError'
 var KEYS_PRESERVED = [
   '$meta', '$flag', '$skin', '$props', '$style',
   'style', 'contents', 'children', 
-  '_dirty', '_props', '_style', '_children'
+  '_dirty', '_props', '_style', '_children', '_contents'
 ];
 var METHODS_PRESERVED = [
   'on', 'off', 'emit',
   'getParent', 'getChildren', 'setChildren',
   'appendChild', 'insertChild', 'removeChild', 'replaceChild', 
-  'get', 'set', 'cmd', 'bind', 'assign', 'update', 'digest', 'attach', 'detach', 'invalidate'
+  'get', 'set', 'cmd', 'bind', 'assign', 'accept', 'update', 'digest', 'attach', 'detach', 'invalidate'
 ];
 
 /**
@@ -61,7 +61,7 @@ defineClass({
 
     destroy: function destroy(component) {
       if (component.$flag & FLAG_DESTROYED) { return; }
-      component.emit('destroying');
+      component.emit('destroy');
       Shell.destroy(component);
     },
 
@@ -73,6 +73,8 @@ defineClass({
       var prototype = constructor.prototype;
       var attributes = constructor.attributes;
       var _template = constructor.__extag_template__;
+
+      component.__extag_scopes__ = scopes;
 
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
@@ -146,7 +148,7 @@ defineClass({
 
       // 6. setup
       var model;
-      if (scopes && scopes[0].context) {
+      if (scopes && scopes[0] && scopes[0].context) {
         model = component.setup(scopes[0].context);
         if (component.context == null) {
           component.context = scopes[0].context;
@@ -169,12 +171,12 @@ defineClass({
         }
       }
 
-      // building
+      // injecting
       try {
         // HTMXEngine.driveComponent(component, scopes, template, props, _template);
         HTMXEngine.driveComponent(component, scopes, template, props, null);
       } catch (e) {
-        captureError(e, component, 'building');
+        captureError(e, component, 'injecting');
       }
 
       component.invalidate();
@@ -283,7 +285,7 @@ defineClass({
         var _template = this.constructor.__extag_template__;
         HTMXEngine.driveComponent(this, null, null, null, _template);
       } catch (e) {
-        captureError(e, this, 'building');
+        captureError(e, this, 'starting');
       }
       try {
         this.emit('started');
@@ -396,8 +398,8 @@ defineClass({
       return;
     }
     this._contents = contents.slice(0);
-    this._contents.scopes = scopes;
-    this.emit('contents');
+    this._contents.scopes = scopes || [this];
+    this.emit('contents', this._contents);
     this.invalidate(FLAG_CHANGED_CONTENTS);
   },
 

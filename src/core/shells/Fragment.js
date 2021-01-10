@@ -7,6 +7,7 @@ import HTMXEngine from 'src/core/template/HTMXEngine'
 import DirtyMarker from 'src/base/DirtyMarker'
 import { defineClass } from 'src/share/functions'
 import {
+  EMPTY_ARRAY,
   FLAG_CHANGED_CHILDREN,
   FLAG_WAITING_UPDATING,
   FLAG_WAITING_DIGESTING
@@ -51,7 +52,7 @@ defineClass({
     if (vnodes != null && !Array.isArray(vnodes)) {
       vnodes = [vnodes];
     }
-    HTMXEngine.driveChildren(this, scopes, vnodes, false);
+    HTMXEngine.driveChildren(this, scopes || EMPTY_ARRAY, vnodes, false);
   },
 
   /**

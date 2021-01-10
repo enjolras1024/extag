@@ -2,7 +2,6 @@
 
 import ClassBinding from 'src/core/bindings/ClassBinding'
 import Cache from 'src/core/models/Cache'
-import Validator from 'src/base/Validator'
 import { assign } from 'src/share/functions'
 import driveChildren from './driveChildren'
 import driveEvents from "./driveEvents";
@@ -19,9 +18,9 @@ export default function driveComponent(target, scopes, vnode, props, template) {
       props = vnode.props;
     }
     // eslint-disable-next-line no-undef
-    if (__ENV__ === 'development') {
-      Validator.validate0(target, props);
-    }
+    // if (__ENV__ === 'development') {
+    //   Validator.validate0(target, props);
+    // }
     driveProps(target, scopes, props, useExpr);
 
     if (vnode.events) {
@@ -40,9 +39,9 @@ export default function driveComponent(target, scopes, vnode, props, template) {
     }
   } else if (props) {
     // eslint-disable-next-line no-undef
-    if (__ENV__ === 'development') {
-      Validator.validate0(target, props);
-    }
+    // if (__ENV__ === 'development') {
+    //   Validator.validate0(target, props);
+    // }
     driveProps(target, scopes, props);
   }
   
