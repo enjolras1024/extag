@@ -18,20 +18,15 @@ import Path from 'src/base/Path'
 import Slot from 'src/core/shells/Slot'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
-import FuncBinding from 'src/core/bindings/FuncBinding'
 import DataBinding from 'src/core/bindings/DataBinding'
 import TextBinding  from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import HTMXEngine from 'src/core/template/HTMXEngine'
-import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 import ClassStyleParser from 'src/core/template/parsers/ClassStyleParser'
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
 import TextBindingParser from 'src/core/template/parsers/TextBindingParser'
 import EventBindingParser from 'src/core/template/parsers/EventBindingParser'
 import PrimitiveLiteralParser from 'src/core/template/parsers/PrimitiveLiteralParser'
-
-// var FOR_LOOP_REGEXP = /^([_$\w]+)\s+of\s+(.+)$/;
-var FOR_LOOP_REGEXP = /^\s*\(?\s*[_$\w]+(\s*,\s*[_$\w]+\s*\))?\s+of\s+.+$/;
 
 var PARENTHESES_REGEXP = /^\(.+\)$/;
 var FOR_OF_SPLITTER = /\s+of\s+/;

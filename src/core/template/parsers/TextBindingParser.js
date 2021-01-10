@@ -67,7 +67,7 @@ export default {
           break;
         case 123: // 123: {
           if (b2) {
-            if (cb === 64) {
+            if (cb === 64) { // 64: @
               throwError("Unclosed @{ .", {
                 code: 1001, 
                 expr: expr
@@ -84,16 +84,18 @@ export default {
           break;
         case 39: // 39: '
         case 34: // 34: "
-          i = EvaluatorParser.gotoEnding(cc, expr, i + 1);
-          if (i === n) {
-            throwError("Unclosed " + String.fromCharCode(cc) + " .", {
-              code: 1001, 
-              expr: expr
-            });
+          if (b2) {
+            i = EvaluatorParser.gotoEnding(cc, expr, i + 1);
+            if (i === n) {
+              throwError("Unclosed " + String.fromCharCode(cc) + " .", {
+                code: 1001, 
+                expr: expr
+              });
+            }
           }
           break;
       case 47: // 47: /, maybe regexp
-        if (EvaluatorParser.regexStarts(expr, i)) {
+        if (b2 && EvaluatorParser.regexStarts(expr, i)) {
           i = EvaluatorParser.gotoEnding(cc, expr, i + 1);
           if (i === n) {
             throwError("Unclosed " + String.fromCharCode(cc) + " .", {
