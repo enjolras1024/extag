@@ -18,6 +18,7 @@ import {
 import {
   TYPE_FRAG,
   TYPE_ELEM,
+  EMPTY_ARRAY,
   FLAG_STARTED,
   FLAG_MOUNTED,
   FLAG_DESTROYED,
@@ -48,8 +49,8 @@ var METHODS_PRESERVED = [
  * @param {Array}     scopes      - Internal use, including the host component and iterator variable from x:for loop
  * @param {Object}    template    - Internal use, for initializing component attributes, contents and events
  */
-export default function Component(props, scopes, template) {
-  Component.initialize(this, props, scopes, template);
+export default function Component(vnode, scopes) {
+  Component.initialize(this, vnode, scopes);
 }
 
 defineClass({
@@ -68,7 +69,7 @@ defineClass({
     /**
      * Initialize this component, using template.
      */
-    initialize: function initialize(component, props, scopes, template) {
+    initialize: function initialize(component, vnode, scopes) {
       var constructor = component.constructor;
       var prototype = constructor.prototype;
       var attributes = constructor.attributes;
@@ -174,7 +175,10 @@ defineClass({
       // injecting
       try {
         // HTMXEngine.driveComponent(component, scopes, template, props, _template);
-        HTMXEngine.driveComponent(component, scopes, template, props, null);
+        // HTMXEngine.driveComponent(component, scopes, template, props, null);
+        if (vnode) {
+          HTMXEngine.driveContent(component, scopes, vnode);
+        }
       } catch (e) {
         captureError(e, component, 'injecting');
       }
@@ -287,11 +291,6 @@ defineClass({
       } catch (e) {
         captureError(e, this, 'starting');
       }
-      try {
-        this.emit('started');
-      } catch (e) {
-        captureError(e, this, 'started');
-      }
       this.$flag |= FLAG_STARTED;
     } 
 
@@ -353,6 +352,8 @@ defineClass({
       this.$flag &= ~FLAG_SHOULD_RENDER_TO_VIEW;
     }
 
+    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
+
     var actions = this._actions;
 
     if ((this.$flag & FLAG_MOUNTED) === 0) {
@@ -384,20 +385,23 @@ defineClass({
         }
       }).bind(this));
     }
-
-    this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
   },
 
   /**
    * accept contents from scopes
-   * @param {Array} contents - some virtual nodes created by Extag.node(), not null
+   * @param {Array} vnodes - some virtual nodes created by Extag.node(), not null
    * @param {Array} scopes 
    */
-  accept: function accept(contents, scopes) {
-    if (this._contents == null && contents.length === 0) {
+  accept: function accept(vnodes, scopes) {
+    if (vnodes == null) {
+      vnodes = EMPTY_ARRAY;
+    } else if (!Array.isArray(vnodes)) {
+      vnodes = [vnodes];
+    }
+    if (!this._contents && !vnodes.length) {
       return;
     }
-    this._contents = contents.slice(0);
+    this._contents = vnodes.slice(0);
     this._contents.scopes = scopes || [this];
     this.emit('contents', this._contents);
     this.invalidate(FLAG_CHANGED_CONTENTS);

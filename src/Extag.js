@@ -62,7 +62,6 @@ var Extag = {
 
   node: JSXParser.node,
   expr: JSXParser.expr,
-  // make: HTMXEngine.makeContent,
 
   conf: function(key, val) {
     if (arguments.length === 1) {

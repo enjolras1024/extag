@@ -1,5 +1,9 @@
 // src/share/functions.js 
 
+import {
+  EXTAG_VNODE
+} from 'src/share/constants'
+
 var slice = Array.prototype.slice;
 var defineProp = Object.defineProperty;
 var hasOwnProp = Object.prototype.hasOwnProperty;
@@ -275,6 +279,10 @@ function throwError(err, opts) {
   throw error;
 }
 
+function isVNode(child) {
+  return child && typeof child === 'object' && child.__extag_node__ === EXTAG_VNODE;
+}
+
 export { 
   copy,
   help,
@@ -282,6 +290,7 @@ export {
   assign,
   append,
   flatten,
+  isVNode,
   toClasses,
   throwError,
   encodeHTML, 

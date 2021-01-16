@@ -622,13 +622,13 @@ function parseHTMX(htmx, prototype) {
         start = idx + 4;
         stop = htmx.indexOf('-->', start);
         stop = stop > 0 ? stop : htmx.length;
-        node =  {
-          tag: '!',
-          comment: htmx.slice(start, stop),
-          __extag_node__: EXTAG_VNODE
-        };
-        parent.children = parent.children || [];
-        parent.children.push(node);
+        // node =  {
+        //   tag: '!',
+        //   comment: htmx.slice(start, stop),
+        //   __extag_node__: EXTAG_VNODE
+        // };
+        // parent.children = parent.children || [];
+        // parent.children.push(node);
         idx = stop + 3;
         start = stop = idx;
         continue;
@@ -660,17 +660,16 @@ var HTMXParser = {
     if (root.tag === '!' || root.tag === '#') {
       throwError('Component template root tag must be a DOM element, instead of: ' + htmx.slice(0, htmx.indexOf('>')));
     }
-    if (root.type) {
-      if (root.tag === 'x:frag' && root.type === Fragment) {
-        root.type = null;
-      } else if (root.tag === 'x:slot' || root.tag === 'x:view') {
-        throwError(root.tag + ' can not be used as root tag of component template: ' + htmx.slice(0, htmx.indexOf('>')));
-      } else {
-        throwError('component can not be used as root tag of another component template: ' + htmx.slice(0, htmx.indexOf('>')));
-      }
-    } else if (root.xif || root.xfor || root.xkey) {
+    if (root.tag === 'x:slot' || root.tag === 'x:view') {
+      throwError(root.tag + ' can not be used as root tag of component template: ' + htmx.slice(0, htmx.indexOf('>')));
+    }
+    if (root.type && root.type.__extag_component_class__) {
+      throwError('component can not be used as root tag of another component template: ' + htmx.slice(0, htmx.indexOf('>')));
+    }
+    if (root.xif || root.xfor || root.xkey) {
       throwError('`x:if`, `x:for`, `x:key` can not be used on root tag of component template: '  + htmx.slice(0, htmx.indexOf('>')));
     }
+
     return root;
   }
 };

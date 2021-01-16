@@ -15,8 +15,8 @@ import {
 
 // import config from 'src/share/config'
 
-export default function Fragment(props, scopes, template) {
-  Fragment.initialize(this, props, scopes, template);
+export default function Fragment(vnode, scopes) {
+  Fragment.initialize(this, vnode, scopes || EMPTY_ARRAY);
 }
 
 defineClass({
@@ -25,7 +25,7 @@ defineClass({
   statics: {
     __extag_fragment_class__: true,
 
-    initialize: function initialize(fragment, props, scopes, template) {
+    initialize: function initialize(fragment, vnode, scopes) {
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         if (fragment.constructor !== Fragment) {
@@ -35,10 +35,10 @@ defineClass({
       // fragment type is 0
       Shell.initialize(fragment, 0, 'x:frag', '');
 
-      fragment.scopes = scopes;
+      fragment.__extag_scopes_ = scopes;
       
-      if (scopes && template) {
-        HTMXEngine.driveComponent(fragment, scopes, template, props);
+      if (vnode) {
+        HTMXEngine.driveContent(fragment, scopes, vnode);
       }
     }
   },
@@ -49,7 +49,9 @@ defineClass({
    * @param {Array} scopes 
    */
   accept: function accept(vnodes, scopes) {
-    if (vnodes != null && !Array.isArray(vnodes)) {
+    if (vnodes == null) {
+      vnodes = EMPTY_ARRAY;
+    } else if (!Array.isArray(vnodes)) {
       vnodes = [vnodes];
     }
     HTMXEngine.driveChildren(this, scopes || EMPTY_ARRAY, vnodes, false);

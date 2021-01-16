@@ -5,7 +5,7 @@ import Shell from 'src/core/shells/Shell'
 import Parent from 'src/core/shells/Parent'
 import DirtyMarker from 'src/base/DirtyMarker'
 import HTMXEngine from 'src/core/template/HTMXEngine'
-import { defineClass } from 'src/share/functions'
+import { defineClass, throwError } from 'src/share/functions'
 import {
   TYPE_ELEM,
   EMPTY_ARRAY,
@@ -14,20 +14,23 @@ import {
   FLAG_WAITING_DIGESTING,
   FLAG_SHOULD_RENDER_TO_VIEW
 } from 'src/share/constants'
-// import config from 'src/share/config'
 
 /**
  * 
  * @param {string} tag      - tag name, with a namespace as prefix, e.g. 'svg:rect'
  * @param {Object} props 
  */
-export default function Element(tag, props) {
-  var idx = tag.indexOf(':'), ns = '';
-  if (idx > 0) {
-    ns = tag.slice(0, idx);
-    tag = tag.slice(idx + 1);
-  }
-  Element.initialize(this, ns, tag, props);
+// export default function Element(tag, props) {
+//   var idx = tag.indexOf(':'), ns = '';
+//   if (idx > 0) {
+//     ns = tag.slice(0, idx);
+//     tag = tag.slice(idx + 1);
+//   }
+//   Element.initialize(this, ns, tag, props);
+// }
+
+export default function Element(vnode, scopes) {
+  Element.initialize(this, vnode, scopes || EMPTY_ARRAY);
 }
 
 defineClass({
@@ -36,21 +39,31 @@ defineClass({
   statics: {
     __extag_element_class__: true,
 
-    initialize: function initialize(element, ns, tag, props) {
+
+    initialize: function initialize(element, vnode, scopes) {
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         if (element.constructor !== Element) {
-          throw new TypeError('Element is final class and can not be extended');
+          throwError('Element is final class and can not be extended');
+        }
+        if (!vnode.tag) {
+          throwError('Unknown tag for element')
         }
       }
 
-      Shell.initialize(element, TYPE_ELEM, tag, ns);
+      Shell.initialize(element, TYPE_ELEM, vnode.tag, vnode.ns);
+
+      element.__extag_scopes__ = scopes;
+
+      if (vnode) {
+        HTMXEngine.driveContent(element, scopes, vnode);
+      }
 
       // Element.defineMembers(element);
 
-      if (props) {
-        element.assign(props);
-      }
+      // if (props) {
+      //   element.assign(props);
+      // }
     }
   },
 
@@ -60,7 +73,9 @@ defineClass({
    * @param {Array} scopes 
    */
   accept: function accept(vnodes, scopes) {
-    if (vnodes != null && !Array.isArray(vnodes)) {
+    if (vnodes == null) {
+      vnodes = EMPTY_ARRAY;
+    } else if (!Array.isArray(vnodes)) {
       vnodes = [vnodes];
     }
     HTMXEngine.driveChildren(this, scopes || EMPTY_ARRAY, vnodes, false);

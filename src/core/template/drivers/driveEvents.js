@@ -29,7 +29,9 @@ function driveEvents(target, scopes, newEvents, useExpr) {
       }
     }
   }
-  target._events = newEvents;
+  if (!useExpr) {
+    target._events = newEvents;
+  }
 }
 
 export default driveEvents;

@@ -2,9 +2,10 @@
 
 var HTMXEngine = {
   driveComponent: null,
+  driveChildren: null,
+  driveContent: null,
   transferProps: null,
   createContent: null,
-  makeContent: null,
   parseHTMX: null,
   parseJSX: null
 }

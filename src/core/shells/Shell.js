@@ -197,7 +197,7 @@ defineClass({
         guid: shellGuid++,
         type: type,
         tag: tag,
-        ns: ns
+        ns: ns ? ns : ''
       }
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {

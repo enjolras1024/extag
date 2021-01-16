@@ -1,31 +1,10 @@
 // src/core/shells/Block.js
 
 import Model from 'src/core/models/Model'
-// import Shell from 'src/core/shells/Shell'
-// import Fragment from 'src/core/shells/Fragment'
 import Component from 'src/core/shells/Component'
-// import Expression from 'src/core/template/Expression'
 import HTMXEngine from 'src/core/template/HTMXEngine'
 import { assign, defineClass } from 'src/share/functions'
 import { applyEvaluator } from 'src/core/bindings/DataBinding'
-// import config from 'src/share/config'
-
-function replaceScopes(content, newScopes) {
-  var bindings = content._bindings;
-  var numScopes = newScopes.length;
-  if (bindings) {
-    for (var i = 0; i < bindings.length; ++i) {
-      var binding = bindings[i];
-      var oldScopes = binding.scopes;
-      if (oldScopes && oldScopes.length === numScopes && 
-          oldScopes[numScopes - 1] !== newScopes[numScopes - 1]) {
-        binding.replace(newScopes);
-      }
-    }
-  }
-}
-
-// function getData(item, variables) 
 
 /**
  * Block for x:if and x:for
@@ -33,55 +12,55 @@ function replaceScopes(content, newScopes) {
  * @param {Array} scopes 
  * @param {Object} template 
  */
-export default function Block(props, scopes, template) {
-  Block.initialize(this, props, scopes, template);
+export default function Block(vnode, scopes) {
+  Block.initialize(this, vnode, scopes);
 }
 
 defineClass({
   constructor: Block, extends: Component,
 
   statics: {
-    initialize: function initialize(block, props, scopes, template) {
-      Component.initialize(block, props);
+    initialize: function initialize(block, vnode, scopes) {
+      Component.initialize(block);
 
       block.mode = 0;
 
-      if (!template) {
+      if (!vnode) {
         return;
       }
 
       block.scopes = scopes;
-      block.template = assign({}, template);
-      delete block.template.xtype;
-      delete block.template.xkey;
-      delete block.template.xfor;
-      delete block.template.xif;
-      
+      var template = assign({}, vnode);
+      block.template = template;
+      delete template.xtype;
+      delete template.xkey;
+      delete template.xfor;
+      delete template.xif;
+
       block.set('condition', true);
 
-      // var ctrls = template.ctrls || {};
       var expression;
 
-      if (template.xif) {
+      if (vnode.xif) {
         block.mode = 1;
         expression = template.xif;
         expression.connect('condition', block, scopes);
       }
 
-      if (template.xfor) {
+      if (vnode.xfor) {
         block.mode = 2;
-        block.varaibles = template.xfor[0];
-        expression = template.xfor[1];
+        block.varaibles = vnode.xfor[0];
+        expression = vnode.xfor[1];
         expression.connect('iterable', block, scopes);
-        if (template.xkey) {
-          block.keyExpr = template.xkey;//.evaluator;
+        if (vnode.xkey) {
+          block.keyExpr = vnode.xkey;//.evaluator;
         }
       }
 
-      if (template.xtype) {
+      if (vnode.xtype) {
         block.mode = block.mode || 1;
         block.xtype = true;
-        expression = template.xtype;
+        expression = vnode.xtype;
         expression.connect('component', block, scopes);
       }
 
@@ -172,7 +151,7 @@ defineClass({
       if (!content) {
         model = new Model(data);
         newScopes[newScopes.length - 1] = model;
-        content = HTMXEngine.makeContent(template, newScopes);
+        content = HTMXEngine.createContent(template, newScopes);
         content.__extag_key__ = key;
         content.__extag_scopes__ = newScopes;
       } else {
