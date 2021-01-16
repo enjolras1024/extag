@@ -98,14 +98,14 @@ function flushQueues() {
 
     digestQueue.length = 0;
     digestQueueCursor = -1;
+
+    waiting = false;
   
     for (i = callbackQueue.length - 1; i >= 0; --i) {
         callbackQueue[i]();
     }
 
     callbackQueue.length = 0;
-
-    waiting = false;
   } catch (e) {
     updateQueueCursor = -1;
     digestQueueCursor = -1;
