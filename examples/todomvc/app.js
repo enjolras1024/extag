@@ -121,7 +121,6 @@
     },
 
     setup: function() {
-      this.on('created', this.onCreated.bind(this));
       var state = new Model({
         todos: [],
         status: STATUS.ALL,
@@ -138,6 +137,9 @@
           return this.todos.length - filter(this.todos, STATUS.COMPLETED).length;
         }
       });
+
+      this.on('mounted', this.onMounted.bind(this));
+
       return {
         state: state,
         onSave: this.onSave.bind(this),
@@ -147,14 +149,16 @@
       }
     },
 
-    onCreated: function() {
+    onMounted: function() {
       var state = this.state;
+      
       var records = ENJ.read();
       if (records) {
         for (var i = 0, n = records.length; i < n; ++i) {
           this.addTodo(records[i]);
         }
       }
+
       state.on('changed', (function(key) {
         if (key === 'todos') {
           this.onSave()

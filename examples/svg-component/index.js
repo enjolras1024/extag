@@ -37,23 +37,22 @@
     },
 
     setup: function() {
-      this.on('created', this.onCreated.bind(this));
-      this.onMouseChange = this.onMouseChange.bind(this);
-    },
-    
-    onCreated: function() {
-      var body = document.body;
-      body.addEventListener('mousemove', this.onMouseChange);
-      body.addEventListener('mouseup', this.onMouseChange);
-      body.addEventListener('touchend', this.onMouseChange);
-      body.addEventListener('touchmove', this.onMouseChange);
-
       this.on('changed', (function() {
         var value = this.value;
         value = value < this.min ? this.min : value;
         value = value > this.max ? this.max : value;
         this.value = value;
       }).bind(this));
+      this.on('mounted', this.onMounted.bind(this));
+      this.onMouseChange = this.onMouseChange.bind(this);
+    },
+    
+    onMounted: function() {
+      var body = document.body;
+      body.addEventListener('mousemove', this.onMouseChange);
+      body.addEventListener('mouseup', this.onMouseChange);
+      body.addEventListener('touchend', this.onMouseChange);
+      body.addEventListener('touchmove', this.onMouseChange);
     },
 
     normalize: function(value) {

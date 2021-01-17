@@ -38,17 +38,17 @@
   // 创建组件
   var panel = new Panel();
   // 创建元素和文本
-  var svg = new Extag.Element('svg:svg'); // 前缀svg:为元素的命名空间
-  var rect = new Extag.Element('svg:rect'); 
-  var span = new Extag.Element('span');
+  var svg = new Extag.Element({tag: 'svg', ns: 'svg'}); // ns为元素的命名空间
+  var rect = new Extag.Element({tag: 'rect', ns: 'svg'}); 
+  var span = new Extag.Element({tag: 'span'});
   var text = new Extag.Text('');
   // appendChild, insertChild, removeChild, replaceChild
   svg.appendChild(rect);
   span.appendChild(text);
   // 设置属性，样式等
+  span.set('class', "dark-bg");
   span.set('title', "It's a rect");
   span.style.set('color', 'white');
-  span.classes.set('dark-bg', true);
   text.set('content', "It's a rect");
   rect.assign({
     width: 100, 
@@ -63,7 +63,9 @@
     title: 'SVG', 
     color: '#eee'
   }); 
-  panel.body.setChildren([svg, span]);
+  panel.on('mounted', function() {
+    panel.body.setChildren([svg, span]);
+  })
   // 附着到页面元素上
   panel.attach(ExtagDOM.query('#panel'));
 </script>
