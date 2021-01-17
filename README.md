@@ -27,15 +27,15 @@ class Hello extends Extag.Component {
             </div>`;
   }
   static get attributes() {
-    return ['name'];
+    return {name: 'World'};
   }
 }
 // 创建一个组件实例
-const hello = new Hello({name: 'World'});
+const hello = new Hello();
 // 附着到一个元素上
 hello.attach(ExtagDOM.query('#hello')); // hello.attach(document.getElementById('hello'));
 ```
-我们定义了一个Hello类，继承自Component。组件模板中使用了一个单向的数据绑定表达式 ```@{ name }```。包裹在 ```@{ }``` 内的自定义的特性 ```name``` 是可绑定的。创建一个Hello类的实例，附着到页面上的一个元素上，```'Hello, World!'``` 的字样就会渲染到页面上。
+我们定义了一个Hello类，继承自Component。组件模板中使用了一个单向的数据绑定表达式 ```@{ name }```。包裹在 ```@{ }``` 内的自定义的特性 ```name``` 是可绑定的，其默认值为```'World'```。创建一个Hello类的实例，附着到页面上的一个元素上，```'Hello, World!'``` 的字样就会渲染到页面上。
 #### 数据绑定 & 事件监听
 我们在标签上使用 ```@=``` 绑定属性和表达式，使用 ```+=``` 连接事件和处理函数：
 ```javascript

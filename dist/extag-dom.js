@@ -1,5 +1,5 @@
 /**
- * ExtagDOM v0.5.1
+ * ExtagDOM v0.5.3
  * (c) 2017-present enjolras.chen
  * Released under the MIT License.
  */
@@ -8,6 +8,20 @@
   typeof define === 'function' && define.amd ? define(factory) :
   (global = global || self, global.ExtagDOM = factory());
 }(this, (function () { 'use strict';
+
+  // src/share/constants.js 
+
+  // shell type
+  var TYPE_FRAG = 0;
+  var TYPE_ELEM = 1;
+  var TYPE_TEXT = 3;
+  var FLAG_CHANGED_CHILDREN = 2;
+  var FLAG_CHANGED_COMMANDS = 8;
+
+  // symbols
+  var EXTAG_VNODE = Object.freeze({});
+  var EMPTY_OBJECT = Object.freeze({});
+  var EMPTY_ARRAY = Object.freeze([]);
 
   // src/share/functions.js 
 
@@ -499,20 +513,6 @@
   function removeEventListener($skin, type, func, opts) {
     $skin.removeEventListener(type, func, opts ? !!opts.capture : false);
   }
-
-  // src/share/constants.js 
-
-  // shell type
-  var TYPE_FRAG = 0;
-  var TYPE_ELEM = 1;
-  var TYPE_TEXT = 3;
-  var FLAG_CHANGED_CHILDREN = 2;
-  var FLAG_CHANGED_COMMANDS = 8;
-
-  // symbols
-  var EXTAG_VNODE = Object.freeze({});
-  var EMPTY_OBJECT = Object.freeze({});
-  var EMPTY_ARRAY = Object.freeze([]);
 
   function toClassName(classes) {
     if (classes) {

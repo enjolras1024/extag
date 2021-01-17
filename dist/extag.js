@@ -1,5 +1,5 @@
 /**
- * Extag v0.5.1
+ * Extag v0.5.3
  * (c) 2017-present enjolras.chen
  * Released under the MIT License.
  */
@@ -113,6 +113,7 @@
   var EXTAG_VNODE = Object.freeze({});
 
   var VIEW_ENGINE = 'view-engine';
+  var HOOK_ENGINE = 'hook-engine';
   var EMPTY_OBJECT = Object.freeze({});
   var EMPTY_ARRAY = Object.freeze([]);
   var BINDING_FORMAT = '@{0}';
@@ -312,6 +313,10 @@
       assign(error, opts);
     }
     throw error;
+  }
+
+  function isVNode(child) {
+    return child && typeof child === 'object' && child.__extag_node__ === EXTAG_VNODE;
   }
 
   // src/base/Watcher.js
@@ -1220,14 +1225,14 @@
 
       digestQueue.length = 0;
       digestQueueCursor = -1;
+
+      waiting = false;
     
       for (i = callbackQueue.length - 1; i >= 0; --i) {
           callbackQueue[i]();
       }
 
       callbackQueue.length = 0;
-
-      waiting = false;
     } catch (e) {
       updateQueueCursor = -1;
       digestQueueCursor = -1;
@@ -1782,7 +1787,7 @@
           guid: shellGuid++,
           type: type,
           tag: tag,
-          ns: ns
+          ns: ns ? ns : ''
         };
         // eslint-disable-next-line no-undef
         {
@@ -2373,9 +2378,10 @@
 
   var HTMXEngine = {
     driveComponent: null,
+    driveChildren: null,
+    driveContent: null,
     transferProps: null,
     createContent: null,
-    makeContent: null,
     parseHTMX: null,
     parseJSX: null
   };
@@ -2446,8 +2452,8 @@
    * @param {Array}     scopes      - Internal use, including the host component and iterator variable from x:for loop
    * @param {Object}    template    - Internal use, for initializing component attributes, contents and events
    */
-  function Component(props, scopes, template) {
-    Component.initialize(this, props, scopes, template);
+  function Component(vnode, scopes) {
+    Component.initialize(this, vnode, scopes);
   }
 
   defineClass({
@@ -2466,7 +2472,7 @@
       /**
        * Initialize this component, using template.
        */
-      initialize: function initialize(component, props, scopes, template) {
+      initialize: function initialize(component, vnode, scopes) {
         var constructor = component.constructor;
         var prototype = constructor.prototype;
         var attributes = constructor.attributes;
@@ -2570,11 +2576,8 @@
         }
 
         // injecting
-        try {
-          // HTMXEngine.driveComponent(component, scopes, template, props, _template);
-          HTMXEngine.driveComponent(component, scopes, template, props, null);
-        } catch (e) {
-          captureError(e, component, 'injecting');
+        if (vnode) {
+          HTMXEngine.driveContent(component, scopes, vnode);
         }
 
         component.invalidate();
@@ -2681,14 +2684,9 @@
       if ((this.$flag & FLAG_STARTED) === 0) {
         try {
           var _template = this.constructor.__extag_template__;
-          HTMXEngine.driveComponent(this, null, null, null, _template);
+          HTMXEngine.driveComponent(this, _template);
         } catch (e) {
           captureError(e, this, 'starting');
-        }
-        try {
-          this.emit('started');
-        } catch (e) {
-          captureError(e, this, 'started');
         }
         this.$flag |= FLAG_STARTED;
       } 
@@ -2751,6 +2749,8 @@
         this.$flag &= ~FLAG_SHOULD_RENDER_TO_VIEW;
       }
 
+      this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
+
       var actions = this._actions;
 
       if ((this.$flag & FLAG_MOUNTED) === 0) {
@@ -2782,20 +2782,23 @@
           }
         }).bind(this));
       }
-
-      this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
     },
 
     /**
      * accept contents from scopes
-     * @param {Array} contents - some virtual nodes created by Extag.node(), not null
+     * @param {Array} vnodes - some virtual nodes created by Extag.node(), not null
      * @param {Array} scopes 
      */
-    accept: function accept(contents, scopes) {
-      if (this._contents == null && contents.length === 0) {
+    accept: function accept(vnodes, scopes) {
+      if (vnodes == null) {
+        vnodes = EMPTY_ARRAY;
+      } else if (!Array.isArray(vnodes)) {
+        vnodes = [vnodes];
+      }
+      if (!this._contents && !vnodes.length) {
         return;
       }
-      this._contents = contents.slice(0);
+      this._contents = vnodes.slice(0);
       this._contents.scopes = scopes || [this];
       this.emit('contents', this._contents);
       this.invalidate(FLAG_CHANGED_CONTENTS);
@@ -2891,8 +2894,8 @@
 
   // import config from 'src/share/config'
 
-  function Fragment(props, scopes, template) {
-    Fragment.initialize(this, props, scopes, template);
+  function Fragment(vnode, scopes) {
+    Fragment.initialize(this, vnode, scopes || EMPTY_ARRAY);
   }
 
   defineClass({
@@ -2901,7 +2904,7 @@
     statics: {
       __extag_fragment_class__: true,
 
-      initialize: function initialize(fragment, props, scopes, template) {
+      initialize: function initialize(fragment, vnode, scopes) {
         // eslint-disable-next-line no-undef
         {
           if (fragment.constructor !== Fragment) {
@@ -2911,10 +2914,10 @@
         // fragment type is 0
         Shell.initialize(fragment, 0, 'x:frag', '');
 
-        fragment.scopes = scopes;
+        fragment.__extag_scopes_ = scopes;
         
-        if (scopes && template) {
-          HTMXEngine.driveComponent(fragment, scopes, template, props);
+        if (vnode) {
+          HTMXEngine.driveContent(fragment, scopes, vnode);
         }
       }
     },
@@ -2925,7 +2928,9 @@
      * @param {Array} scopes 
      */
     accept: function accept(vnodes, scopes) {
-      if (vnodes != null && !Array.isArray(vnodes)) {
+      if (vnodes == null) {
+        vnodes = EMPTY_ARRAY;
+      } else if (!Array.isArray(vnodes)) {
         vnodes = [vnodes];
       }
       HTMXEngine.driveChildren(this, scopes || EMPTY_ARRAY, vnodes, false);
@@ -2935,17 +2940,19 @@
      * Update this shell and insert it into the schedule for rendering.
      */
     update: function update() {
-      if ((this.$flag & FLAG_WAITING_UPDATING) == 0) {
+      if ((this.$flag & FLAG_WAITING_UPDATING) === 0) {
         return;
       }
 
       if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
         if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
           var parent = this.getParent(true);
-          parent.$flag |= FLAG_CHANGED_CHILDREN;
-          if ((parent.$flag & FLAG_WAITING_DIGESTING) === 0) {
-            parent.$flag |= FLAG_WAITING_DIGESTING;
-            Schedule.insertDigestQueue(parent);
+          if (parent) {
+            parent.$flag |= FLAG_CHANGED_CHILDREN;
+            if ((parent.$flag & FLAG_WAITING_DIGESTING) === 0) {
+              parent.$flag |= FLAG_WAITING_DIGESTING;
+              Schedule.insertDigestQueue(parent);
+            }
           }
         }
         this.$flag |= FLAG_WAITING_DIGESTING;
@@ -2984,14 +2991,14 @@
         }
         portal.fragment.accept(contents, contents.scopes);
       });
-      portal.on('started', function() {
+      portal.on('updating', function() {
         var pool = portal.getPool();
         if (pool.target) {
           pool.target.append(portal);
         } else {
           pool.portals.push(portal);
         }
-      });
+      }, {once: true});
       portal.on('destroying', function() {
         var pool = portal.getPool();
         if (pool.target) {
@@ -3022,7 +3029,7 @@
     },
     setup: function setup() {
       var target = this;
-      target.on('started', function() {
+      target.on('updating', function() {
         var name = target.get('name');
         var pool = name2pool[name];
         if (!pool) {
@@ -3040,7 +3047,7 @@
         } else {
           throwError('A portal target with the same name="' + name + '" already exists');
         }
-      });
+      }, {once: true});
       target.on('destroying', function() {
         var name = target.get('name');
         delete name2pool[name];
@@ -3061,20 +3068,23 @@
   });
 
   // src/core/shells/Element.js
-  // import config from 'src/share/config'
 
   /**
    * 
    * @param {string} tag      - tag name, with a namespace as prefix, e.g. 'svg:rect'
    * @param {Object} props 
    */
-  function Element(tag, props) {
-    var idx = tag.indexOf(':'), ns = '';
-    if (idx > 0) {
-      ns = tag.slice(0, idx);
-      tag = tag.slice(idx + 1);
-    }
-    Element.initialize(this, ns, tag, props);
+  // export default function Element(tag, props) {
+  //   var idx = tag.indexOf(':'), ns = '';
+  //   if (idx > 0) {
+  //     ns = tag.slice(0, idx);
+  //     tag = tag.slice(idx + 1);
+  //   }
+  //   Element.initialize(this, ns, tag, props);
+  // }
+
+  function Element(vnode, scopes) {
+    Element.initialize(this, vnode, scopes || EMPTY_ARRAY);
   }
 
   defineClass({
@@ -3083,21 +3093,31 @@
     statics: {
       __extag_element_class__: true,
 
-      initialize: function initialize(element, ns, tag, props) {
+
+      initialize: function initialize(element, vnode, scopes) {
         // eslint-disable-next-line no-undef
         {
           if (element.constructor !== Element) {
-            throw new TypeError('Element is final class and can not be extended');
+            throwError('Element is final class and can not be extended');
+          }
+          if (!vnode.tag) {
+            throwError('Unknown tag for element');
           }
         }
 
-        Shell.initialize(element, TYPE_ELEM, tag, ns);
+        Shell.initialize(element, TYPE_ELEM, vnode.tag, vnode.ns);
+
+        element.__extag_scopes__ = scopes;
+
+        if (vnode) {
+          HTMXEngine.driveContent(element, scopes, vnode);
+        }
 
         // Element.defineMembers(element);
 
-        if (props) {
-          element.assign(props);
-        }
+        // if (props) {
+        //   element.assign(props);
+        // }
       }
     },
 
@@ -3107,7 +3127,9 @@
      * @param {Array} scopes 
      */
     accept: function accept(vnodes, scopes) {
-      if (vnodes != null && !Array.isArray(vnodes)) {
+      if (vnodes == null) {
+        vnodes = EMPTY_ARRAY;
+      } else if (!Array.isArray(vnodes)) {
         vnodes = [vnodes];
       }
       HTMXEngine.driveChildren(this, scopes || EMPTY_ARRAY, vnodes, false);
@@ -3622,63 +3644,61 @@
 
   // src/core/shells/Block.js
 
-  // function getData(item, variables) 
-
   /**
    * Block for x:if and x:for
    * @param {Object} props 
    * @param {Array} scopes 
    * @param {Object} template 
    */
-  function Block(props, scopes, template) {
-    Block.initialize(this, props, scopes, template);
+  function Block(vnode, scopes) {
+    Block.initialize(this, vnode, scopes);
   }
 
   defineClass({
     constructor: Block, extends: Component,
 
     statics: {
-      initialize: function initialize(block, props, scopes, template) {
-        Component.initialize(block, props);
+      initialize: function initialize(block, vnode, scopes) {
+        Component.initialize(block);
 
         block.mode = 0;
 
-        if (!template) {
+        if (!vnode) {
           return;
         }
 
         block.scopes = scopes;
-        block.template = assign({}, template);
-        delete block.template.xtype;
-        delete block.template.xkey;
-        delete block.template.xfor;
-        delete block.template.xif;
-        
+        var template = assign({}, vnode);
+        block.template = template;
+        delete template.xtype;
+        delete template.xkey;
+        delete template.xfor;
+        delete template.xif;
+
         block.set('condition', true);
 
-        // var ctrls = template.ctrls || {};
         var expression;
 
-        if (template.xif) {
+        if (vnode.xif) {
           block.mode = 1;
           expression = template.xif;
           expression.connect('condition', block, scopes);
         }
 
-        if (template.xfor) {
+        if (vnode.xfor) {
           block.mode = 2;
-          block.varaibles = template.xfor[0];
-          expression = template.xfor[1];
+          block.varaibles = vnode.xfor[0];
+          expression = vnode.xfor[1];
           expression.connect('iterable', block, scopes);
-          if (template.xkey) {
-            block.keyExpr = template.xkey;//.evaluator;
+          if (vnode.xkey) {
+            block.keyExpr = vnode.xkey;//.evaluator;
           }
         }
 
-        if (template.xtype) {
+        if (vnode.xtype) {
           block.mode = block.mode || 1;
           block.xtype = true;
-          expression = template.xtype;
+          expression = vnode.xtype;
           expression.connect('component', block, scopes);
         }
 
@@ -3769,7 +3789,7 @@
         if (!content) {
           model = new Model(data);
           newScopes[newScopes.length - 1] = model;
-          content = HTMXEngine.makeContent(template, newScopes);
+          content = HTMXEngine.createContent(template, newScopes);
           content.__extag_key__ = key;
           content.__extag_scopes__ = newScopes;
         } else {
@@ -3785,6 +3805,313 @@
       this.setChildren(contents);
     }
   });
+
+  // src/core/template/drivers/createContent.js
+
+  function createContent(vnode, scopes) {
+    if (!isVNode(vnode)) {
+      return new Text(vnode);
+    }  
+
+    var ctor, expr, content;
+    var useExpr = vnode.useExpr;
+
+    if (vnode.xif || vnode.xfor || vnode.xtype) {
+      content = new Block(vnode, scopes);
+    } else if (useExpr && vnode.type === Expression) {
+      expr = vnode.expr;
+      if (expr.pattern.target === 'frag') {
+        content = new Fragment(null, scopes);
+        expr.connect('accept', content, scopes);
+      } else {
+        content = new Text('');
+        expr.connect('content', content, scopes);
+      }
+    } else {
+      ctor = vnode.type;
+      if (ctor && ctor !== Element) {
+        content = new ctor(vnode, scopes);
+      } else {
+        content = new Element(vnode, scopes);
+      }
+      if (vnode.name) {
+        content.$owner = scopes[0];
+        scopes[0].addNamedPart(vnode.name, content); // TODO: removeNamedPart
+      }
+    }
+
+    return content;
+  }
+
+  // src/core/template/drivers/driveEvents.js
+
+  function driveEvents(target, scopes, newEvents, useExpr) {
+    var oldEvents = target._events;
+    var type, value;
+    // firstly, remove old event handlers
+    if (oldEvents) {
+      for (type in oldEvents) {
+        value = oldEvents[type];
+        if (typeof value === 'function') {
+          target.off(type, value);
+        } else if (Array.isArray(value)) {
+          target.off(type, value[0], value[1]);
+        }
+      }
+    }
+    // add new event handlers
+    if (newEvents) {
+      for (type in newEvents) {
+        value = newEvents[type];
+        if (useExpr && value instanceof Expression) {
+          value.connect(type, target, scopes);
+        } else if (typeof value === 'function') {
+          target.on(type, value);
+        } else if (Array.isArray(value)) {
+          target.on(type, value[0], value[1]);
+        }
+      }
+    }
+    if (!useExpr) {
+      target._events = newEvents;
+    }
+  }
+
+  // src/core/template/drivers/driveProps.js
+
+  function driveProps(target, scopes, newProps, useExpr) {
+    var oldProps = target._props;
+    var name, desc, value;
+
+    // eslint-disable-next-line no-undef
+    {
+      if (target instanceof Component) {
+        Validator.validate0(target, newProps);
+      }
+    }
+
+    // firstly, remove redundant properties, or reset default property values.
+    if (oldProps) { 
+      if (target instanceof Component) {
+        for (name in oldProps) {
+          if (!newProps || !(name in newProps)) {
+            desc = Accessor.getAttrDesc(target, name);
+            if (desc) {
+              target.set(name, Accessor.getAttributeDefaultValue(desc));
+            } else {
+              target.set(name, null);
+            }
+          }
+        }
+      } else {
+        for (name in oldProps) {
+          if (!newProps || !(name in newProps)) {
+            target.set(name, null);
+          }
+        }
+      }
+    }
+    // assign new property values
+    if (newProps) {
+      for (name in newProps) {
+        value = newProps[name];
+        if (useExpr && value instanceof Expression) {
+          value.connect(name, target, scopes);
+        } else {
+          target.set(name, value);
+        }
+      }
+    }
+  }
+
+  // src/core/template/drivers/driveChildren.js
+
+  /**
+   * Check if the node matches the child text, element or component.
+   * @param {Shell} child  - text, element or component
+   * @param {string | Object} vnode - vnode
+   */
+  function matchChild(child, vnode) {
+    var meta = child.$meta;
+    if (meta.type === TYPE_TEXT && vnode.__extag_node__ !== EXTAG_VNODE) {
+      return true;
+    }
+    return child.__extag_key__ === vnode.xkey && 
+            (vnode.type ? child.constructor === vnode.type : 
+              (meta.tag === vnode.tag && meta.ns === vnode.ns));
+  }
+
+  function driveChild(target, vnode, scopes) {
+    if (isVNode(vnode)) {
+      driveProps(target, scopes, vnode.attrs);
+      driveEvents(target, scopes, vnode.events);
+      driveChildren(target, scopes, vnode.contents, vnode.useExpr, target instanceof Component);
+    } else /*if (target instanceof Text)*/ {
+      target.set('content', vnode);
+    }
+  }
+
+  function createContents(vnodes, scopes) {
+    var i, n, content, contents = [];
+    if (vnodes && vnodes.length) { 
+      for (i = 0, n = vnodes.length; i < n; ++i) {
+        content = createContent(vnodes[i], scopes);
+        if (content) {
+          contents.push(content);
+        }
+      }
+    }
+    return contents;
+  }
+
+  function collectContents(vnodes, scopes, target) {
+    var oldShells = target._children || EMPTY_ARRAY;
+    var newVNodes = vnodes || EMPTY_ARRAY;
+
+
+    if (newVNodes.length) {
+      newVNodes = flattenVNodes(newVNodes, null, target.$meta.ns);
+    }
+
+    var contents = new Array(newVNodes.length);
+    var content, indices, key, i;
+
+    var oldBeginIndex = 0, oldEndIndex = oldShells.length - 1;
+    var newBeginIndex = 0, newEndIndex = newVNodes.length - 1;
+
+    var oldBeginShell = oldShells[oldBeginIndex];
+    var oldEndShell = oldShells[oldEndIndex];
+    var newBeginVNode = newVNodes[newBeginIndex];
+    var newEndVNode = newVNodes[newEndIndex];
+
+    // refer to Vue (https://vuejs.org/)
+    while (oldBeginIndex <= oldEndIndex && newBeginIndex <= newEndIndex) {
+      if (oldBeginShell == null) {
+        oldBeginShell = oldShells[++oldBeginIndex];
+      } else if (oldEndShell == null) {
+        oldEndShell = oldShells[--oldEndIndex];
+      } else if (matchChild(oldBeginShell, newBeginVNode)) {
+        contents[newBeginIndex] = oldBeginShell; 
+        driveChild(oldBeginShell, newBeginVNode, scopes);
+        oldBeginShell = oldShells[++oldBeginIndex];
+        newBeginVNode = newVNodes[++newBeginIndex];
+      } else if (matchChild(oldEndShell, newEndVNode)) {
+        contents[newEndIndex] = oldEndShell;
+        driveChild(oldEndShell, newEndVNode, scopes);
+        oldEndShell = oldShells[--oldEndIndex];
+        newEndVNode = newVNodes[--newEndIndex];
+      } else if (matchChild(oldBeginShell, newEndVNode)) {
+        contents[newEndIndex] = oldBeginShell;
+        driveChild(oldBeginShell, newEndVNode, scopes);
+        oldBeginShell = oldShells[++oldBeginIndex];
+        newEndVNode = newVNodes[--newEndIndex];
+      } else if (matchChild(oldEndShell, newBeginVNode)) {
+        contents[newBeginIndex] = oldEndShell;
+        driveChild(oldEndShell, newBeginVNode, scopes);
+        oldEndShell = oldShells[--oldEndIndex];
+        newBeginVNode = newVNodes[++newBeginIndex];
+      } else  {
+        if (!indices) {
+          indices = {};
+          for (i = oldBeginIndex; i <= oldEndIndex; ++i) {
+            key = oldShells[i].__extag_key__;
+            if (key) {
+              indices[key] = i;
+            }
+          }
+        }
+
+        key = newBeginVNode.xkey;
+        i = key && indices[key];
+
+        if (i != null && matchChild(oldShells[i] || EMPTY_OBJECT, newBeginVNode)) {
+          contents[newBeginIndex] = oldShells[i];
+        } else {
+          content = createContent(newBeginVNode, scopes);
+          content.__extag_key__ = key;
+          contents[newBeginIndex] = content;
+        }
+
+        // driveChild(contents[newBeginIndex], newBeginVNode, scopes);
+
+        newBeginVNode = newVNodes[++newBeginIndex];
+      }
+    }
+
+    if (oldBeginIndex > oldEndIndex) {
+      while (newBeginIndex <= newEndIndex) {
+        content = createContent(newBeginVNode, scopes);
+        content.__extag_key__ = newBeginVNode.xkey;
+        contents[newBeginIndex] = content;
+        newBeginVNode = newVNodes[++newBeginIndex];
+      }
+    }
+
+    return contents;
+  }
+
+  function flattenVNodes(vnodes, array, ns) {
+    var i, n = vnodes.length, vnode;
+    if (!array) {
+      for (i = 0; i < n; ++i) {
+        if (Array.isArray(vnodes[i])) {
+          array = [];
+          break;
+        }
+      }
+    }
+    if (array) {
+      for (i = 0; i < n; ++i) {
+        vnode = vnodes[i];
+        if (Array.isArray(vnode)) {
+          flattenVNodes(vnode, array, ns);
+        } else {
+          array.push(vnode);
+          if (ns && isVNode(vnode) && !vnode.ns) {
+            vnode.ns = ns;
+          }
+        }
+      }
+    } else {
+      for (i = 0; i < n; ++i) {
+        vnode = vnodes[i];
+        if (ns && isVNode(vnode) && !vnode.ns) {
+          vnode.ns = ns;
+        }
+      }
+    }
+    return array ? array : vnodes;
+  }
+
+  function driveChildren(target, scopes, vnodes, useExpr, areContents) {
+    var contents;
+    if (!vnodes) {
+      vnodes = EMPTY_ARRAY;
+    }
+    if (areContents) {
+      target.accept(vnodes, scopes);
+    } else {
+      if (useExpr) {
+        if (vnodes.length === 1) {
+          var expr = vnodes[0];
+          if (expr instanceof Expression && expr.pattern.target === 'frag') {
+            if (target instanceof Component) {
+              expr.connect(function(vnodes, scopes) {
+                driveChildren(this, scopes, vnodes, false);
+              }, target, scopes);
+            } else {
+              expr.connect('accept', target, scopes);
+            }
+            return;
+          }
+        }
+        contents = createContents(vnodes, scopes);
+      } else {
+        contents = collectContents(vnodes, scopes, target);
+      }
+      target.setChildren(contents);
+    }
+  }
 
   // src/core/bindings/ClassBinding.js
 
@@ -3890,348 +4217,32 @@
     }
   });
 
-  // src/core/template/drivers/driveEvents.js
+  // src/core/template/drivers/driveClasses.js
 
-  function driveEvents(target, scopes, newEvents, useExpr) {
-    var oldEvents = target._events;
-    var type, value;
-    // firstly, remove old event handlers
-    if (oldEvents) {
-      for (type in oldEvents) {
-        value = oldEvents[type];
-        if (typeof value === 'function') {
-          target.off(type, value);
-        } else if (Array.isArray(value)) {
-          target.off(type, value[0], value[1]);
-        }
-      }
-    }
-    // add new event handlers
-    if (newEvents) {
-      for (type in newEvents) {
-        value = newEvents[type];
-        if (useExpr && value instanceof Expression) {
-          value.connect(type, target, scopes);
-        } else if (typeof value === 'function') {
-          target.on(type, value);
-        } else if (Array.isArray(value)) {
-          target.on(type, value[0], value[1]);
-        }
-      }
-    }
-    target._events = newEvents;
+  function driveClasses(target, scopes, classes) {
+    ClassBinding.create(classes).connect('class', target, scopes);
   }
 
-  // src/core/template/drivers/driveProps.js
+  // src/core/template/drivers/driveContent.js
 
-  function driveProps(target, scopes, newProps, useExpr) {
-    var oldProps = target._props;
-    var name, desc, value;
-
-    // eslint-disable-next-line no-undef
-    {
-      if (target instanceof Component) {
-        Validator.validate0(target, newProps);
-      }
-    }
-
-    // firstly, remove redundant properties, or reset default property values.
-    if (oldProps) { 
-      if (target instanceof Component) {
-        for (name in oldProps) {
-          if (!newProps || !(name in newProps)) {
-            desc = Accessor.getAttrDesc(target, name);
-            if (desc) {
-              target.set(name, Accessor.getAttributeDefaultValue(desc));
-            } else {
-              target.set(name, null);
-            }
-          }
-        }
-      } else {
-        for (name in oldProps) {
-          if (!newProps || !(name in newProps)) {
-            target.set(name, null);
-          }
-        }
-      }
-    }
-    // assign new property values
-    if (newProps) {
-      for (name in newProps) {
-        value = newProps[name];
-        if (useExpr && value instanceof Expression) {
-          value.connect(name, target, scopes);
-        } else {
-          target.set(name, value);
-        }
-      }
-    }
-  }
-
-  // src/core/template/drivers/driveChildren.js
-
-  /**
-   * Check if the node matches the child text, element or component.
-   * @param {Shell} child  - text, element or component
-   * @param {string | Object} vnode - vnode
-   */
-  function matchChild(child, vnode) {
-    var meta = child.$meta;
-    if (meta.type === TYPE_TEXT && vnode.__extag_node__ !== EXTAG_VNODE) {
-      return true;
-    }
-    return child.__extag_key__ === vnode.xkey && 
-            (vnode.type ? child.constructor === vnode.type : 
-              (meta.tag === vnode.tag && meta.ns === vnode.ns));
-  }
-
-  function driveContent(target, vnode, scopes) {
-    if (isVNode(vnode)) {
-      driveProps(target, scopes, vnode.props);
-      driveEvents(target, scopes, vnode.events);
-      driveChildren(target, scopes, vnode.children, vnode.useExpr, target instanceof Component);
-      // if (target instanceof Component && target !== scopes[0]) {
-      // } else {
-
-      // }
-    } else /*if (target instanceof Text)*/ {
-      target.set('content', vnode);
-    }
-  }
-
-  function createContent(vnode, scopes) {
-    if (!isVNode(vnode)) {
-      return new Text(vnode);
-    }  
-
-    var ctor, expr, content;
+  function driveContent(content, scopes, vnode) {
     var useExpr = vnode.useExpr;
-
-    if (vnode.xif || vnode.xfor || vnode.xtype) {
-      content = new Block(null, scopes, vnode);
-    } else if (useExpr && vnode.type === Expression) {
-      expr = vnode.expr;
-      if (expr.pattern.target === 'frag') {
-        content = new Fragment(null, scopes);
-        expr.connect('accept', content, scopes);
-      } else {
-        content = new Text('');
-        expr.connect('content', content, scopes);
+    if (vnode.events) {
+      driveEvents(content, scopes, vnode.events, useExpr);
+    }
+    if (vnode.attrs) {
+      driveProps(content, scopes, vnode.attrs, useExpr);
+    }
+    if (useExpr) {
+      if (vnode.style) {
+        driveProps(content.style, scopes, vnode.style, useExpr);
       }
-    } else if (vnode.tag !== '!') {
-      ctor = vnode.type;
-      if (ctor) {
-        content = new ctor(null, scopes, vnode);
-      } else {
-        content = new Element(vnode.ns ? vnode.ns + ':' + vnode.tag : vnode.tag);
-
-        if (vnode.events) {
-          driveEvents(content, scopes, vnode.events, useExpr);
-        }
-
-        if (vnode.props) {
-          driveProps(content, scopes, vnode.props, useExpr);
-        }
-        if (vnode.style) {
-          driveProps(content.style, scopes, vnode.style, useExpr);
-        }
-        if (vnode.classes) {
-          ClassBinding.create(vnode.classes).connect('class', content, scopes);
-        }
-        if (vnode.children) {
-          driveChildren(content, scopes, vnode.children, useExpr);
-        }
-      }
-
-      if (content && vnode.name) {
-        content.$owner = scopes[0];
-        scopes[0].addNamedPart(vnode.name, content); // TODO: removeNamedPart
+      if (vnode.classes) {
+        driveClasses(content, scopes, vnode.classes);
       }
     }
-
-    return content;
-  }
-
-  function createContents(children, scopes) {
-    var i, n, child, content, contents = [];
-    if (children && children.length) { 
-      for (i = 0, n = children.length; i < n; ++i) {
-        child = children[i];
-        content = createContent(child, scopes);
-        if (content) {
-          contents.push(content);
-        }
-      }
-    }
-    return contents;
-  }
-
-  function collectContents(children, scopes, target) {
-    var oldShells, newVNodes;
-
-    // if (target instanceof Component && target !== scopes[0]) {
-    //   oldShells = target._contents || EMPTY_ARRAY;
-    //   newVNodes = children || EMPTY_ARRAY;
-    // } else if (!(target instanceof Slot)) {
-      oldShells = target._children || EMPTY_ARRAY;
-      newVNodes = children || EMPTY_ARRAY;
-    // } else {
-    //   return;
-    // }
-
-    if (newVNodes.length) {
-      newVNodes = flattenVNodes(newVNodes, null, target.$meta.ns);
-    }
-
-    var contents = new Array(newVNodes.length);
-    var content, indices, key, i;
-
-    var oldBeginIndex = 0, oldEndIndex = oldShells.length - 1;
-    var newBeginIndex = 0, newEndIndex = newVNodes.length - 1;
-
-    var oldBeginShell = oldShells[oldBeginIndex];
-    var oldEndShell = oldShells[oldEndIndex];
-    var newBeginVNode = newVNodes[newBeginIndex];
-    var newEndVNode = newVNodes[newEndIndex];
-
-    // refer to Vue (https://vuejs.org/)
-    while (oldBeginIndex <= oldEndIndex && newBeginIndex <= newEndIndex) {
-      if (oldBeginShell == null) {
-        oldBeginShell = oldShells[++oldBeginIndex];
-      } else if (oldEndShell == null) {
-        oldEndShell = oldShells[--oldEndIndex];
-      } else if (matchChild(oldBeginShell, newBeginVNode)) {
-        contents[newBeginIndex] = oldBeginShell; 
-        driveContent(oldBeginShell, newBeginVNode, scopes);
-        oldBeginShell = oldShells[++oldBeginIndex];
-        newBeginVNode = newVNodes[++newBeginIndex];
-      } else if (matchChild(oldEndShell, newEndVNode)) {
-        contents[newEndIndex] = oldEndShell;
-        driveContent(oldEndShell, newEndVNode, scopes);
-        oldEndShell = oldShells[--oldEndIndex];
-        newEndVNode = newVNodes[--newEndIndex];
-      } else if (matchChild(oldBeginShell, newEndVNode)) {
-        contents[newEndIndex] = oldBeginShell;
-        driveContent(oldBeginShell, newEndVNode, scopes);
-        oldBeginShell = oldShells[++oldBeginIndex];
-        newEndVNode = newVNodes[--newEndIndex];
-      } else if (matchChild(oldEndShell, newBeginVNode)) {
-        contents[newBeginIndex] = oldEndShell;
-        driveContent(oldEndShell, newBeginVNode, scopes);
-        oldEndShell = oldShells[--oldEndIndex];
-        newBeginVNode = newVNodes[++newBeginIndex];
-      } else  {
-        if (!indices) {
-          indices = {};
-          for (i = oldBeginIndex; i <= oldEndIndex; ++i) {
-            key = oldShells[i].__extag_key__;
-            if (key) {
-              indices[key] = i;
-            }
-          }
-        }
-
-        key = newBeginVNode.xkey;
-        i = key && indices[key];
-
-        if (i != null && matchChild(oldShells[i] || EMPTY_OBJECT, newBeginVNode)) {
-          contents[newBeginIndex] = oldShells[i];
-        } else {
-          content = createContent(newBeginVNode, scopes);
-          if (content) {
-            content.__extag_key__ = key;
-            contents[newBeginIndex] = content;
-          } else {
-            throw new Error('Can not create content from ', newBeginVNode);
-          }
-          
-        }
-
-        // driveContent(contents[newBeginIndex], newBeginVNode, scopes);
-
-        newBeginVNode = newVNodes[++newBeginIndex];
-      }
-    }
-
-    if (oldBeginIndex > oldEndIndex) {
-      while (newBeginIndex <= newEndIndex) {
-        content = createContent(newBeginVNode, scopes);
-        if (content) {
-          contents[newBeginIndex] = content;
-          content.__extag_key__ = newBeginVNode.xkey;
-        } else {
-          throw new Error('Can not create content from ', newBeginVNode);
-        }
-        // driveContent(contents[newBeginIndex], newBeginVNode, scopes);
-        newBeginVNode = newVNodes[++newBeginIndex];
-      }
-    }
-
-    return contents;
-  }
-
-  function isVNode(child) {
-    return typeof child === 'object' && child.__extag_node__ === EXTAG_VNODE;
-  }
-
-  function flattenVNodes(children, array, ns) {
-    var i, n = children.length, child;
-    if (!array) {
-      for (i = 0; i < n; ++i) {
-        if (Array.isArray(children[i])) {
-          array = [];
-          break;
-        }
-      }
-    }
-    if (array) {
-      for (i = 0; i < n; ++i) {
-        child = children[i];
-        if (Array.isArray(child)) {
-          flattenVNodes(child, array, ns);
-        } else {
-          array.push(child);
-          if (ns && isVNode(child) && !child.ns) {
-            child.ns = ns;
-          }
-        }
-      }
-    } else {
-      for (i = 0; i < n; ++i) {
-        child = children[i];
-        if (ns && isVNode(child) && !child.ns) {
-          child.ns = ns;
-        }
-      }
-    }
-    return array ? array : children;
-  }
-
-  function driveChildren(target, scopes, children, useExpr, areContents) {
-    var contents;
-    if (areContents) {
-      target.accept(children, scopes);
-    } else {
-      if (useExpr) {
-        if (children && children.length === 1) {
-          var expr = children[0];
-          if (expr instanceof Expression && expr.pattern.target === 'frag') {
-            if (target instanceof Component) {
-              expr.connect(function(children, scopes) {
-                driveChildren(this, scopes, children, false);
-              }, target, scopes);
-            } else {
-              expr.connect('accept', target, scopes);
-            }
-            return;
-          }
-        }
-        contents = createContents(children, scopes);
-      } else {
-        contents = collectContents(children, scopes, target);
-      }
-      target.setChildren(contents);
+    if (vnode.contents) {
+      driveChildren(content, scopes, vnode.contents, useExpr, content instanceof Component);
     }
   }
 
@@ -4300,77 +4311,38 @@
 
   // src/core/template/drivers/driveComponent.js
 
-  function driveComponent(target, scopes, vnode, props, template) {
-    var useExpr;
+  function driveComponent(target, template) {
+    var scopes = [target];
 
-    if (vnode && scopes) {
-      useExpr = vnode.useExpr;
-      if (props && vnode.props) {
-        props = assign({}, vnode.props, props);
-      } else if (!props && vnode.props) {
-        props = vnode.props;
-      }
-      // eslint-disable-next-line no-undef
-      // if ("development" === 'development') {
-      //   Validator.validate0(target, props);
-      // }
-      driveProps(target, scopes, props, useExpr);
-
-      if (vnode.events) {
-        driveEvents(target, scopes, vnode.events, useExpr);
-      }
-      if (useExpr) {
-        if (vnode.style) {
-          driveProps(target.style, scopes, vnode.style, useExpr);
-        }
-        if (vnode.classes) {
-          ClassBinding.create(vnode.classes).connect('class', target, scopes);
-        }
-      }
-      if (vnode.children) {
-        driveChildren(target, scopes, vnode.children, useExpr, true);
-      }
-    } else if (props) {
-      // eslint-disable-next-line no-undef
-      // if ("development" === 'development') {
-      //   Validator.validate0(target, props);
-      // }
-      driveProps(target, scopes, props);
-    }
-    
-    if (!template) { return; }
-
-    var _scopes = [target];
-
-    useExpr = template.useExpr;
+    var useExpr = template.useExpr;
 
     if (template.events) {
-      driveEvents(target, _scopes, template.events, useExpr);
+      driveEvents(target, scopes, template.events, useExpr);
     }
-    if (template.props) {
+    if (template.attrs) {
       target.$props = new Cache(target);
-      driveProps(target.$props, _scopes, template.props, useExpr);
+      driveProps(target.$props, scopes, template.attrs, useExpr);
     }
     if (useExpr) {
       if (template.style) {
         target.$style = new Cache(target);
-        driveProps(target.$style, _scopes, template.style, useExpr);
+        driveProps(target.$style, scopes, template.style, useExpr);
+      }
+      if (template.classes) {
+        target.$props = target.$props || new Cache(target);
+        driveClasses(target.$props, scopes, template.classes);
       }
     }
-    if (template.children) {
-      driveChildren(target, _scopes, template.children, useExpr);
+    if (template.contents) {
+      driveChildren(target, scopes, template.contents, useExpr);
     }
   }
 
-  HTMXEngine.makeContent = createContent;
   HTMXEngine.createContent = createContent;
   HTMXEngine.driveChildren = driveChildren;
-  // HTMXEngine.driveContent = driveContent;
-  HTMXEngine.driveEvents = driveEvents;
-  HTMXEngine.driveProps = driveProps;
+  HTMXEngine.driveContent = driveContent;
   HTMXEngine.driveComponent = driveComponent;
   HTMXEngine.transferProps = transferProps;
-  HTMXEngine.transferProperties = transferProps;
 
   // src/core/template/parsers/EvaluatorParser.js
 
@@ -4874,7 +4846,9 @@
     }
   });
 
-  var DATA_BINDING_MODES$3 = DataBinding.MODES;
+  // src/core/template/parsers/JSXParser.js
+
+   var DATA_BINDING_MODES$3 = DataBinding.MODES;
 
   function checkExprMode(mode) {
     if (mode !== BINDING_OPERATORS.DATA && mode !== BINDING_OPERATORS.TEXT) {
@@ -4883,7 +4857,7 @@
   }
 
   function parseJsxNode(node, prototype) {
-    var props = node.props, value, key, args;
+    var attrs = node.attrs, value, key, args;
     if (node.xif) {
       args = node.xif.args;
       checkExprMode(args[0]);
@@ -4903,43 +4877,23 @@
       checkExprMode(args[0]);
       node.xkey = parseJsxExpr(args, node, prototype);
     }
-    if (props) {
+    if (attrs) {
       // parse expression, and extract style, class
-      for (key in props) {
-        value = props[key];
+      for (key in attrs) {
+        value = attrs[key];
         if (value && typeof value === 'object') {
           if (value.__extag_expr__ === Expression) {
             args = value.args;
             checkExprMode(args[0]);
-            props[key] = parseJsxExpr(args, node, prototype);
+            attrs[key] = parseJsxExpr(args, node, prototype);
           } else if (key === 'style') {
             node[key] = parseJsxData(value, node, prototype);
-            delete props[key];
+            delete attrs[key];
           }
         }
       }
     }
-    // if (node.type && typeof node.type === 'string') {
-    //   ctor = Path.search(node.type, prototype.constructor.resources);
-    //   if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
-    //     // eslint-disable-next-line no-undef
-    //     if ("development" === 'development') {
-    //       logger.warn('Can not find such component type `' + expr + '`. ' + 
-    //                   'Make sure it extends Component and please register `' + expr  + '` in static resources.');
-    //     }
-    //     throwError('Can not find such component type `' + expr + '`');
-    //   }
-    //   node.type = ctor;
-    // }
-    if (node.type == null && CAPITAL_REGEXP.test(node.tag)) {
-      // eslint-disable-next-line no-undef
-      {
-        if (node.type == null) {
-          logger.warn('`' + node.tag + '` maybe component, but the class is not found.');
-        } 
-      }
-    }
-    if (node.type == null) {
+    if (node.type == null && node.xtype == null) {
       switch (node.tag) {
         case 'x:slot':
           node.type = Slot;
@@ -5098,33 +5052,33 @@
     }
   }
 
-  function parseJsxChildren(node, prototype) {
-    var children = node.children;
-    if (!children || !children.length) {
+  function parseJsxContents(node, prototype) {
+    var contents = node.contents;
+    if (!contents || !contents.length) {
       return;
     }
-    var i, type, child;
-    for (i = children.length - 1; i >= 0; --i) {
-      child = children[i];
-      type = typeof child;
+    var i, type, vnode;
+    for (i = contents.length - 1; i >= 0; --i) {
+      vnode = contents[i];
+      type = typeof vnode;
       if (type === 'object') {
-        if (child.__extag_node__ === EXTAG_VNODE) {
-          child.useExpr = true;
-          child.identifiers = node.identifiers;
-          parseJsxNode(child, prototype);
-          parseJsxChildren(child, prototype);
+        if (vnode.__extag_node__ === EXTAG_VNODE) {
+          vnode.useExpr = true;
+          vnode.identifiers = node.identifiers;
+          parseJsxNode(vnode, prototype);
+          parseJsxContents(vnode, prototype);
           continue;
-        } else if (child.__extag_expr__ === Expression) {
-          var mode = child.args[0];
+        } else if (vnode.__extag_expr__ === Expression) {
+          var mode = vnode.args[0];
           if (mode !== BINDING_OPERATORS.DATA && 
               mode !== BINDING_OPERATORS.FRAGMENT) {
             throwError(mode + ' is not allowed in expr() for text or fragment binding');
           }
-          children[i] = {
+          contents[i] = {
             __extag_node__: EXTAG_VNODE,
             useExpr: true,
             type: Expression,
-            expr: parseJsxExpr(child.args, node, prototype)
+            expr: parseJsxExpr(vnode.args, node, prototype)
           };
         }
       }
@@ -5145,15 +5099,14 @@
   /**
    * Create virtual node
    * @param {string|Function} type  element tag or component type
-   * @param {Object} options  some props, and expressions maybe
-   * @param {string|Array|Object} children  child nodes
+   * @param {Object} options  some attrs, events, and expressions maybe
+   * @param {string|Array|Object} contents  virtual child nodes
    * @returns {Object}
    */
-  function node(type, options, children) {
+  function node(type, options, contents) {
     var node = {
       __extag_node__: EXTAG_VNODE
     };
-    var props, key;
 
     var t = typeof type;
     if (t === 'string') {
@@ -5183,11 +5136,11 @@
       if (type.__extag_component_class__ || type === Fragment) {
         node.type = type;
       } else {
-        var hookEngine = config.get('hook-engine');
+        var hookEngine = config.get(HOOK_ENGINE);
         if (hookEngine) {
-          node.type = hookEngine.getComponentClass(type);
+          node.type = hookEngine.getHookableComponentClass(type);
         }
-        if (!node.type || !node.type.__extag_component_class__) {
+        if (typeof node.type !== 'function' || !node.type.__extag_component_class__) {
           throwError('component class is not found.');
         }
       }
@@ -5227,28 +5180,24 @@
         node.events = options.events;
       }
 
-      // var props;
-      if (node.props) {
-        props = node.props;
-      } else {
-        props = node.props = {};
-      }
-
+      var key, attrs = {};
       for (key in options) {
-        if (!RESERVED_PARAMS[key] && hasOwnProp.call(options, key)) {
-          props[key] = options[key];
+        if (!RESERVED_PARAMS[key] && 
+            hasOwnProp.call(options, key)) {
+          attrs[key] = options[key];
         }
       }
+      node.attrs = attrs;
     }
 
-    if (children) {
-      if (arguments.length > 3 || Array.isArray(children)) {
-        children = slice.call(arguments, 2);
-        children = flatten(children);
+    if (contents) {
+      if (arguments.length > 3 || Array.isArray(contents)) {
+        contents = slice.call(arguments, 2);
+        contents = flatten(contents);
       } else {
-        children = [children];
+        contents = [contents];
       }
-      node.children = children;
+      node.contents = contents;
     }
 
     return node;
@@ -5289,7 +5238,7 @@
       _node.useExpr = true;
       _node.identifiers = ['this'];
       parseJsxNode(_node, prototype);
-      parseJsxChildren(_node, prototype);
+      parseJsxContents(_node, prototype);
 
       if (_node.type) {
         if (_node.type === Fragment) {
@@ -5587,13 +5536,6 @@
     return group;
   }
 
-  // function getPropName(attrName) {
-  //   if (attrName in SPECIAL_CASES) {
-  //     return SPECIAL_CASES[attrName];
-  //   }
-  //   return attrName;// toCamelCase(attrName);
-  // }
-
   function isDirective(name) {
     return name.charCodeAt(0) === 120 // 'x'
             && (name in DIRECTIVES);
@@ -5603,6 +5545,26 @@
     return hasOwnProp.call(SELF_CLOSING_TAGS, tagName);
   }
 
+  function findComponentClass(expr, prototype) {
+    var ctor = Path.search(expr, prototype.constructor.resources);
+    if (typeof ctor === 'function') {
+      if (ctor.__extag_component_class__) {
+        return ctor;
+      }
+      var hookEngine = config.get(HOOK_ENGINE);
+      if (hookEngine) {
+        ctor = hookEngine.getHookableComponentClass(ctor);
+        if (typeof ctor === 'function' && ctor.__extag_component_class__) {
+          return ctor;
+        }
+      }
+      // eslint-disable-next-line no-undef
+      {
+        logger.warn('`' + expr+ '` maybe component, but the class is not found.');
+      }
+    } 
+  }
+
   function parseDirective(name, expr, node, prototype, identifiers) {
     var result;
     if (name === 'x:class') {
@@ -5610,22 +5572,9 @@
     } else if (name === 'x:style') {
       node.style = ClassStyleParser.parse(expr, prototype, identifiers, true);
     } else if (name === 'x:type') {
-      var ctor = Path.search(expr, prototype.constructor.resources);
-      if (typeof ctor === 'function') {
-        if (ctor.__extag_component_class__ || ctor === Fragment) {
-          node.type = ctor;
-        } else {
-          var hookEngine = config.get('hook-engine');
-          if (hookEngine) {
-            node.type = hookEngine.getComponentClass(ctor);
-          }
-        }
-        // eslint-disable-next-line no-undef
-        {
-          if (node.type == null) {
-            logger.warn('`' + node.tag + '` maybe component, but the class is not found.');
-          } 
-        }
+      var ctor = findComponentClass(expr, prototype);
+      if (ctor) {
+        node.type = ctor;
       } else {
         result = DataBindingParser.parse(expr, prototype, identifiers);
         node.xtype = new Expression(DataBinding, result);
@@ -5699,8 +5648,7 @@
     var result, group, key;
 
     if (attrValue == null) {
-      // key = getPropName(attrName);
-      group = getGroup(node, 'props');
+      group = getGroup(node, 'attrs');
       group[attrName] = true;
       return;
     }
@@ -5713,10 +5661,9 @@
       result = EventBindingParser.parse(attrValue, prototype, identifiers);
       group[key] = new Expression(EventBinding, result);
     } else {
-      group = getGroup(node, 'props');
+      group = getGroup(node, 'attrs');
       switch (lastChar) {
         case BINDING_OPERATORS.DATA: // last char is '@'
-          // key = getPropName(attrName.slice(0, -1));
           key = attrName.slice(0, -1);
           result = PrimitiveLiteralParser.tryParse(attrValue.trim());
           if (result != null) {
@@ -5727,7 +5674,6 @@
           }
           break;
         case BINDING_OPERATORS.TEXT: // last char is '#'
-          // key = getPropName(attrName.slice(0, -1));
           key = attrName.slice(0, -1);
           try {
             result = TextBindingParser.parse(attrValue, prototype, identifiers);
@@ -5751,7 +5697,6 @@
           }
           break;
         default:
-          // key = getPropName(attrName);
           group[attrName] = attrValue;
       }
     }
@@ -5837,7 +5782,7 @@
             attrName = attrNames.shift();
             if (attrName && node) {
               parseAttribute(attrName, null, node, prototype, node.identifiers);
-              // getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
+              // getGroup(node, 'attrs')[viewEngine.toCamelCase(attrName)] = '';
             }
           }
         }
@@ -5850,7 +5795,7 @@
             attrName = attrNames.shift();
             if (attrName && node) {
               parseAttribute(attrName, null, node, prototype, node.identifiers);
-              // getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
+              // getGroup(node, 'attrs')[viewEngine.toCamelCase(attrName)] = '';
             }
           }
           attrName = attrNames.shift();
@@ -5878,7 +5823,7 @@
   }
 
   function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
-    var children = parent.children || [], result;
+    var contents = parent.contents || [], result;
     var text = htmx.slice(start, stop);
     text = text.replace(LF_IN_BLANK_START, '').replace(LF_IN_BLANK_END, '');
     if (!text) {
@@ -5903,7 +5848,7 @@
       if (result) {
         if (result.length === 1 && (result[0] instanceof Expression)) {
           expr = result[0];
-          children.push(createExprNode(result[0].binding, result[0]));
+          contents.push(createExprNode(result[0].binding, result[0]));
         } else {
           var i = -1, j = 0 , n = result.length;
           for (; j < n; ++j) {
@@ -5911,14 +5856,14 @@
             if ((expr instanceof Expression) && expr.pattern.target === 'frag') {
               if (j > i) {
                 if (j - i > 1) {
-                  children.push(createExprNode(TextBinding, result.slice(i, j)));
+                  contents.push(createExprNode(TextBinding, result.slice(i, j)));
                 } else if (result[i] instanceof Expression) {
-                  children.push(createExprNode(result[i].binding, result[i]));
+                  contents.push(createExprNode(result[i].binding, result[i]));
                 } else {
-                  children.push(result[i]);
+                  contents.push(result[i]);
                 }
               }
-              children.push(createExprNode(expr.binding, expr));
+              contents.push(createExprNode(expr.binding, expr));
               i = -1;
             } else if (i < 0) {
               i = j;
@@ -5926,21 +5871,21 @@
           }
           if (i >= 0 && j > i) {
             if (j - i > 1) {
-              children.push(createExprNode(TextBinding, result.slice(i, j)));
+              contents.push(createExprNode(TextBinding, result.slice(i, j)));
             } else if (result[i] instanceof Expression) {
-              children.push(createExprNode(result[i].binding, result[i]));
+              contents.push(createExprNode(result[i].binding, result[i]));
             } else {
-              children.push(result[i]);
+              contents.push(result[i]);
             }
           }
         }
       } else {
-        children.push(decodeHTML(text));
+        contents.push(decodeHTML(text));
       }
     } else {
-      children.push(decodeHTML(text));
+      contents.push(decodeHTML(text));
     }
-    parent.children = children;
+    parent.contents = contents;
   }
 
   function parseHTMX(htmx, prototype) {
@@ -5954,7 +5899,7 @@
 
     parent = {
       tag: '<>',
-      children: [],
+      contents: [],
       identifiers: ['this']
     };
     parents.push(parent);
@@ -5990,47 +5935,34 @@
           }
 
           if (!node.ns) {
-            if (node.props && node.props.xmlns) {
-              node.ns = toNameSpace(node.props.xmlns);
+            if (node.attrs && node.attrs.xmlns) {
+              node.ns = toNameSpace(node.attrs.xmlns);
             } else if (parent.ns) {
               node.ns = parent.ns;
             }
           }
 
-          if (node.type == null && X_TAG_REGEXP.test(tagName)) {
-            switch (tagName) {
-              case 'x:slot':
-                node.type = Slot;
-                break;
-              case 'x:frag':
-                node.type = Fragment;
-                break;
-            }
-          }
-
-          if (node.type == null && node.xtype == null && CAPITAL_REGEXP.test(tagName)) {
-            var ctor = Path.search(tagName, prototype.constructor.resources);
-            if (typeof ctor === 'function') {
-              if (ctor.__extag_component_class__ || ctor === Fragment) {
-                node.type = ctor;
-              } else {
-                var hookEngine = config.get('hook-engine');
-                if (hookEngine) {
-                  node.type = hookEngine.getComponentClass(ctor);
-                }
+          if (node.type == null && node.xtype == null) {
+            if (X_TAG_REGEXP.test(tagName)) {
+              switch (tagName) {
+                case 'x:slot':
+                  node.type = Slot;
+                  break;
+                case 'x:frag':
+                  node.type = Fragment;
+                  break;
               }
-            }
-            // eslint-disable-next-line no-undef
-            {
-              if (node.type == null) {
-                logger.warn('`' + node.tag + '` maybe component, but the class is not found.');
-              } 
+            } else if (CAPITAL_REGEXP.test(tagName)) {
+              var ctor = findComponentClass(tagName, prototype);
+              if (ctor) {
+                node.type = ctor;
+              }
             }
           }
 
           if (parent) {
-            parent.children = parent.children || [];
-            parent.children.push(node);
+            parent.contents = parent.contents || [];
+            parent.contents.push(node);
           }
           
           if (htmx[stop - 1] !== '/' && !isSelfClosingTag(tagName)) {
@@ -6070,18 +6002,6 @@
             start = stop = stop + 1;
             stop = parseAttributes(htmx, start);
           }
-
-          // if (parent.children) {
-          //   var props = getGroup(parent, 'props');
-          //   if (node.type) {
-          //     props.contents = parent.children;
-          //   } else {
-          //     props.children = parent.children;
-          //   }
-          // }
-
-          // start = stop = stop + 1;
-
           // tag closed
           if (parents.length > 1) {
             parents.pop();
@@ -6108,13 +6028,13 @@
           start = idx + 4;
           stop = htmx.indexOf('-->', start);
           stop = stop > 0 ? stop : htmx.length;
-          node =  {
-            tag: '!',
-            comment: htmx.slice(start, stop),
-            __extag_node__: EXTAG_VNODE
-          };
-          parent.children = parent.children || [];
-          parent.children.push(node);
+          // node =  {
+          //   tag: '!',
+          //   comment: htmx.slice(start, stop),
+          //   __extag_node__: EXTAG_VNODE
+          // };
+          // parent.contents = parent.contents || [];
+          // parent.contents.push(node);
           idx = stop + 3;
           start = stop = idx;
           continue;
@@ -6137,26 +6057,25 @@
 
       var constructor = prototype.constructor;
       var nodes = parseHTMX(htmx, prototype);
-      var children = nodes[0].children;
-      var root = children[0];
+      var contents = nodes[0].contents;
+      var root = contents[0];
 
-      if (children.length !== 1) {
+      if (contents.length !== 1) {
         throwError('The template of component ' + (constructor.fullname || constructor.name) + ' must have only one root tag.');
       }
       if (root.tag === '!' || root.tag === '#') {
         throwError('Component template root tag must be a DOM element, instead of: ' + htmx.slice(0, htmx.indexOf('>')));
       }
-      if (root.type) {
-        if (root.tag === 'x:frag' && root.type === Fragment) {
-          root.type = null;
-        } else if (root.tag === 'x:slot' || root.tag === 'x:view') {
-          throwError(root.tag + ' can not be used as root tag of component template: ' + htmx.slice(0, htmx.indexOf('>')));
-        } else {
-          throwError('component can not be used as root tag of another component template: ' + htmx.slice(0, htmx.indexOf('>')));
-        }
-      } else if (root.xif || root.xfor || root.xkey) {
+      if (root.tag === 'x:slot' || root.tag === 'x:view') {
+        throwError(root.tag + ' can not be used as root tag of component template: ' + htmx.slice(0, htmx.indexOf('>')));
+      }
+      if (root.type && root.type.__extag_component_class__) {
+        throwError('component can not be used as root tag of another component template: ' + htmx.slice(0, htmx.indexOf('>')));
+      }
+      if (root.xif || root.xfor || root.xkey) {
         throwError('`x:if`, `x:for`, `x:key` can not be used on root tag of component template: '  + htmx.slice(0, htmx.indexOf('>')));
       }
+
       return root;
     }
   };
@@ -6177,7 +6096,6 @@
 
     node: JSXParser.node,
     expr: JSXParser.expr,
-    // make: HTMXEngine.makeContent,
 
     conf: function(key, val) {
       if (arguments.length === 1) {
@@ -6213,7 +6131,7 @@
     
 
     // eslint-disable-next-line no-undef
-    version: "0.5.1"
+    version: "0.5.3"
   };
 
   return Extag;

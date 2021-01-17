@@ -1,6 +1,6 @@
 {
   "name": "extag-dom",
-  "version": "0.5.1",
+  "version": "0.5.3",
   "description": "Extag's default view engine for DOM operations",
   "homepage": "https://enjolras1024.github.io/extag/",
   "repository": {
