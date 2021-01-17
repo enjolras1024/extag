@@ -11,16 +11,18 @@ export default function driveContent(content, scopes, vnode) {
   if (vnode.events) {
     driveEvents(content, scopes, vnode.events, useExpr);
   }
-  if (vnode.props) {
-    driveProps(content, scopes, vnode.props, useExpr)
+  if (vnode.attrs) {
+    driveProps(content, scopes, vnode.attrs, useExpr)
   }
-  if (vnode.style) {
-    driveProps(content.style, scopes, vnode.style, useExpr);
+  if (useExpr) {
+    if (vnode.style) {
+      driveProps(content.style, scopes, vnode.style, useExpr);
+    }
+    if (vnode.classes) {
+      driveClasses(content, scopes, vnode.classes, useExpr);
+    }
   }
-  if (vnode.classes) {
-    driveClasses(content, scopes, vnode.classes, useExpr);
-  }
-  if (vnode.children) {
-    driveChildren(content, scopes, vnode.children, useExpr, content instanceof Component);
+  if (vnode.contents) {
+    driveChildren(content, scopes, vnode.contents, useExpr, content instanceof Component);
   }
 }

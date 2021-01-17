@@ -21,14 +21,14 @@ defineClass({
       }
       portal.fragment.accept(contents, contents.scopes);
     });
-    portal.on('started', function() {
+    portal.on('updating', function() {
       var pool = portal.getPool();
       if (pool.target) {
         pool.target.append(portal);
       } else {
         pool.portals.push(portal);
       }
-    });
+    }, {once: true});
     portal.on('destroying', function() {
       var pool = portal.getPool();
       if (pool.target) {
@@ -59,7 +59,7 @@ Portal.Target = defineClass({
   },
   setup: function setup() {
     var target = this;
-    target.on('started', function() {
+    target.on('updating', function() {
       var name = target.get('name');
       var pool = name2pool[name];
       if (!pool) {
@@ -77,7 +77,7 @@ Portal.Target = defineClass({
       } else {
         throwError('A portal target with the same name="' + name + '" already exists')
       }
-    });
+    }, {once: true});
     target.on('destroying', function() {
       var name = target.get('name');
       delete name2pool[name];

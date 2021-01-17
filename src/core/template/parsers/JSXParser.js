@@ -1,3 +1,5 @@
+// src/core/template/parsers/JSXParser.js
+
 import Path from 'src/base/Path'
 import Slot from 'src/core/shells/Slot'
 import Fragment from 'src/core/shells/Fragment'
@@ -11,10 +13,9 @@ import FuncBinding from 'src/core/bindings/FuncBinding'
 import DataBinding from 'src/core/bindings/DataBinding'
 import TextBinding from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
-import logger from 'src/share/logger'
 import { 
+  HOOK_ENGINE,
   EXTAG_VNODE,
-  CAPITAL_REGEXP,
   BINDING_OPERATORS,
   WHITE_SPACES_REGEXP
  } from 'src/share/constants'
@@ -35,7 +36,7 @@ function checkExprMode(mode) {
 }
 
 function parseJsxNode(node, prototype) {
-  var props = node.props, value, key, ctor, args;
+  var attrs = node.attrs, value, key, args;
   if (node.xif) {
     args = node.xif.args;
     checkExprMode(args[0]);
@@ -55,60 +56,23 @@ function parseJsxNode(node, prototype) {
     checkExprMode(args[0]);
     node.xkey = parseJsxExpr(args, node, prototype);
   }
-  if (props) {
+  if (attrs) {
     // parse expression, and extract style, class
-    for (key in props) {
-      value = props[key];
+    for (key in attrs) {
+      value = attrs[key];
       if (value && typeof value === 'object') {
         if (value.__extag_expr__ === Expression) {
           args = value.args;
           checkExprMode(args[0]);
-          props[key] = parseJsxExpr(args, node, prototype);
+          attrs[key] = parseJsxExpr(args, node, prototype);
         } else if (key === 'style') {
           node[key] = parseJsxData(value, node, prototype);
-          delete props[key];
+          delete attrs[key];
         }
       }
     }
   }
-  // if (node.type && typeof node.type === 'string') {
-  //   ctor = Path.search(node.type, prototype.constructor.resources);
-  //   if (typeof ctor !== 'function' || !ctor.__extag_component_class__) {
-  //     // eslint-disable-next-line no-undef
-  //     if (__ENV__ === 'development') {
-  //       logger.warn('Can not find such component type `' + expr + '`. ' + 
-  //                   'Make sure it extends Component and please register `' + expr  + '` in static resources.');
-  //     }
-  //     throwError('Can not find such component type `' + expr + '`');
-  //   }
-  //   node.type = ctor;
-  // }
-  if (node.type == null && CAPITAL_REGEXP.test(node.tag)) {
-    // ctor = Path.search(node.tag, prototype.constructor.resources);
-    // if (typeof ctor === 'function' && ctor.__extag_component_class__) {
-    //   node.type = ctor;
-    // // eslint-disable-next-line no-undef
-    // } else if (__ENV__ === 'development') {
-    //   logger.warn('`' + node.tag + '` maybe component type but not found.');
-    // }
-    if (typeof ctor === 'function') {
-      if (ctor.__extag_component_class__ || ctor === Fragment) {
-        node.type = ctor;
-      } else {
-        var hookEngine = config.get('hook-engine');
-        if (hookEngine) {
-          node.type = hookEngine.getComponentClass(ctor);
-        }
-      }
-    }
-    // eslint-disable-next-line no-undef
-    if (__ENV__ === 'development') {
-      if (node.type == null) {
-        logger.warn('`' + node.tag + '` maybe component, but the class is not found.');
-      } 
-    }
-  }
-  if (node.type == null) {
+  if (node.type == null && node.xtype == null) {
     switch (node.tag) {
       case 'x:slot':
         node.type = Slot;
@@ -267,33 +231,33 @@ function parseJsxEvents(node, prototype) {
   }
 }
 
-function parseJsxChildren(node, prototype) {
-  var children = node.children;
-  if (!children || !children.length) {
+function parseJsxContents(node, prototype) {
+  var contents = node.contents;
+  if (!contents || !contents.length) {
     return;
   }
-  var i, type, child;
-  for (i = children.length - 1; i >= 0; --i) {
-    child = children[i];
-    type = typeof child;
+  var i, type, vnode;
+  for (i = contents.length - 1; i >= 0; --i) {
+    vnode = contents[i];
+    type = typeof vnode;
     if (type === 'object') {
-      if (child.__extag_node__ === EXTAG_VNODE) {
-        child.useExpr = true;
-        child.identifiers = node.identifiers;
-        parseJsxNode(child, prototype);
-        parseJsxChildren(child, prototype);
+      if (vnode.__extag_node__ === EXTAG_VNODE) {
+        vnode.useExpr = true;
+        vnode.identifiers = node.identifiers;
+        parseJsxNode(vnode, prototype);
+        parseJsxContents(vnode, prototype);
         continue;
-      } else if (child.__extag_expr__ === Expression) {
-        var mode = child.args[0];
+      } else if (vnode.__extag_expr__ === Expression) {
+        var mode = vnode.args[0];
         if (mode !== BINDING_OPERATORS.DATA && 
             mode !== BINDING_OPERATORS.FRAGMENT) {
           throwError(mode + ' is not allowed in expr() for text or fragment binding');
         }
-        children[i] = {
+        contents[i] = {
           __extag_node__: EXTAG_VNODE,
           useExpr: true,
           type: Expression,
-          expr: parseJsxExpr(child.args, node, prototype)
+          expr: parseJsxExpr(vnode.args, node, prototype)
         };
       }
     }
@@ -314,15 +278,14 @@ var RESERVED_PARAMS = {
 /**
  * Create virtual node
  * @param {string|Function} type  element tag or component type
- * @param {Object} options  some props, and expressions maybe
- * @param {string|Array|Object} children  child nodes
+ * @param {Object} options  some attrs, events, and expressions maybe
+ * @param {string|Array|Object} contents  virtual child nodes
  * @returns {Object}
  */
-function node(type, options, children) {
+function node(type, options, contents) {
   var node = {
     __extag_node__: EXTAG_VNODE
   };
-  var props, key;
 
   var t = typeof type;
   if (t === 'string') {
@@ -352,11 +315,11 @@ function node(type, options, children) {
     if (type.__extag_component_class__ || type === Fragment) {
       node.type = type;
     } else {
-      var hookEngine = config.get('hook-engine');
+      var hookEngine = config.get(HOOK_ENGINE);
       if (hookEngine) {
-        node.type = hookEngine.getComponentClass(type);
+        node.type = hookEngine.getHookableComponentClass(type);
       }
-      if (!node.type || !node.type.__extag_component_class__) {
+      if (typeof node.type !== 'function' || !node.type.__extag_component_class__) {
         throwError('component class is not found.');
       }
     }
@@ -396,28 +359,24 @@ function node(type, options, children) {
       node.events = options.events;
     }
 
-    // var props;
-    if (node.props) {
-      props = node.props;
-    } else {
-      props = node.props = {};
-    }
-
+    var key, attrs = {};
     for (key in options) {
-      if (!RESERVED_PARAMS[key] && hasOwnProp.call(options, key)) {
-        props[key] = options[key];
+      if (!RESERVED_PARAMS[key] && 
+          hasOwnProp.call(options, key)) {
+        attrs[key] = options[key];
       }
     }
+    node.attrs = attrs;
   }
 
-  if (children) {
-    if (arguments.length > 3 || Array.isArray(children)) {
-      children = slice.call(arguments, 2);
-      children = flatten(children);
+  if (contents) {
+    if (arguments.length > 3 || Array.isArray(contents)) {
+      contents = slice.call(arguments, 2);
+      contents = flatten(contents);
     } else {
-      children = [children];
+      contents = [contents];
     }
-    node.children = children;
+    node.contents = contents;
   }
 
   return node;
@@ -458,7 +417,7 @@ var JSXParser = {
     _node.useExpr = true;
     _node.identifiers = ['this'];
     parseJsxNode(_node, prototype);
-    parseJsxChildren(_node, prototype);
+    parseJsxContents(_node, prototype);
 
     if (_node.type) {
       if (_node.type === Fragment) {

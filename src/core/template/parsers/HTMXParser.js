@@ -1,6 +1,7 @@
 // src/core/template/parsers/HTMXParser.js
 
 import { 
+  HOOK_ENGINE,
   EXTAG_VNODE,
   BINDING_FORMAT,
   CAPITAL_REGEXP,
@@ -101,13 +102,6 @@ function getGroup(node, name) {
   return group;
 }
 
-// function getPropName(attrName) {
-//   if (attrName in SPECIAL_CASES) {
-//     return SPECIAL_CASES[attrName];
-//   }
-//   return attrName;// toCamelCase(attrName);
-// }
-
 function isDirective(name) {
   return name.charCodeAt(0) === 120 // 'x'
           && (name in DIRECTIVES);
@@ -117,6 +111,26 @@ function isSelfClosingTag(tagName) {
   return hasOwnProp.call(SELF_CLOSING_TAGS, tagName);
 }
 
+function findComponentClass(expr, prototype) {
+  var ctor = Path.search(expr, prototype.constructor.resources);
+  if (typeof ctor === 'function') {
+    if (ctor.__extag_component_class__) {
+      return ctor;
+    }
+    var hookEngine = config.get(HOOK_ENGINE);
+    if (hookEngine) {
+      ctor = hookEngine.getHookableComponentClass(ctor);
+      if (typeof ctor === 'function' && ctor.__extag_component_class__) {
+        return ctor;
+      }
+    }
+    // eslint-disable-next-line no-undef
+    if (__ENV__ === 'development') {
+      logger.warn('`' + expr+ '` maybe component, but the class is not found.');
+    }
+  } 
+}
+
 function parseDirective(name, expr, node, prototype, identifiers) {
   var result;
   if (name === 'x:class') {
@@ -124,22 +138,9 @@ function parseDirective(name, expr, node, prototype, identifiers) {
   } else if (name === 'x:style') {
     node.style = ClassStyleParser.parse(expr, prototype, identifiers, true);
   } else if (name === 'x:type') {
-    var ctor = Path.search(expr, prototype.constructor.resources);
-    if (typeof ctor === 'function') {
-      if (ctor.__extag_component_class__ || ctor === Fragment) {
-        node.type = ctor;
-      } else {
-        var hookEngine = config.get('hook-engine');
-        if (hookEngine) {
-          node.type = hookEngine.getComponentClass(ctor);
-        }
-      }
-      // eslint-disable-next-line no-undef
-      if (__ENV__ === 'development') {
-        if (node.type == null) {
-          logger.warn('`' + node.tag + '` maybe component, but the class is not found.');
-        } 
-      }
+    var ctor = findComponentClass(expr, prototype);
+    if (ctor) {
+      node.type = ctor;
     } else {
       result = DataBindingParser.parse(expr, prototype, identifiers);
       node.xtype = new Expression(DataBinding, result);
@@ -213,8 +214,7 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
   var result, group, key;
 
   if (attrValue == null) {
-    // key = getPropName(attrName);
-    group = getGroup(node, 'props');
+    group = getGroup(node, 'attrs');
     group[attrName] = true;
     return;
   }
@@ -227,10 +227,9 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
     result = EventBindingParser.parse(attrValue, prototype, identifiers);
     group[key] = new Expression(EventBinding, result);
   } else {
-    group = getGroup(node, 'props');
+    group = getGroup(node, 'attrs');
     switch (lastChar) {
       case BINDING_OPERATORS.DATA: // last char is '@'
-        // key = getPropName(attrName.slice(0, -1));
         key = attrName.slice(0, -1);
         result = PrimitiveLiteralParser.tryParse(attrValue.trim());
         if (result != null) {
@@ -241,7 +240,6 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         }
         break;
       case BINDING_OPERATORS.TEXT: // last char is '#'
-        // key = getPropName(attrName.slice(0, -1));
         key = attrName.slice(0, -1);
         try {
           result = TextBindingParser.parse(attrValue, prototype, identifiers);
@@ -265,7 +263,6 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
         }
         break;
       default:
-        // key = getPropName(attrName);
         group[attrName] = attrValue;
     }
   }
@@ -351,7 +348,7 @@ function parseAttributes(htmx, from, node, prototype) {
           attrName = attrNames.shift();
           if (attrName && node) {
             parseAttribute(attrName, null, node, prototype, node.identifiers);
-            // getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
+            // getGroup(node, 'attrs')[viewEngine.toCamelCase(attrName)] = '';
           }
         }
       }
@@ -364,7 +361,7 @@ function parseAttributes(htmx, from, node, prototype) {
           attrName = attrNames.shift();
           if (attrName && node) {
             parseAttribute(attrName, null, node, prototype, node.identifiers);
-            // getGroup(node, 'props')[viewEngine.toCamelCase(attrName)] = '';
+            // getGroup(node, 'attrs')[viewEngine.toCamelCase(attrName)] = '';
           }
         }
         attrName = attrNames.shift();
@@ -392,7 +389,7 @@ function createExprNode(binding, pattern) {
 }
 
 function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
-  var children = parent.children || [], result;
+  var contents = parent.contents || [], result;
   var text = htmx.slice(start, stop);
   text = text.replace(LF_IN_BLANK_START, '').replace(LF_IN_BLANK_END, '');
   if (!text) {
@@ -417,7 +414,7 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
     if (result) {
       if (result.length === 1 && (result[0] instanceof Expression)) {
         expr = result[0];
-        children.push(createExprNode(result[0].binding, result[0]));
+        contents.push(createExprNode(result[0].binding, result[0]));
       } else {
         var i = -1, j = 0 , n = result.length;
         for (; j < n; ++j) {
@@ -425,14 +422,14 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
           if ((expr instanceof Expression) && expr.pattern.target === 'frag') {
             if (j > i) {
               if (j - i > 1) {
-                children.push(createExprNode(TextBinding, result.slice(i, j)));
+                contents.push(createExprNode(TextBinding, result.slice(i, j)));
               } else if (result[i] instanceof Expression) {
-                children.push(createExprNode(result[i].binding, result[i]));
+                contents.push(createExprNode(result[i].binding, result[i]));
               } else {
-                children.push(result[i]);
+                contents.push(result[i]);
               }
             }
-            children.push(createExprNode(expr.binding, expr));
+            contents.push(createExprNode(expr.binding, expr));
             i = -1;
           } else if (i < 0) {
             i = j;
@@ -440,21 +437,21 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
         }
         if (i >= 0 && j > i) {
           if (j - i > 1) {
-            children.push(createExprNode(TextBinding, result.slice(i, j)));
+            contents.push(createExprNode(TextBinding, result.slice(i, j)));
           } else if (result[i] instanceof Expression) {
-            children.push(createExprNode(result[i].binding, result[i]));
+            contents.push(createExprNode(result[i].binding, result[i]));
           } else {
-            children.push(result[i]);
+            contents.push(result[i]);
           }
         }
       }
     } else {
-      children.push(decodeHTML(text));
+      contents.push(decodeHTML(text));
     }
   } else {
-    children.push(decodeHTML(text));
+    contents.push(decodeHTML(text));
   }
-  parent.children = children;
+  parent.contents = contents;
 }
 
 function parseHTMX(htmx, prototype) {
@@ -468,7 +465,7 @@ function parseHTMX(htmx, prototype) {
 
   parent = {
     tag: '<>',
-    children: [],
+    contents: [],
     identifiers: ['this']
   };
   parents.push(parent);
@@ -504,47 +501,34 @@ function parseHTMX(htmx, prototype) {
         }
 
         if (!node.ns) {
-          if (node.props && node.props.xmlns) {
-            node.ns = toNameSpace(node.props.xmlns);
+          if (node.attrs && node.attrs.xmlns) {
+            node.ns = toNameSpace(node.attrs.xmlns);
           } else if (parent.ns) {
             node.ns = parent.ns;
           }
         }
 
-        if (node.type == null && X_TAG_REGEXP.test(tagName)) {
-          switch (tagName) {
-            case 'x:slot':
-              node.type = Slot;
-              break;
-            case 'x:frag':
-              node.type = Fragment;
-              break;
-          }
-        }
-
-        if (node.type == null && node.xtype == null && CAPITAL_REGEXP.test(tagName)) {
-          var ctor = Path.search(tagName, prototype.constructor.resources);
-          if (typeof ctor === 'function') {
-            if (ctor.__extag_component_class__ || ctor === Fragment) {
-              node.type = ctor;
-            } else {
-              var hookEngine = config.get('hook-engine');
-              if (hookEngine) {
-                node.type = hookEngine.getComponentClass(ctor);
-              }
+        if (node.type == null && node.xtype == null) {
+          if (X_TAG_REGEXP.test(tagName)) {
+            switch (tagName) {
+              case 'x:slot':
+                node.type = Slot;
+                break;
+              case 'x:frag':
+                node.type = Fragment;
+                break;
             }
-          }
-          // eslint-disable-next-line no-undef
-          if (__ENV__ === 'development') {
-            if (node.type == null) {
-              logger.warn('`' + node.tag + '` maybe component, but the class is not found.');
-            } 
+          } else if (CAPITAL_REGEXP.test(tagName)) {
+            var ctor = findComponentClass(tagName, prototype);
+            if (ctor) {
+              node.type = ctor;
+            }
           }
         }
 
         if (parent) {
-          parent.children = parent.children || [];
-          parent.children.push(node);
+          parent.contents = parent.contents || [];
+          parent.contents.push(node);
         }
         
         if (htmx[stop - 1] !== '/' && !isSelfClosingTag(tagName)) {
@@ -584,18 +568,6 @@ function parseHTMX(htmx, prototype) {
           start = stop = stop + 1;
           stop = parseAttributes(htmx, start);
         }
-
-        // if (parent.children) {
-        //   var props = getGroup(parent, 'props');
-        //   if (node.type) {
-        //     props.contents = parent.children;
-        //   } else {
-        //     props.children = parent.children;
-        //   }
-        // }
-
-        // start = stop = stop + 1;
-
         // tag closed
         if (parents.length > 1) {
           parents.pop();
@@ -627,8 +599,8 @@ function parseHTMX(htmx, prototype) {
         //   comment: htmx.slice(start, stop),
         //   __extag_node__: EXTAG_VNODE
         // };
-        // parent.children = parent.children || [];
-        // parent.children.push(node);
+        // parent.contents = parent.contents || [];
+        // parent.contents.push(node);
         idx = stop + 3;
         start = stop = idx;
         continue;
@@ -651,10 +623,10 @@ var HTMXParser = {
 
     var constructor = prototype.constructor;
     var nodes = parseHTMX(htmx, prototype);
-    var children = nodes[0].children;
-    var root = children[0];
+    var contents = nodes[0].contents;
+    var root = contents[0];
 
-    if (children.length !== 1) {
+    if (contents.length !== 1) {
       throwError('The template of component ' + (constructor.fullname || constructor.name) + ' must have only one root tag.')
     }
     if (root.tag === '!' || root.tag === '#') {

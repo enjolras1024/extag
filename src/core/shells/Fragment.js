@@ -61,17 +61,19 @@ defineClass({
    * Update this shell and insert it into the schedule for rendering.
    */
   update: function update() {
-    if ((this.$flag & FLAG_WAITING_UPDATING) == 0) {
+    if ((this.$flag & FLAG_WAITING_UPDATING) === 0) {
       return;
     }
 
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       if (this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
         var parent = this.getParent(true);
-        parent.$flag |= FLAG_CHANGED_CHILDREN;
-        if ((parent.$flag & FLAG_WAITING_DIGESTING) === 0) {
-          parent.$flag |= FLAG_WAITING_DIGESTING;
-          Schedule.insertDigestQueue(parent);
+        if (parent) {
+          parent.$flag |= FLAG_CHANGED_CHILDREN;
+          if ((parent.$flag & FLAG_WAITING_DIGESTING) === 0) {
+            parent.$flag |= FLAG_WAITING_DIGESTING;
+            Schedule.insertDigestQueue(parent);
+          }
         }
       }
       this.$flag |= FLAG_WAITING_DIGESTING;

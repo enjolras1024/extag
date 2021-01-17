@@ -173,14 +173,8 @@ defineClass({
       }
 
       // injecting
-      try {
-        // HTMXEngine.driveComponent(component, scopes, template, props, _template);
-        // HTMXEngine.driveComponent(component, scopes, template, props, null);
-        if (vnode) {
-          HTMXEngine.driveContent(component, scopes, vnode);
-        }
-      } catch (e) {
-        captureError(e, component, 'injecting');
+      if (vnode) {
+        HTMXEngine.driveContent(component, scopes, vnode);
       }
 
       component.invalidate();
@@ -287,7 +281,7 @@ defineClass({
     if ((this.$flag & FLAG_STARTED) === 0) {
       try {
         var _template = this.constructor.__extag_template__;
-        HTMXEngine.driveComponent(this, null, null, null, _template);
+        HTMXEngine.driveComponent(this, _template);
       } catch (e) {
         captureError(e, this, 'starting');
       }

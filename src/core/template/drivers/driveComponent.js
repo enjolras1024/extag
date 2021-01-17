@@ -1,70 +1,34 @@
 // src/core/template/drivers/driveComponent.js
 
-import ClassBinding from 'src/core/bindings/ClassBinding'
 import Cache from 'src/core/models/Cache'
-import { assign } from 'src/share/functions'
 import driveChildren from './driveChildren'
+import driveClasses from './driveClasses';
 import driveEvents from "./driveEvents";
 import driveProps from './driveProps'
 
-export default function driveComponent(target, scopes, vnode, props, template) {
-  var useExpr;
+export default function driveComponent(target, template) {
+  var scopes = [target];
 
-  if (vnode && scopes) {
-    useExpr = vnode.useExpr;
-    if (props && vnode.props) {
-      props = assign({}, vnode.props, props);
-    } else if (!props && vnode.props) {
-      props = vnode.props;
-    }
-    // eslint-disable-next-line no-undef
-    // if (__ENV__ === 'development') {
-    //   Validator.validate0(target, props);
-    // }
-    driveProps(target, scopes, props, useExpr);
-
-    if (vnode.events) {
-      driveEvents(target, scopes, vnode.events, useExpr);
-    }
-    if (useExpr) {
-      if (vnode.style) {
-        driveProps(target.style, scopes, vnode.style, useExpr);
-      }
-      if (vnode.classes) {
-        ClassBinding.create(vnode.classes).connect('class', target, scopes);
-      }
-    }
-    if (vnode.children) {
-      driveChildren(target, scopes, vnode.children, useExpr, true);
-    }
-  } else if (props) {
-    // eslint-disable-next-line no-undef
-    // if (__ENV__ === 'development') {
-    //   Validator.validate0(target, props);
-    // }
-    driveProps(target, scopes, props);
-  }
-  
-  if (!template) { return; }
-
-  var _scopes = [target];
-
-  useExpr = template.useExpr;
+  var useExpr = template.useExpr;
 
   if (template.events) {
-    driveEvents(target, _scopes, template.events, useExpr);
+    driveEvents(target, scopes, template.events, useExpr);
   }
-  if (template.props) {
+  if (template.attrs) {
     target.$props = new Cache(target);
-    driveProps(target.$props, _scopes, template.props, useExpr);
+    driveProps(target.$props, scopes, template.attrs, useExpr);
   }
   if (useExpr) {
     if (template.style) {
       target.$style = new Cache(target);
-      driveProps(target.$style, _scopes, template.style, useExpr);
+      driveProps(target.$style, scopes, template.style, useExpr);
+    }
+    if (template.classes) {
+      target.$props = target.$props || new Cache(target);
+      driveClasses(target.$props, scopes, template.classes, useExpr);
     }
   }
-  if (template.children) {
-    driveChildren(target, _scopes, template.children, useExpr);
+  if (template.contents) {
+    driveChildren(target, scopes, template.contents, useExpr);
   }
 }

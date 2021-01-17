@@ -1,9 +1,5 @@
-import { 
-  TYPE_TEXT, 
-  EXTAG_VNODE,
-  EMPTY_OBJECT, 
-  EMPTY_ARRAY 
-} from 'src/share/constants'
+// src/core/template/drivers/createContent.js
+
 import { isVNode } from 'src/share/functions'
 import Text from 'src/core/shells/Text'
 import Block from 'src/core/shells/Block'
