@@ -11,6 +11,7 @@ import Binding from 'src/core/bindings/Binding'
 import HTMXEngine from 'src/core/template/HTMXEngine'
 import logger from 'src/share/logger'
 import { 
+  throwError,
   defineProp, 
   defineClass, 
   getOwnPropDesc 
@@ -34,7 +35,7 @@ import captureError from 'src/core/captureError'
 var KEYS_PRESERVED = [
   '$meta', '$flag', '$skin', '$props', '$style',
   'style', 'contents', 'children', 
-  '_dirty', '_props', '_style', '_children', '_contents'
+  '_dirty', '_props', '_style', '_children', '_contents', '_bindings'
 ];
 var METHODS_PRESERVED = [
   'on', 'off', 'emit',
@@ -107,11 +108,11 @@ defineClass({
       // }
 
       // get attribute default values
-      var defaults = Accessor.getAttributeDefaultValues(component);
+      // var defaults = Accessor.getAttributeDefaultValues(component);
       // defineProp(component, '_props', {
       //   value: defaults, writable: false, enumerable: false, configurable: true
       // });
-      component._props = defaults;
+      component._props = Accessor.getAttributeDefaultValues(component);
 
       // parsing template once and only once.
       if (!_template) {
@@ -128,7 +129,7 @@ defineClass({
           } else if (typeof constructor.template === 'function') {
             _template = HTMXEngine.parseJSX(constructor.template, prototype);
           } else {
-            throw new TypeError('The static template must be string or function');
+            throwError('The static template must be string or function');
           }
   
           if (_template) {
@@ -142,28 +143,27 @@ defineClass({
         }
       }
 
-      // 4. initialize the component as normal element
       Shell.initialize(component, _template.tag !== 'x:frag' ? TYPE_ELEM : TYPE_FRAG, _template.tag, _template.ns || '');
 
       // Element.defineMembers(component);
 
-      // 6. setup
-      var model;
-      if (scopes && scopes[0] && scopes[0].context) {
-        model = component.setup(scopes[0].context);
-        if (component.context == null) {
-          component.context = scopes[0].context;
-        }
-      } else {
-        model = component.setup();
+      // injecting
+      if (vnode) {
+        HTMXEngine.driveContent(component, scopes, vnode);
       }
 
-      if (model != null) {
-        if (typeof model !== 'object') {
-          throw new TypeError('setup() should return object, not ' + (typeof model));
+      // setup
+      var context = scopes && scopes[0] && scopes[0].context;
+      if (context) {
+        component.context = context;
+      }
+      var options = component.setup(component._props);
+      if (options != null) {
+        if (typeof options !== 'object') {
+          throwError('setup() should return object, instead of ' + (typeof options));
         }
-        for (var key in model) {
-          var desc = getOwnPropDesc(model, key);
+        for (var key in options) {
+          var desc = getOwnPropDesc(options, key);
           if (desc.get || desc.set) {
             defineProp(component, key, desc);
           } else {
@@ -172,18 +172,13 @@ defineClass({
         }
       }
 
-      // injecting
-      if (vnode) {
-        HTMXEngine.driveContent(component, scopes, vnode);
-      }
-
       component.invalidate();
     }
 
   },
 
   /**
-   * Get property stored in _props or _props.
+   * Get property stored in _props.
    * @param {string} key
    */
   get: function get(key) {
@@ -360,7 +355,7 @@ defineClass({
         this.$flag |= FLAG_MOUNTED;
       }
       if (actions && actions.mounted && (this.$flag & FLAG_MOUNTED)) {
-        Schedule.pushCallbackQueue((function() {
+        Schedule.pushCallbackStack((function() {
           try {
             this.emit('mounted');
           } catch (e) {
@@ -371,7 +366,7 @@ defineClass({
     }
     
     if (actions && actions.updated) {
-      Schedule.pushCallbackQueue((function() {
+      Schedule.pushCallbackStack((function() {
         try {
           this.emit('updated');
         } catch (e) {
@@ -396,7 +391,7 @@ defineClass({
       return;
     }
     this._contents = vnodes.slice(0);
-    this._contents.scopes = scopes || [this];
+    this._contents.scopes = scopes || EMPTY_ARRAY;
     this.emit('contents', this._contents);
     this.invalidate(FLAG_CHANGED_CONTENTS);
   },

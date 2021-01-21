@@ -3,7 +3,7 @@
 import Schedule from 'src/core/Schedule'
 import Shell from 'src/core/shells/Shell'
 import Parent from 'src/core/shells/Parent'
-import { defineClass } from 'src/share/functions'
+import { throwError, defineClass } from 'src/share/functions'
 import {
   TYPE_TEXT,
   FLAG_MOUNTED,
@@ -40,7 +40,7 @@ defineClass({
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         if (text.constructor !== Text) {
-          throw new TypeError('Text is final class and can not be extended');
+          throwError('Text is final class and can not be extended');
         }
       }
       Shell.initialize(text, TYPE_TEXT, '', '');

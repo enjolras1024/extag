@@ -1,9 +1,9 @@
 // src/base/DirtyMarker.js
 
-import { hasOwnProp, defineClass } from 'src/share/functions'
+import { throwError, hasOwnProp, defineClass } from 'src/share/functions'
 
 export default function DirtyMarker() {
-  throw new Error('DirtyMarker is a partial class for mixins and can not be instantiated');
+  throwError('DirtyMarker is a partial class for mixins and can not be instantiated');
 }
 
 defineClass({

@@ -28,7 +28,7 @@ export default function createContent(vnode, scopes) {
     }
   } else {
     ctor = vnode.type;
-    if (ctor && ctor !== Element) {
+    if (ctor) {
       content = new ctor(vnode, scopes);
     } else {
       content = new Element(vnode, scopes);

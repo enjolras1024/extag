@@ -5,7 +5,7 @@ import Shell from 'src/core/shells/Shell'
 import Parent from 'src/core/shells/Parent'
 import HTMXEngine from 'src/core/template/HTMXEngine'
 import DirtyMarker from 'src/base/DirtyMarker'
-import { defineClass } from 'src/share/functions'
+import { throwError, defineClass } from 'src/share/functions'
 import {
   EMPTY_ARRAY,
   FLAG_CHANGED_CHILDREN,
@@ -29,7 +29,7 @@ defineClass({
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         if (fragment.constructor !== Fragment) {
-          throw new TypeError('Fragment is final class and can not be extended');
+          throwError('Fragment is final class and can not be extended');
         }
       }
       // fragment type is 0

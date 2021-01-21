@@ -66,7 +66,7 @@ var setImmediate = (function(Promise, MutationObserver, requestAnimationFrame) {
 
 var updateQueue = []; 
 var digestQueue = [];
-var callbackQueue = [];
+var callbackStack = [];
 var updateQueueCursor = 0;
 var digestQueueCursor = 0;
 var waiting = false;
@@ -101,17 +101,17 @@ function flushQueues() {
 
     waiting = false;
   
-    for (i = callbackQueue.length - 1; i >= 0; --i) {
-        callbackQueue[i]();
+    for (i = callbackStack.length - 1; i >= 0; --i) {
+        callbackStack[i]();
     }
 
-    callbackQueue.length = 0;
+    callbackStack.length = 0;
   } catch (e) {
     updateQueueCursor = -1;
     digestQueueCursor = -1;
     updateQueue.length = 0;
     digestQueue.length = 0;
-    callbackQueue.length = 0;
+    callbackStack.length = 0;
     waiting = false;
     throw e;
   }
@@ -204,16 +204,16 @@ function insertUpdateQueue(shell) {
 
 
 /**
- * Push a callback function into callbackQueue
+ * Push a callback function into callbackStack
  * @param {Function} func 
  */
-function pushCallbackQueue(callback) {
-  callbackQueue.push(callback);
+function pushCallbackStack(callback) {
+  callbackStack.push(callback);
 }
 
 export default {
   setImmediate: setImmediate,
   insertUpdateQueue: insertUpdateQueue,
   insertDigestQueue: insertDigestQueue,
-  pushCallbackQueue: pushCallbackQueue
+  pushCallbackStack: pushCallbackStack
 };

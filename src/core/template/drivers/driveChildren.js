@@ -170,12 +170,12 @@ function flattenVNodes(vnodes, array, ns) {
   return array ? array : vnodes;
 }
 
-function driveChildren(target, scopes, vnodes, useExpr, areContents) {
+function driveChildren(target, scopes, vnodes, useExpr, forComponent) {
   var contents;
   if (!vnodes) {
     vnodes = EMPTY_ARRAY;
   }
-  if (areContents) {
+  if (forComponent) {
     target.accept(vnodes, scopes);
   } else {
     if (useExpr) {

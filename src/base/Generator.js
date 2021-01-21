@@ -1,6 +1,6 @@
 // src/base/Generator.js
 
-import { slice, defineClass } from 'src/share/functions'
+import { slice, throwError, defineClass } from 'src/share/functions'
 import logger from 'src/share/logger'
 
 /**
@@ -62,7 +62,7 @@ defineClass({
           if (__ENV__ === 'development') {
             logger.warn('Sorry but `anew` only supports 6 argumnets at most. Using `inst` instead.');
           }
-          throw new Error('`anew` arguments length must not exceed 6.');
+          throwError('`anew` arguments length must not exceed 6.');
       }
     }
   }

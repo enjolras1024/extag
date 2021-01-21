@@ -42,7 +42,7 @@ function collectRemovedChild(child) {
   removed.push(child);
   if (!inQueue) {
     inQueue = true;
-    Schedule.pushCallbackQueue(cleanRemovedChildren);
+    Schedule.pushCallbackStack(cleanRemovedChildren);
   }
 }
 function cleanRemovedChildren() {

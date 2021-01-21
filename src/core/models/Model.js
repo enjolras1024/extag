@@ -4,6 +4,7 @@ import Watcher from 'src/base/Watcher'
 import Accessor from 'src/base/Accessor'
 import Validator from 'src/base/Validator'
 import Dependency from 'src/core/Dependency'
+import { EMPTY_OBJECT } from 'src/share/constants'
 import { 
   getOwnPropDesc,
   hasOwnProp, 
@@ -75,6 +76,10 @@ defineClass({
         assignProps(model, props);
       }
     }
+  },
+
+  keys: function keys() {
+    return Object.keys(this._props || EMPTY_OBJECT);
   },
 
   /**

@@ -1,6 +1,12 @@
 // src/base/Accessor.js
 
-import { assign, hasOwnProp, defineProp, defineClass } from 'src/share/functions'
+import { 
+  assign, 
+  throwError, 
+  hasOwnProp, 
+  defineProp, 
+  defineClass 
+} from 'src/share/functions'
 import Generator from 'src/base/Generator'
 import logger from 'src/share/logger'
 
@@ -57,7 +63,7 @@ function getAttributeDefaultValue(desc) {
 }
 
 function getAttributeDefaultValues(target) {
-  var defaultValues = {}, descriptors = target.__extag_descriptors__;
+  var defaults = {}, descriptors = target.__extag_descriptors__;
   if (descriptors) {
     for (var key in descriptors) {
       if (hasOwnProp.call(descriptors, key)) {
@@ -67,18 +73,18 @@ function getAttributeDefaultValues(target) {
           continue;
         }
         if (type !== 'object') {
-          defaultValues[key] = desc.value;
+          defaults[key] = desc.value;
         } else if (desc.value != null) {
           if (!(desc.value instanceof Generator)) {
-            defaultValues[key] = desc.value;
+            defaults[key] = desc.value;
           } else {
-            defaultValues[key] = desc.value.gen && desc.value.gen();
+            defaults[key] = desc.value.gen && desc.value.gen();
           }
         }
       }
     }
   }
-  return defaultValues;
+  return defaults;
 }
 
 function applyAttributeDescriptors(target, descriptors) {
@@ -152,7 +158,7 @@ function getAttrDesc(target, attrName) {
 }
 
 export default function Accessor() {
-  throw new Error('Accessor is a partial class for mixins and can not be instantiated');
+  throwError('Accessor is a partial class for mixins and can not be instantiated');
 }
 
 defineClass({
@@ -168,12 +174,12 @@ defineClass({
 
   // eslint-disable-next-line no-unused-vars
   get: function get(key) {
-    throw new Error('Method `get` must be implemented by sub-class');
+    throwError('Method `get` must be implemented by sub-class');
   },
 
   // eslint-disable-next-line no-unused-vars
   set: function set(key, value) {
-    throw new Error('Method `set` must be implemented by sub-class');
+    throwError('Method `set` must be implemented by sub-class');
   },
 
   assign: function assign(props) {
