@@ -85,21 +85,13 @@ defineClass({
       }
     }
 
-    // if (pattern.mode === MODES.ANY_WAY) {
-    //   this.scopes[0].on('updating', this.execute);
-    //   this.target.set(this.targetProp, applyEvaluator(pattern, scopes));
-    // } else {
-    //   this.flag = 1;
-    //   this.execute();
-    //   if (this.keys && this.keys.length) {
-    //     scopes[0].on('updating', this.execute);
-    //   }
-    // }
     this.flag = 1;
     this.execute();
-    scopes[0].on('updating', this.execute);
-
-    Binding.record(target, this);
+    if ((this.deps && this.deps.length) || 
+        pattern.mode === MODES.ANY_WAY) {
+      scopes[0].on('updating', this.execute);
+      Binding.record(target, this);
+    }
   },
 
   replace: function replace(scopes) {
@@ -135,24 +127,8 @@ defineClass({
     Dependency.clean(this);
   },
 
-  // evaluate: function() {
-  //   if (this.converters && this.converters.length) {
-  //     return applyConverters(
-  //       this.converters, 
-  //       this.scopes, 
-  //       this.evaluator.execute(this.scopes)
-  //     );
-  //   } else {
-  //     return this.evaluator.execute(this.scopes);
-  //   }
-  // },
-
   execute: function execute() {
     var pattern = this.pattern;
-    // if (pattern.mode === MODES.ANY_WAY) {
-    //   this.target.set(this.targetProp, applyEvaluator(pattern, this.scopes));
-    //   return;
-    // }
     if (this.flag === 0 && pattern.mode !== MODES.ANY_WAY) {
       return;
     }
