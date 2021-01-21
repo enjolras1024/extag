@@ -139,7 +139,7 @@ function renderChildren($skin, shell, children) {
   var i, n, m;
   var newChild, oldChild;
   var $newChild, $oldChild;
-  var $children = $skin.childNodes;
+  var $children = $skin.hasChildNodes() ? $skin.childNodes : EMPTY_ARRAY;
 
   n = children.length;
   m = $children.length;
@@ -150,16 +150,8 @@ function renderChildren($skin, shell, children) {
       oldChild = getShell($oldChild);
       if (oldChild && shell !== oldChild.getParent(true)) {
         $skin.removeChild($oldChild);
-        // $removed.push($oldChild);
       }
     }
-    // for (i = $removed.length - 1; i >= 0;  --i) {
-    //   $parent = getParent($removed[i]);
-    //   oldChild = getShell($removed[i]);
-    //   if (!$parent && oldChild) { 
-    //     oldChild.detach();
-    //   }
-    // }
   }
 
   if (n) {
@@ -176,14 +168,6 @@ function renderChildren($skin, shell, children) {
       oldChild = $oldChild ? getShell($oldChild) : null;
       if (!$newChild) {
         var meta = newChild.$meta;
-        // if (!$oldChild || 
-        //     meta.tag !== getTagName($oldChild) || 
-        //     meta.ns !== getNameSpace($oldChild) || 
-        //     (oldChild && oldChild !== newChild)) {
-        //   $newChild = createChild(meta.type, meta.tag, meta.ns);
-        // } else {
-        //   $newChild = $oldChild;
-        // }
 
         if ($oldChild && !oldChild && 
             canHydrate($oldChild, newChild)) {

@@ -136,7 +136,7 @@ function defineClass(proto) {
     superClass = proto.extends;
 
     if (typeof superClass !== 'function') {
-      throw new TypeError('superClass must be a function');
+      throwError('superClass must be a function');
     }
   } else {
     superClass = Object;
@@ -147,7 +147,7 @@ function defineClass(proto) {
     subClass = proto.constructor;
     //delete proto.constructor;
     if (typeof subClass !== 'function') {
-      throw new TypeError('subClass must be a function');
+      throwError('subClass must be a function');
     }
   } else {
     subClass = function() {
@@ -272,7 +272,7 @@ function toCamelCase(key) {
 }
 
 function throwError(err, opts) {
-  var error = err instanceof Error ? err : new Error(err);
+  var error = err instanceof Error ? err : new Error('[EXTAG ERROR] ' + err);
   if (opts) {
     assign(error, opts);
   }

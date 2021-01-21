@@ -1,8 +1,4 @@
 import { 
-  assign
- } from 'src/share/functions'
-
- import { 
   EMPTY_ARRAY,
   TYPE_TEXT,
   TYPE_ELEM,
@@ -35,7 +31,7 @@ function mergeClasses(outerClasses, innerClasses) {
   return innerClassName + ' ' + outerClassName;
 }
 
-function mergeDirty(outerDirty, innerDirty, outerProps, innerProps) {
+function mergeDirty(outerDirty, innerDirty, outerProps) {
   if (!innerDirty) {
     return outerDirty;
   }
@@ -185,7 +181,7 @@ function renderShell($skin, shell) {
       renderProps($skin, _props, _dirty);
     }
     
-    var shadowMode = _props && _props.shadowMode;
+    var shadowMode = _props && _props['shadow-mode'];
     var children = shell._children;
     // render style
     var _style = shell._style;
