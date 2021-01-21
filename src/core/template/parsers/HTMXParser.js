@@ -403,7 +403,7 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         if (e.code === 1001) {
-          var snapshot = getSnapshot(htmx, BINDING_FORMAT.replace('0', e.expr), parent, start);
+          var snapshot = getSnapshot(htmx, e.expr, parent, start);
           logger.warn((e.desc || e.message) + ' In the template of component ' 
                   + (prototype.constructor.fullname || prototype.constructor.name) + ':\n' 
                   + snapshot[0], snapshot[1], snapshot[2]);

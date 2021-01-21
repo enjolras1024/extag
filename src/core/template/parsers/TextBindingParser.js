@@ -50,15 +50,25 @@ export default {
                   template.push(text);
                 }
               }
-              if (expr.charCodeAt(stop + 2) === 123 && expr.charCodeAt(i - 1) === 125) {
-                // @{{...}}
-                pattern = DataBindingParser.parse(expr.slice(stop + 3, i - 1), prototype, identifiers);
-                pattern.target = 'frag';
-              } else {
-                // @{...}
-                pattern = DataBindingParser.parse(expr.slice(stop + 2, i), prototype, identifiers);
-                pattern.target = 'text';
+              
+              try {
+                if (expr.charCodeAt(stop + 2) === 123 && expr.charCodeAt(i - 1) === 125) {
+                  // @{{...}}
+                  pattern = DataBindingParser.parse(expr.slice(stop + 3, i - 1), prototype, identifiers);
+                  pattern.target = 'frag';
+                } else {
+                  // @{...}
+                  pattern = DataBindingParser.parse(expr.slice(stop + 2, i), prototype, identifiers);
+                    pattern.target = 'text';
+                }
+              } catch (e) {
+                expr = expr.slice(stop, i + 1);
+                throwError(e, {
+                  code: 1001,
+                  expr: expr
+                });
               }
+              
               template.push(new Expression(pattern.target === 'frag' ? FuncBinding : DataBinding, pattern));
               start = stop = i + 1;
               b2 = false;
