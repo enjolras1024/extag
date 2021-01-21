@@ -44,7 +44,7 @@ defineClass({
         }
       }
       Shell.initialize(text, TYPE_TEXT, '', '');
-      text.set('content', content || '');
+      text.set('content', content != null ? content : '');
     }
   },
 

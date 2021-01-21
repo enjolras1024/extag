@@ -323,12 +323,11 @@ function node(type, options, contents) {
         throwError('component class is not found.');
       }
     }
-    
   } else {
     throwError('The first argument must be string, function, component class or constructor.');
   }
 
-  if (options != null) {
+  if (options && typeof options === 'object') {
     if (options.xns) {
       node.ns = options.xns;
     }
@@ -369,9 +368,11 @@ function node(type, options, contents) {
     node.attrs = attrs;
   }
 
-  if (contents) {
-    if (arguments.length > 3 || Array.isArray(contents)) {
+  if (contents != null) {
+    if (arguments.length > 3) {
       contents = slice.call(arguments, 2);
+      contents = flatten(contents);
+    } else if (Array.isArray(contents)) {
       contents = flatten(contents);
     } else {
       contents = [contents];
@@ -421,6 +422,7 @@ var JSXParser = {
 
     if (_node.type) {
       if (_node.type === Fragment) {
+        _node.tag = 'x:frag';
         _node.type = null;
       } else {
         throwError('component can not be used as root tag of another component template.')
