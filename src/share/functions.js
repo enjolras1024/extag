@@ -272,7 +272,7 @@ function toCamelCase(key) {
 }
 
 function throwError(err, opts) {
-  var error = err instanceof Error ? err : new Error('[EXTAG ERROR] ' + err);
+  var error = err instanceof Error ? err : new Error(err);
   if (opts) {
     assign(error, opts);
   }

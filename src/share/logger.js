@@ -4,8 +4,9 @@ import { slice } from 'src/share/functions'
 
 function log(fn, args, prefix) {
   args = slice.call(args, 0);
-  // args.unshift(prefix);
-  args[0] = prefix + ' ' + args[0];
+  if (!(args[0] instanceof Error)) {
+    args[0] = prefix + ' ' + args[0];
+  }
   fn.apply(console, args);
 }
 

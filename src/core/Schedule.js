@@ -1,8 +1,11 @@
 /* eslint-disable no-unused-vars */
 // src/core/Schedule.js
 
-import { isNativeFunc } from 'src/share/functions'
-import logger from 'src/share/logger';
+import { 
+  isNativeFunc 
+} from 'src/share/functions'
+import logger from 'src/share/logger'
+import captureError from './captureError'
 
 var setImmediate = (function(Promise, MutationObserver, requestAnimationFrame) {
   if (Promise) {
@@ -77,13 +80,18 @@ function flushQueues() {
     turn++;
     updateQueueCursor = 0;
 
-    var shell, i;
+    var callback, shell, i;
   
     // quene may be lengthen if the method `invalidate` is called when updating
     while (updateQueueCursor < updateQueue.length) {
-      shell = updateQueue[updateQueueCursor];
-      shell.update();
-      ++updateQueueCursor;
+      shell = updateQueue[updateQueueCursor++];
+      try {
+        shell.update();
+      } catch (e) {
+        pushCallbackStack(function() {
+          captureError(e, shell, 'updating');
+        });
+      }
     }
   
     updateQueue.length = 0;
@@ -91,9 +99,14 @@ function flushQueues() {
 
     digestQueueCursor = 0;
     while (digestQueueCursor < digestQueue.length) {
-      shell = digestQueue[digestQueueCursor];
-      shell.digest();
-      ++digestQueueCursor;
+      shell = digestQueue[digestQueueCursor++];
+      try {
+        shell.digest();
+      } catch (e) {
+        pushCallbackStack(function() {
+          captureError(e, shell, 'digesting');
+        });
+      }
     }
 
     digestQueue.length = 0;
@@ -102,7 +115,12 @@ function flushQueues() {
     waiting = false;
   
     for (i = callbackStack.length - 1; i >= 0; --i) {
-        callbackStack[i]();
+        try {
+          callback = callbackStack[i]
+          callback();
+        } catch (e) {
+          logger.error("callback failed", e);
+        }
     }
 
     callbackStack.length = 0;
@@ -171,36 +189,36 @@ function insertUpdateQueue(shell) {
 }
 
 /**
-   * Insert a shell into the digestQueue.
-   * @param {Shell} shell 
-   */
-  function insertDigestQueue(shell) {
-    var i, n = digestQueue.length, id = shell.$meta.guid;
+ * Insert a shell into the digestQueue.
+ * @param {Shell} shell 
+ */
+function insertDigestQueue(shell) {
+  var i, n = digestQueue.length, id = shell.$meta.guid;
 
-    if (n > 0 && id > digestQueue[n-1].$meta.guid) {
-      i = n;
-    } /*else if (n === 0) {
-      i = n;
-    }*/ else {
-      var index = binarySearch(id, digestQueueCursor + 1, digestQueue.length - 1, digestQueue);
-      if (index < 0) {
-        i = - index - 1;
-      } else {
-        return;
-      }
-    }
-
-    if (i === n) {
-      digestQueue.push(shell);
+  if (n > 0 && id > digestQueue[n-1].$meta.guid) {
+    i = n;
+  } /*else if (n === 0) {
+    i = n;
+  }*/ else {
+    var index = binarySearch(id, digestQueueCursor + 1, digestQueue.length - 1, digestQueue);
+    if (index < 0) {
+      i = - index - 1;
     } else {
-      digestQueue.splice(i, 0, shell);
-    }
-
-    if (!waiting) {
-      waiting = true;
-      setImmediate(flushQueues);
+      return;
     }
   }
+
+  if (i === n) {
+    digestQueue.push(shell);
+  } else {
+    digestQueue.splice(i, 0, shell);
+  }
+
+  if (!waiting) {
+    waiting = true;
+    setImmediate(flushQueues);
+  }
+}
 
 
 /**

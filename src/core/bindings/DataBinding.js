@@ -16,7 +16,7 @@ if (__ENV__ === 'development') {
       return evaluator.apply(scopes[0], scopes);
     } catch (e) {
       var constructor = scopes[0].constructor;
-      logger.warn('The expression `' + (evaluator.expr || evaluator.toString()) + 
+      logger.error('The expression `' + (evaluator.expr || evaluator.toString()) + 
                   '` failed in the template of component ' + (constructor.fullname || constructor.name));
       throw e;
     }

@@ -1,18 +1,26 @@
 // src/core/captureError.js
-import logger from 'src/share/logger'
 
-export default function captureError(error, component, phase) {
+import logger from 'src/share/logger'
+import {
+  FLAG_WAITING_UPDATING,
+  FLAG_WAITING_DIGESTING
+} from 'src/share/constants'
+
+export default function captureError(error, shell, phase) {
+  shell.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
+
   var _stop;
   function stop() {
     _stop = true;
   }
+
   var scopes;
-  var solver = null;
-  var target = component;
-  var targets = [component];
-  while (component) {
-    if (!_stop) {
-      component.emit('throwed', {
+  var target = shell;
+  var targets = [shell];
+
+  while (shell) {
+    if (shell.constructor.__extag_component_class__) {
+      shell.emit('throwed', {
         targets: targets.slice(0),
         target: target,
         phase: phase,
@@ -20,26 +28,16 @@ export default function captureError(error, component, phase) {
         stop: stop
       });
       if (_stop) {
-        solver = component;
+        break;
       }
     }
-    scopes = component.__extag_scopes__;
+    scopes = shell.__extag_scopes__;
     if (scopes && scopes[0]) {
-      component = scopes[0];
-      targets.push(component);
+      shell = scopes[0];
+      targets.push(shell);
     } else {
-      component.emit('error', {
-        targets: targets.slice(0),
-        target: target,
-        solver: solver,
-        phase: phase,
-        error: error,
-        stop: stop
-      });
-      if (!_stop) {
-        logger.error('Unsolved error in phase `' + phase + '` from ', target);
-        throw error;
-      }
+      logger.error('Unsolved error in phase `' + phase + '` from ', target);
+      logger.error(error);
       break;
     }
   }
