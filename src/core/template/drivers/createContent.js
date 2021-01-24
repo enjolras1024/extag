@@ -34,7 +34,6 @@ export default function createContent(vnode, scopes) {
       content = new Element(vnode, scopes);
     }
     if (vnode.name) {
-      content.$owner = scopes[0];
       scopes[0].addNamedPart(vnode.name, content); // TODO: removeNamedPart
     }
   }

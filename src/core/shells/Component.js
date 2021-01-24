@@ -34,7 +34,7 @@ import captureError from 'src/core/captureError'
 
 var KEYS_PRESERVED = [
   '$meta', '$flag', '$skin', '$props', '$style',
-  'style', 'contents', 'children', 
+  'style', 'contents', 'children', 'context',
   '_dirty', '_props', '_style', '_children', '_contents', '_bindings'
 ];
 var METHODS_PRESERVED = [
@@ -146,18 +146,12 @@ defineClass({
       Shell.initialize(component, _template.tag !== 'x:frag' ? TYPE_ELEM : TYPE_FRAG, _template.tag, _template.ns || '');
 
       // Element.defineMembers(component);
-
-      // injecting
-      if (vnode) {
-        HTMXEngine.driveContent(component, scopes, vnode);
-      }
-
+      
       // setup
       var context = scopes && scopes[0] && scopes[0].context;
-      if (context) {
-        component.context = context;
-      }
-      var options = component.setup(component._props);
+      var options = component.setup(context);
+      var actions = component._actions;
+
       if (options != null) {
         if (typeof options !== 'object') {
           throwError('setup() should return object, instead of ' + (typeof options));
@@ -170,6 +164,18 @@ defineClass({
             component[key] = desc.value;
           }
         }
+      }
+      if (context && component.context == null) {
+        component.context = context;
+      }
+
+      // injecting
+      if (vnode) {
+        HTMXEngine.driveContent(component, scopes, vnode);
+      }
+
+      if (actions && actions.created) {
+        component.emit('created');
       }
 
       component.invalidate();
@@ -267,25 +273,20 @@ defineClass({
       return;
     }
 
-    try {
-      this.emit('updating');
-    } catch (e) {
-      captureError(e, this, 'updating');
-    }
+    this.emit('updating');
 
     if ((this.$flag & FLAG_STARTED) === 0) {
-      try {
-        var _template = this.constructor.__extag_template__;
-        HTMXEngine.driveComponent(this, _template);
-      } catch (e) {
-        captureError(e, this, 'starting');
-      }
+      var _template = this.constructor.__extag_template__;
+      HTMXEngine.driveComponent(this, _template);
       this.$flag |= FLAG_STARTED;
+      if (this._actions && this._actions.started) {
+        this.emit('started');
+      }
     } 
 
     var type = this.$meta.type;
     if (type !== 0) {
-      if ((this.$flag & FLAG_CHANGED_CACHE)) {
+      if ((this.$flag & FLAG_CHANGED_CACHE) !== 0) {
         HTMXEngine.transferProps(this);
       }
     }
@@ -356,22 +357,14 @@ defineClass({
       }
       if (actions && actions.mounted && (this.$flag & FLAG_MOUNTED)) {
         Schedule.pushCallbackStack((function() {
-          try {
-            this.emit('mounted');
-          } catch (e) {
-            captureError(e, this, 'mounted');
-          }
+          this.emit('mounted');
         }).bind(this));
       }
     }
     
     if (actions && actions.updated) {
       Schedule.pushCallbackStack((function() {
-        try {
-          this.emit('updated');
-        } catch (e) {
-          captureError(e, this, 'updated');
-        }
+        this.emit('updated');
       }).bind(this));
     }
   },

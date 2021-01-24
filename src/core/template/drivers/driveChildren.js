@@ -7,6 +7,7 @@ import {
   EMPTY_OBJECT
 } from 'src/share/constants'
 import { isVNode } from 'src/share/functions'
+import Fragment from 'src/core/shells/Fragment'
 import Component from 'src/core/shells/Component'
 import Expression from 'src/core/template/Expression'
 import createContent from "./createContent";
@@ -179,12 +180,14 @@ function driveChildren(target, scopes, vnodes, useExpr, forComponent) {
     target.accept(vnodes, scopes);
   } else {
     if (useExpr) {
-      if (vnodes.length === 1) {
-        var expr = vnodes[0];
+      if (vnodes.length === 1 && isVNode(vnodes[0]) && (vnodes[0].type === Expression)) {
+        var expr = vnodes[0].expr;
         if (expr instanceof Expression && expr.pattern.target === 'frag') {
           if (target instanceof Component) {
             expr.connect(function(vnodes, scopes) {
-              driveChildren(this, scopes, vnodes, false);
+              // this is target, and this is scopes[0]
+              // driveChildren(this, scopes, vnodes, false);
+              Fragment.prototype.accept.call(this, vnodes, scopes);
             }, target, scopes);
           } else {
             expr.connect('accept', target, scopes);

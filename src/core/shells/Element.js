@@ -10,6 +10,7 @@ import {
   TYPE_ELEM,
   EMPTY_ARRAY,
   FLAG_MOUNTED,
+  FLAG_CHANGED_CACHE,
   FLAG_WAITING_UPDATING,
   FLAG_WAITING_DIGESTING,
   FLAG_SHOULD_RENDER_TO_VIEW
@@ -89,8 +90,10 @@ defineClass({
       return false;
     }
 
-    HTMXEngine.transferProps(this);
-
+    if ((this.$flag & FLAG_CHANGED_CACHE) !== 0) {
+      HTMXEngine.transferProps(this);
+    }
+    
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       this.$flag |= FLAG_WAITING_DIGESTING;
       Schedule.insertDigestQueue(this);

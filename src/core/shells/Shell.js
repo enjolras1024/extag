@@ -77,7 +77,7 @@ defineClass({
     // eslint-disable-next-line no-undef
     if (__ENV__ === 'development') {
       if (!viewEngine) {
-        logger.warn('There is no available viewEngine, so the error occurs below. Usually that is ExtagDom. You can use <script> to include extag-dom.js in broswer.');
+        logger.warn('There is no available viewEngine, so the error occurs below. Usually that is ExtagDOM. You can use <script> to include extag-dom.js in broswer.');
       }
     }
     viewEngine.attachShell($skin, this);
@@ -117,10 +117,6 @@ defineClass({
    * detach the skin from this shell, and destroy itself firstly.
    */
   detach: function detach() {
-    if (this.$owner) {
-      this.$owner = null;
-    }
-
     this.constructor.destroy(this);
 
     var $skin = this.$skin;

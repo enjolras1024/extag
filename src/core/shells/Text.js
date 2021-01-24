@@ -88,9 +88,6 @@ defineClass({
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       return false;
     }
-    // if (this.$flag === FLAG_NORMAL) {
-    //   return false;
-    // }
 
     if (this.$skin && (this.$flag & FLAG_SHOULD_RENDER_TO_VIEW)) {
       var viewEngine = Shell.getViewEngine(this);
@@ -106,7 +103,6 @@ defineClass({
     }
 
     this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
-    // this.$flag = FLAG_NORMAL;
   },
 
   getParent: Parent.prototype.getParent,
