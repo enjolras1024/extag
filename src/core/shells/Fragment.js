@@ -38,7 +38,7 @@ defineClass({
       fragment.__extag_scopes_ = scopes;
       
       if (vnode) {
-        HTMXEngine.driveContent(fragment, scopes, vnode);
+        HTMXEngine.driveContent(fragment, scopes, vnode, true);
       }
     }
   },

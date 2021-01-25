@@ -6,7 +6,7 @@ import driveClasses from './driveClasses';
 import driveEvents from "./driveEvents";
 import driveProps from './driveProps'
 
-export default function driveComponent(target, template) {
+export default function driveComponent(target, template, first) {
   var scopes = [target];
 
   var useExpr = template.useExpr;
@@ -16,12 +16,12 @@ export default function driveComponent(target, template) {
   }
   if (template.attrs) {
     target.$props = new Cache(target);
-    driveProps(target.$props, scopes, template.attrs, useExpr);
+    driveProps(target.$props, scopes, template.attrs, useExpr, first);
   }
   if (useExpr) {
     if (template.style) {
       target.$style = new Cache(target);
-      driveProps(target.$style, scopes, template.style, useExpr);
+      driveProps(target.$style, scopes, template.style, useExpr, first);
     }
     if (template.classes) {
       target.$props = target.$props || new Cache(target);

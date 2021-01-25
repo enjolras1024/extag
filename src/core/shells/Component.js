@@ -171,7 +171,7 @@ defineClass({
 
       // injecting
       if (vnode) {
-        HTMXEngine.driveContent(component, scopes, vnode);
+        HTMXEngine.driveContent(component, scopes, vnode, true);
       }
 
       if (actions && actions.created) {
@@ -277,7 +277,7 @@ defineClass({
 
     if ((this.$flag & FLAG_STARTED) === 0) {
       var _template = this.constructor.__extag_template__;
-      HTMXEngine.driveComponent(this, _template);
+      HTMXEngine.driveComponent(this, _template, true);
       this.$flag |= FLAG_STARTED;
       if (this._actions && this._actions.started) {
         this.emit('started');

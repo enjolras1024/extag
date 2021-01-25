@@ -56,7 +56,6 @@ function collectContents(vnodes, scopes, target) {
   var oldShells = target._children || EMPTY_ARRAY;
   var newVNodes = vnodes || EMPTY_ARRAY;
 
-
   if (newVNodes.length) {
     newVNodes = flattenVNodes(newVNodes, null, target.$meta.ns);
   }

@@ -5,7 +5,7 @@ import Validator from 'src/base/Validator'
 import Component from 'src/core/shells/Component'
 import Expression from 'src/core/template/Expression'
 
-function driveProps(target, scopes, newProps, useExpr) {
+function driveProps(target, scopes, newProps, useExpr, first) {
   var oldProps = target._props;
   var name, desc, value;
 
@@ -16,8 +16,8 @@ function driveProps(target, scopes, newProps, useExpr) {
     }
   }
 
-  // firstly, remove redundant properties, or reset default property values.
-  if (oldProps) { 
+  // remove redundant properties, or reset default property values.
+  if (oldProps && !first) { 
     if (target instanceof Component) {
       for (name in oldProps) {
         if (!newProps || !(name in newProps)) {

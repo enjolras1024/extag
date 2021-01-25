@@ -242,6 +242,9 @@ function parseJsxContents(node, prototype) {
     type = typeof vnode;
     if (type === 'object') {
       if (vnode.__extag_node__ === EXTAG_VNODE) {
+        if (node.ns && !vnode.ns) {
+          vnode.ns = node.ns;
+        }
         vnode.useExpr = true;
         vnode.identifiers = node.identifiers;
         parseJsxNode(vnode, prototype);

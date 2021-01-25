@@ -57,7 +57,7 @@ defineClass({
       element.__extag_scopes__ = scopes;
 
       if (vnode) {
-        HTMXEngine.driveContent(element, scopes, vnode);
+        HTMXEngine.driveContent(element, scopes, vnode, true);
       }
 
       // Element.defineMembers(element);

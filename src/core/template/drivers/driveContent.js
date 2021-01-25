@@ -6,17 +6,17 @@ import driveClasses from "./driveClasses";
 import driveEvents from "./driveEvents";
 import driveProps from './driveProps'
 
-export default function driveContent(content, scopes, vnode) {
+export default function driveContent(content, scopes, vnode, first) {
   var useExpr = vnode.useExpr;
   if (vnode.events) {
     driveEvents(content, scopes, vnode.events, useExpr);
   }
   if (vnode.attrs) {
-    driveProps(content, scopes, vnode.attrs, useExpr)
+    driveProps(content, scopes, vnode.attrs, useExpr, first)
   }
   if (useExpr) {
     if (vnode.style) {
-      driveProps(content.style, scopes, vnode.style, useExpr);
+      driveProps(content.style, scopes, vnode.style, useExpr, first);
     }
     if (vnode.classes) {
       driveClasses(content, scopes, vnode.classes, useExpr);
