@@ -30,7 +30,7 @@ var MenuCard = Extag.defineClass({
 var SideBar = Extag.defineClass({
   extends: Extag.Component,
   statics: {
-    template: ['<aside x:class="side-bar; offscreen: @{state.offscreen}">',
+    template: ['<aside x:class="side-bar; offscreen: @{state.offscreen}" click+="onClickSideBar">',
                 '<div x:type="MenuCard" x:for="card of menuCards" ', 
                   ' activeId@="state.activeId" href@="card.href" text@="card.text" menus@="card.menus" folded@="card.folded">', 
                 '</div>',
@@ -44,16 +44,17 @@ var SideBar = Extag.defineClass({
     attributes: ['menuCards']
   },
   setup: function() {
-    this.on('created', this.onCreated.bind(this));
+    this.on('mounted', this.onMounted.bind(this));
     return {
       state: new Extag.Model({
         offscreen: true,
         activeId: '' 
       }),
-      onClickButton: this.onClickButton.bind(this)
+      onClickButton: this.onClickButton.bind(this),
+      onClickSideBar: this.onClickSideBar.bind(this)
     }
   },
-  onCreated: function() {
+  onMounted: function() {
     this.links = []
     var menuCards = this.menuCards;
     var locationHref = window.location.href;
@@ -112,6 +113,12 @@ var SideBar = Extag.defineClass({
       target = target.parentNode;
     }
     this.state.offscreen = true;
+  },
+  onClickSideBar: function(event) {
+    var className = event.target.className;
+    if (className && className.indexOf('menu-link') >= 0) {
+      this.state.offscreen = true;
+    }
   }
 });
 
@@ -176,8 +183,9 @@ var CodeTabs = Extag.defineClass({
     attrs: {
       menuCards: [
         {text: 'Extag', href: root + '/', menus: [
-          {text: '快速开始', href: root + '/index.html#get-started'},
-          {text: 'GitHub', href: 'https://github.com/enjolras1024/extag', target: '_blank'}
+          {text: 'GitHub', href: 'https://github.com/enjolras1024/extag', target: '_blank'},
+          {text: '快速开始', href: root + '/index.html#get-started'}
+          
         ]},
         {text: '事件系统', href: root + '/documents/event.html', menus: [
           {text: 'on, off, emit', href: root + '/documents/event.html#on-off-emit'}
@@ -218,10 +226,11 @@ var CodeTabs = Extag.defineClass({
         {text: '数据模型', href: root + '/documents/model.html', menus: [
           {text: 'Model for Object', href: root + '/documents/model.html#model-for-object'}
         ]},
-        {text: 'Tips', href: 'void(0)', menus: [
+        {text: '高级指引', href: 'void(0)', menus: [
           {text: '类React组件', href: root + '/documents/react-like-component.html'},
           {text: '函数化模板', href: root + '/documents/functional-template.html'},
           {text: 'Portals', href: root + '/documents/portals.html'},
+          {text: 'Shadow Mode', href: root + '/documents/shadow-mode.html'}
         ]},
         // {text: 'Tips', href: root + '/documents/tips.html', menus: [
         //   {text: '函数组件', href: root + '/documents/tips.html#functinal-component'},

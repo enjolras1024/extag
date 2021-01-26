@@ -1,5 +1,5 @@
 /**
- * ExtagDOM v0.5.3
+ * ExtagDOM v0.5.5
  * (c) 2017-present enjolras.chen
  * Released under the MIT License.
  */
@@ -778,7 +778,7 @@
     var i, n, m;
     var newChild, oldChild;
     var $newChild, $oldChild;
-    var $children = $skin.childNodes;
+    var $children = $skin.hasChildNodes() ? $skin.childNodes : EMPTY_ARRAY;
 
     n = children.length;
     m = $children.length;
@@ -789,16 +789,8 @@
         oldChild = getShell($oldChild);
         if (oldChild && shell !== oldChild.getParent(true)) {
           $skin.removeChild($oldChild);
-          // $removed.push($oldChild);
         }
       }
-      // for (i = $removed.length - 1; i >= 0;  --i) {
-      //   $parent = getParent($removed[i]);
-      //   oldChild = getShell($removed[i]);
-      //   if (!$parent && oldChild) { 
-      //     oldChild.detach();
-      //   }
-      // }
     }
 
     if (n) {
@@ -815,14 +807,6 @@
         oldChild = $oldChild ? getShell($oldChild) : null;
         if (!$newChild) {
           var meta = newChild.$meta;
-          // if (!$oldChild || 
-          //     meta.tag !== getTagName($oldChild) || 
-          //     meta.ns !== getNameSpace($oldChild) || 
-          //     (oldChild && oldChild !== newChild)) {
-          //   $newChild = createChild(meta.type, meta.tag, meta.ns);
-          // } else {
-          //   $newChild = $oldChild;
-          // }
 
           if ($oldChild && !oldChild && 
               canHydrate($oldChild, newChild)) {
@@ -861,7 +845,7 @@
     return innerClassName + ' ' + outerClassName;
   }
 
-  function mergeDirty(outerDirty, innerDirty, outerProps, innerProps) {
+  function mergeDirty(outerDirty, innerDirty, outerProps) {
     if (!innerDirty) {
       return outerDirty;
     }
@@ -1011,7 +995,7 @@
         renderProps($skin, _props, _dirty);
       }
       
-      var shadowMode = _props && _props.shadowMode;
+      var shadowMode = _props && _props['shadow-mode'];
       var children = shell._children;
       // render style
       var _style = shell._style;

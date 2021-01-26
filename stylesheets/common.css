@@ -12,20 +12,20 @@ h1, h2, h3, h4 {
   font-size: 1em;
 }
 
-article h1 {
+.article h1 {
   font-size: 3.5em;
 }
 
-article h2 {
+.article h2 {
   font-size: 2.5em;
 }
 
-article h3 {
+.article h3 {
   font-size: 1.8em;
   padding-top: 1em;
 }
 
-article h4 {
+.article h4 {
   font-size: 1.5em;
 }
 
@@ -118,14 +118,6 @@ ul > li {
   clear: both;
 }
 
-/* .main {
-  width: 960px;
-  margin: 0 auto;
-  padding-top: 50px;
-  padding-bottom: 0;
-  position: relative;
-} */
-
 .side-bar {
   width: 250px;
   top: 0;
@@ -148,10 +140,6 @@ ul > li {
 
 .icon-triangle {
   display: inline-block; 
-  float: right;
-  /* position: relative;
-  left: -10px; */
-  
   width: 0; 
   height: 0; 
   border:6px solid transparent;
@@ -185,8 +173,6 @@ ul > li {
   padding: 0;
 }
 
-
-
 .menu-link {
   color: #444;
   line-height: 1.5em;
@@ -202,18 +188,16 @@ ul > li {
   border-bottom: solid 1px #06d;
 }
 
-/*h4 {*/
-/*margin: 10px 0;*/
-/*padding: 0;*/
-/*}*/
-
-.article {
-  padding: 10px 20px 10px 300px;
-  /* width: 660px; */
-  /* float: left; */
+.main {
+  padding: 10px 30px 10px 300px;
 }
 
-article > p {
+.article {
+  margin: 0 auto;
+  max-width: 960px;
+}
+
+.article > p {
   line-height: 1.5em;
   font-size: 1.5em;
   color: #333;
@@ -572,14 +556,9 @@ article > p {
     font-weight: bold;
   }
 
-
-
   .article {
     box-sizing: border-box;
     padding: 1em 2em;
-    /* float: right; */
     width: 100%;
-
-    /*font-size: 1.25em;*/
   }
 }
