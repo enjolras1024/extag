@@ -39,9 +39,10 @@ function driveChild(target, vnode, scopes) {
   }
 }
 
-function createContents(vnodes, scopes) {
+function createContents(vnodes, scopes, target) {
   var i, n, content, contents = [];
   if (vnodes && vnodes.length) { 
+    // vnodes = flattenVNodes(vnodes, null, target.$meta.ns);
     for (i = 0, n = vnodes.length; i < n; ++i) {
       content = createContent(vnodes[i], scopes, true);
       if (content) {
@@ -56,9 +57,9 @@ function collectContents(vnodes, scopes, target) {
   var oldShells = target._children || EMPTY_ARRAY;
   var newVNodes = vnodes || EMPTY_ARRAY;
 
-  if (newVNodes.length) {
-    newVNodes = flattenVNodes(newVNodes, null, target.$meta.ns);
-  }
+  // if (newVNodes.length) {
+  //   newVNodes = flattenVNodes(newVNodes, null, target.$meta.ns);
+  // }
 
   var contents = new Array(newVNodes.length);
   var content, indices, key, i;
@@ -174,6 +175,8 @@ function driveChildren(target, scopes, vnodes, useExpr, forComponent) {
   var contents;
   if (!vnodes) {
     vnodes = EMPTY_ARRAY;
+  } else if (vnodes.length) {
+    vnodes = flattenVNodes(vnodes, null, target.$meta.ns);
   }
   if (forComponent) {
     target.accept(vnodes, scopes);
@@ -194,7 +197,7 @@ function driveChildren(target, scopes, vnodes, useExpr, forComponent) {
           return;
         }
       }
-      contents = createContents(vnodes, scopes);
+      contents = createContents(vnodes, scopes, target);
     } else {
       contents = collectContents(vnodes, scopes, target);
     }

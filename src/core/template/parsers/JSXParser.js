@@ -236,6 +236,8 @@ function parseJsxContents(node, prototype) {
   if (!contents || !contents.length) {
     return;
   }
+  contents = node.contents = flatten(contents);
+
   var i, type, vnode;
   for (i = contents.length - 1; i >= 0; --i) {
     vnode = contents[i];
@@ -374,10 +376,7 @@ function node(type, options, contents) {
   if (contents != null) {
     if (arguments.length > 3) {
       contents = slice.call(arguments, 2);
-      contents = flatten(contents);
-    } else if (Array.isArray(contents)) {
-      contents = flatten(contents);
-    } else {
+    } else if (!Array.isArray(contents)) {
       contents = [contents];
     }
     node.contents = contents;
