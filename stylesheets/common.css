@@ -140,6 +140,7 @@ ul > li {
 
 .icon-triangle {
   display: inline-block; 
+  float: right;
   width: 0; 
   height: 0; 
   border:6px solid transparent;
