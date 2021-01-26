@@ -1,5 +1,5 @@
 /**
- * Extag v0.5.3
+ * Extag v0.5.5
  * (c) 2017-present enjolras.chen
  * Released under the MIT License.
  */
@@ -221,7 +221,7 @@
       superClass = proto.extends;
 
       if (typeof superClass !== 'function') {
-        throw new TypeError('superClass must be a function');
+        throwError('superClass must be a function');
       }
     } else {
       superClass = Object;
@@ -232,7 +232,7 @@
       subClass = proto.constructor;
       //delete proto.constructor;
       if (typeof subClass !== 'function') {
-        throw new TypeError('subClass must be a function');
+        throwError('subClass must be a function');
       }
     } else {
       subClass = function() {
@@ -610,8 +610,7 @@
 
   function log(fn, args, prefix) {
     args = slice.call(args, 0);
-    // args.unshift(prefix);
-    args[0] = prefix + ' ' + args[0];
+    args.unshift(prefix);
     fn.apply(console, args);
   }
 
@@ -691,7 +690,7 @@
             {
               logger.warn('Sorry but `anew` only supports 6 argumnets at most. Using `inst` instead.');
             }
-            throw new Error('`anew` arguments length must not exceed 6.');
+            throwError('`anew` arguments length must not exceed 6.');
         }
       }
     }
@@ -752,7 +751,7 @@
   }
 
   function getAttributeDefaultValues(target) {
-    var defaultValues = {}, descriptors = target.__extag_descriptors__;
+    var defaults = {}, descriptors = target.__extag_descriptors__;
     if (descriptors) {
       for (var key in descriptors) {
         if (hasOwnProp.call(descriptors, key)) {
@@ -762,18 +761,18 @@
             continue;
           }
           if (type !== 'object') {
-            defaultValues[key] = desc.value;
+            defaults[key] = desc.value;
           } else if (desc.value != null) {
             if (!(desc.value instanceof Generator)) {
-              defaultValues[key] = desc.value;
+              defaults[key] = desc.value;
             } else {
-              defaultValues[key] = desc.value.gen && desc.value.gen();
+              defaults[key] = desc.value.gen && desc.value.gen();
             }
           }
         }
       }
     }
-    return defaultValues;
+    return defaults;
   }
 
   function applyAttributeDescriptors(target, descriptors) {
@@ -845,7 +844,7 @@
   }
 
   function Accessor() {
-    throw new Error('Accessor is a partial class for mixins and can not be instantiated');
+    throwError('Accessor is a partial class for mixins and can not be instantiated');
   }
 
   defineClass({
@@ -861,12 +860,12 @@
 
     // eslint-disable-next-line no-unused-vars
     get: function get(key) {
-      throw new Error('Method `get` must be implemented by sub-class');
+      throwError('Method `get` must be implemented by sub-class');
     },
 
     // eslint-disable-next-line no-unused-vars
     set: function set(key, value) {
-      throw new Error('Method `set` must be implemented by sub-class');
+      throwError('Method `set` must be implemented by sub-class');
     },
 
     assign: function assign(props) {
@@ -1065,7 +1064,7 @@
   // src/base/DirtyMarker.js
 
   function DirtyMarker() {
-    throw new Error('DirtyMarker is a partial class for mixins and can not be instantiated');
+    throwError('DirtyMarker is a partial class for mixins and can not be instantiated');
   }
 
   defineClass({
@@ -1128,6 +1127,45 @@
       return _dirty ? (key == null || hasOwnProp.call(_dirty, key)) : false;
     }
   });
+
+  // src/core/captureError.js
+
+  function captureError(error, shell, phase) {
+    shell.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
+
+    var _stop;
+    function stop() {
+      _stop = true;
+    }
+
+    var scopes;
+    var target = shell;
+    var targets = [shell];
+
+    while (shell) {
+      if (shell.constructor.__extag_component_class__) {
+        shell.emit('throwed', {
+          targets: targets.slice(0),
+          target: target,
+          phase: phase,
+          error: error,
+          stop: stop
+        });
+        if (_stop) {
+          break;
+        }
+      }
+      scopes = shell.__extag_scopes__;
+      if (scopes && scopes[0]) {
+        shell = scopes[0];
+        targets.push(shell);
+      } else {
+        logger.error('Unsolved error in phase `' + phase + '` from ', target);
+        logger.error(error);
+        break;
+      }
+    }
+  }
 
   /* eslint-disable no-unused-vars */
 
@@ -1193,7 +1231,7 @@
 
   var updateQueue = []; 
   var digestQueue = [];
-  var callbackQueue = [];
+  var callbackStack = [];
   var updateQueueCursor = 0;
   var digestQueueCursor = 0;
   var waiting = false;
@@ -1204,13 +1242,18 @@
       turn++;
       updateQueueCursor = 0;
 
-      var shell, i;
+      var callback, shell, i;
     
       // quene may be lengthen if the method `invalidate` is called when updating
       while (updateQueueCursor < updateQueue.length) {
-        shell = updateQueue[updateQueueCursor];
-        shell.update();
-        ++updateQueueCursor;
+        shell = updateQueue[updateQueueCursor++];
+        try {
+          shell.update();
+        } catch (e) {
+          pushCallbackStack(function() {
+            captureError(e, shell, 'updating');
+          });
+        }
       }
     
       updateQueue.length = 0;
@@ -1218,9 +1261,14 @@
 
       digestQueueCursor = 0;
       while (digestQueueCursor < digestQueue.length) {
-        shell = digestQueue[digestQueueCursor];
-        shell.digest();
-        ++digestQueueCursor;
+        shell = digestQueue[digestQueueCursor++];
+        try {
+          shell.digest();
+        } catch (e) {
+          pushCallbackStack(function() {
+            captureError(e, shell, 'digesting');
+          });
+        }
       }
 
       digestQueue.length = 0;
@@ -1228,17 +1276,22 @@
 
       waiting = false;
     
-      for (i = callbackQueue.length - 1; i >= 0; --i) {
-          callbackQueue[i]();
+      for (i = callbackStack.length - 1; i >= 0; --i) {
+          try {
+            callback = callbackStack[i];
+            callback();
+          } catch (e) {
+            logger.error("callback failed", e);
+          }
       }
 
-      callbackQueue.length = 0;
+      callbackStack.length = 0;
     } catch (e) {
       updateQueueCursor = -1;
       digestQueueCursor = -1;
       updateQueue.length = 0;
       digestQueue.length = 0;
-      callbackQueue.length = 0;
+      callbackStack.length = 0;
       waiting = false;
       throw e;
     }
@@ -1298,51 +1351,51 @@
   }
 
   /**
-     * Insert a shell into the digestQueue.
-     * @param {Shell} shell 
-     */
-    function insertDigestQueue(shell) {
-      var i, n = digestQueue.length, id = shell.$meta.guid;
+   * Insert a shell into the digestQueue.
+   * @param {Shell} shell 
+   */
+  function insertDigestQueue(shell) {
+    var i, n = digestQueue.length, id = shell.$meta.guid;
 
-      if (n > 0 && id > digestQueue[n-1].$meta.guid) {
-        i = n;
-      } /*else if (n === 0) {
-        i = n;
-      }*/ else {
-        var index = binarySearch(id, digestQueueCursor + 1, digestQueue.length - 1, digestQueue);
-        if (index < 0) {
-          i = - index - 1;
-        } else {
-          return;
-        }
-      }
-
-      if (i === n) {
-        digestQueue.push(shell);
+    if (n > 0 && id > digestQueue[n-1].$meta.guid) {
+      i = n;
+    } /*else if (n === 0) {
+      i = n;
+    }*/ else {
+      var index = binarySearch(id, digestQueueCursor + 1, digestQueue.length - 1, digestQueue);
+      if (index < 0) {
+        i = - index - 1;
       } else {
-        digestQueue.splice(i, 0, shell);
-      }
-
-      if (!waiting) {
-        waiting = true;
-        setImmediate(flushQueues);
+        return;
       }
     }
 
+    if (i === n) {
+      digestQueue.push(shell);
+    } else {
+      digestQueue.splice(i, 0, shell);
+    }
+
+    if (!waiting) {
+      waiting = true;
+      setImmediate(flushQueues);
+    }
+  }
+
 
   /**
-   * Push a callback function into callbackQueue
+   * Push a callback function into callbackStack
    * @param {Function} func 
    */
-  function pushCallbackQueue(callback) {
-    callbackQueue.push(callback);
+  function pushCallbackStack(callback) {
+    callbackStack.push(callback);
   }
 
   var Schedule = {
     setImmediate: setImmediate,
     insertUpdateQueue: insertUpdateQueue,
     insertDigestQueue: insertDigestQueue,
-    pushCallbackQueue: pushCallbackQueue
+    pushCallbackStack: pushCallbackStack
   };
 
   // src/core/Dependency.js
@@ -1494,6 +1547,10 @@
           assignProps(model, props);
         }
       }
+    },
+
+    keys: function keys() {
+      return Object.keys(this._props || EMPTY_OBJECT);
     },
 
     /**
@@ -1667,7 +1724,7 @@
       // eslint-disable-next-line no-undef
       {
         if (!viewEngine) {
-          logger.warn('There is no available viewEngine, so the error occurs below. Usually that is ExtagDom. You can use <script> to include extag-dom.js in broswer.');
+          logger.warn('There is no available viewEngine, so the error occurs below. Usually that is ExtagDOM. You can use <script> to include extag-dom.js in broswer.');
         }
       }
       viewEngine.attachShell($skin, this);
@@ -1707,10 +1764,6 @@
      * detach the skin from this shell, and destroy itself firstly.
      */
     detach: function detach() {
-      if (this.$owner) {
-        this.$owner = null;
-      }
-
       this.constructor.destroy(this);
 
       var $skin = this.$skin;
@@ -1966,7 +2019,7 @@
     removed.push(child);
     if (!inQueue) {
       inQueue = true;
-      Schedule.pushCallbackQueue(cleanRemovedChildren);
+      Schedule.pushCallbackStack(cleanRemovedChildren);
     }
   }
   function cleanRemovedChildren() {
@@ -2225,11 +2278,11 @@
         // eslint-disable-next-line no-undef
         {
           if (text.constructor !== Text) {
-            throw new TypeError('Text is final class and can not be extended');
+            throwError('Text is final class and can not be extended');
           }
         }
         Shell.initialize(text, TYPE_TEXT, '', '');
-        text.set('content', content || '');
+        text.set('content', content != null ? content : '');
       }
     },
 
@@ -2273,9 +2326,6 @@
       if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
         return false;
       }
-      // if (this.$flag === FLAG_NORMAL) {
-      //   return false;
-      // }
 
       if (this.$skin && (this.$flag & FLAG_SHOULD_RENDER_TO_VIEW)) {
         var viewEngine = Shell.getViewEngine(this);
@@ -2291,7 +2341,6 @@
       }
 
       this.$flag &= ~(FLAG_WAITING_UPDATING | FLAG_WAITING_DIGESTING);
-      // this.$flag = FLAG_NORMAL;
     },
 
     getParent: Parent.prototype.getParent,
@@ -2386,58 +2435,12 @@
     parseJSX: null
   };
 
-  // src/core/captureError.js
-
-  function captureError(error, component, phase) {
-    var _stop;
-    function stop() {
-      _stop = true;
-    }
-    var scopes;
-    var solver = null;
-    var target = component;
-    var targets = [component];
-    while (component) {
-      if (!_stop) {
-        component.emit('throwed', {
-          targets: targets.slice(0),
-          target: target,
-          phase: phase,
-          error: error,
-          stop: stop
-        });
-        if (_stop) {
-          solver = component;
-        }
-      }
-      scopes = component.__extag_scopes__;
-      if (scopes && scopes[0]) {
-        component = scopes[0];
-        targets.push(component);
-      } else {
-        component.emit('error', {
-          targets: targets.slice(0),
-          target: target,
-          solver: solver,
-          phase: phase,
-          error: error,
-          stop: stop
-        });
-        if (!_stop) {
-          logger.error('Unsolved error in phase `' + phase + '` from ', target);
-          throw error;
-        }
-        break;
-      }
-    }
-  }
-
   // src/core/shells/Component.js
 
   var KEYS_PRESERVED = [
     '$meta', '$flag', '$skin', '$props', '$style',
-    'style', 'contents', 'children', 
-    '_dirty', '_props', '_style', '_children', '_contents'
+    'style', 'contents', 'children', 'context',
+    '_dirty', '_props', '_style', '_children', '_contents', '_bindings'
   ];
   var METHODS_PRESERVED = [
     'on', 'off', 'emit',
@@ -2510,11 +2513,11 @@
         // }
 
         // get attribute default values
-        var defaults = Accessor.getAttributeDefaultValues(component);
+        // var defaults = Accessor.getAttributeDefaultValues(component);
         // defineProp(component, '_props', {
         //   value: defaults, writable: false, enumerable: false, configurable: true
         // });
-        component._props = defaults;
+        component._props = Accessor.getAttributeDefaultValues(component);
 
         // parsing template once and only once.
         if (!_template) {
@@ -2531,7 +2534,7 @@
             } else if (typeof constructor.template === 'function') {
               _template = HTMXEngine.parseJSX(constructor.template, prototype);
             } else {
-              throw new TypeError('The static template must be string or function');
+              throwError('The static template must be string or function');
             }
     
             if (_template) {
@@ -2545,28 +2548,21 @@
           }
         }
 
-        // 4. initialize the component as normal element
         Shell.initialize(component, _template.tag !== 'x:frag' ? TYPE_ELEM : TYPE_FRAG, _template.tag, _template.ns || '');
 
         // Element.defineMembers(component);
+        
+        // setup
+        var context = scopes && scopes[0] && scopes[0].context;
+        var options = component.setup(context);
+        var actions = component._actions;
 
-        // 6. setup
-        var model;
-        if (scopes && scopes[0] && scopes[0].context) {
-          model = component.setup(scopes[0].context);
-          if (component.context == null) {
-            component.context = scopes[0].context;
+        if (options != null) {
+          if (typeof options !== 'object') {
+            throwError('setup() should return object, instead of ' + (typeof options));
           }
-        } else {
-          model = component.setup();
-        }
-
-        if (model != null) {
-          if (typeof model !== 'object') {
-            throw new TypeError('setup() should return object, not ' + (typeof model));
-          }
-          for (var key in model) {
-            var desc = getOwnPropDesc(model, key);
+          for (var key in options) {
+            var desc = getOwnPropDesc(options, key);
             if (desc.get || desc.set) {
               defineProp(component, key, desc);
             } else {
@@ -2574,10 +2570,17 @@
             }
           }
         }
+        if (context && component.context == null) {
+          component.context = context;
+        }
 
         // injecting
         if (vnode) {
-          HTMXEngine.driveContent(component, scopes, vnode);
+          HTMXEngine.driveContent(component, scopes, vnode, true);
+        }
+
+        if (actions && actions.created) {
+          component.emit('created');
         }
 
         component.invalidate();
@@ -2586,7 +2589,7 @@
     },
 
     /**
-     * Get property stored in _props or _props.
+     * Get property stored in _props.
      * @param {string} key
      */
     get: function get(key) {
@@ -2675,25 +2678,20 @@
         return;
       }
 
-      try {
-        this.emit('updating');
-      } catch (e) {
-        captureError(e, this, 'updating');
-      }
+      this.emit('updating');
 
       if ((this.$flag & FLAG_STARTED) === 0) {
-        try {
-          var _template = this.constructor.__extag_template__;
-          HTMXEngine.driveComponent(this, _template);
-        } catch (e) {
-          captureError(e, this, 'starting');
-        }
+        var _template = this.constructor.__extag_template__;
+        HTMXEngine.driveComponent(this, _template, true);
         this.$flag |= FLAG_STARTED;
+        if (this._actions && this._actions.started) {
+          this.emit('started');
+        }
       } 
 
       var type = this.$meta.type;
       if (type !== 0) {
-        if ((this.$flag & FLAG_CHANGED_CACHE)) {
+        if ((this.$flag & FLAG_CHANGED_CACHE) !== 0) {
           HTMXEngine.transferProps(this);
         }
       }
@@ -2763,23 +2761,15 @@
           this.$flag |= FLAG_MOUNTED;
         }
         if (actions && actions.mounted && (this.$flag & FLAG_MOUNTED)) {
-          Schedule.pushCallbackQueue((function() {
-            try {
-              this.emit('mounted');
-            } catch (e) {
-              captureError(e, this, 'mounted');
-            }
+          Schedule.pushCallbackStack((function() {
+            this.emit('mounted');
           }).bind(this));
         }
       }
       
       if (actions && actions.updated) {
-        Schedule.pushCallbackQueue((function() {
-          try {
-            this.emit('updated');
-          } catch (e) {
-            captureError(e, this, 'updated');
-          }
+        Schedule.pushCallbackStack((function() {
+          this.emit('updated');
         }).bind(this));
       }
     },
@@ -2799,7 +2789,7 @@
         return;
       }
       this._contents = vnodes.slice(0);
-      this._contents.scopes = scopes || [this];
+      this._contents.scopes = scopes || EMPTY_ARRAY;
       this.emit('contents', this._contents);
       this.invalidate(FLAG_CHANGED_CONTENTS);
     },
@@ -2908,7 +2898,7 @@
         // eslint-disable-next-line no-undef
         {
           if (fragment.constructor !== Fragment) {
-            throw new TypeError('Fragment is final class and can not be extended');
+            throwError('Fragment is final class and can not be extended');
           }
         }
         // fragment type is 0
@@ -2917,7 +2907,7 @@
         fragment.__extag_scopes_ = scopes;
         
         if (vnode) {
-          HTMXEngine.driveContent(fragment, scopes, vnode);
+          HTMXEngine.driveContent(fragment, scopes, vnode, true);
         }
       }
     },
@@ -3110,7 +3100,7 @@
         element.__extag_scopes__ = scopes;
 
         if (vnode) {
-          HTMXEngine.driveContent(element, scopes, vnode);
+          HTMXEngine.driveContent(element, scopes, vnode, true);
         }
 
         // Element.defineMembers(element);
@@ -3143,8 +3133,10 @@
         return false;
       }
 
-      HTMXEngine.transferProps(this);
-
+      if ((this.$flag & FLAG_CHANGED_CACHE) !== 0) {
+        HTMXEngine.transferProps(this);
+      }
+      
       if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
         this.$flag |= FLAG_WAITING_DIGESTING;
         Schedule.insertDigestQueue(this);
@@ -3196,7 +3188,7 @@
         return evaluator.apply(scopes[0], scopes);
       } catch (e) {
         var constructor = scopes[0].constructor;
-        logger.warn('The expression `' + (evaluator.expr || evaluator.toString()) + 
+        logger.error('The expression `' + (evaluator.expr || evaluator.toString()) + 
                     '` failed in the template of component ' + (constructor.fullname || constructor.name));
         throw e;
       }
@@ -3261,21 +3253,13 @@
         }
       }
 
-      // if (pattern.mode === MODES.ANY_WAY) {
-      //   this.scopes[0].on('updating', this.execute);
-      //   this.target.set(this.targetProp, applyEvaluator(pattern, scopes));
-      // } else {
-      //   this.flag = 1;
-      //   this.execute();
-      //   if (this.keys && this.keys.length) {
-      //     scopes[0].on('updating', this.execute);
-      //   }
-      // }
       this.flag = 1;
       this.execute();
-      scopes[0].on('updating', this.execute);
-
-      Binding.record(target, this);
+      if ((this.deps && this.deps.length) || 
+          pattern.mode === MODES.ANY_WAY) {
+        scopes[0].on('updating', this.execute);
+        Binding.record(target, this);
+      }
     },
 
     replace: function replace(scopes) {
@@ -3311,24 +3295,8 @@
       Dependency.clean(this);
     },
 
-    // evaluate: function() {
-    //   if (this.converters && this.converters.length) {
-    //     return applyConverters(
-    //       this.converters, 
-    //       this.scopes, 
-    //       this.evaluator.execute(this.scopes)
-    //     );
-    //   } else {
-    //     return this.evaluator.execute(this.scopes);
-    //   }
-    // },
-
     execute: function execute() {
       var pattern = this.pattern;
-      // if (pattern.mode === MODES.ANY_WAY) {
-      //   this.target.set(this.targetProp, applyEvaluator(pattern, this.scopes));
-      //   return;
-      // }
       if (this.flag === 0 && pattern.mode !== MODES.ANY_WAY) {
         return;
       }
@@ -3829,13 +3797,12 @@
       }
     } else {
       ctor = vnode.type;
-      if (ctor && ctor !== Element) {
+      if (ctor) {
         content = new ctor(vnode, scopes);
       } else {
         content = new Element(vnode, scopes);
       }
       if (vnode.name) {
-        content.$owner = scopes[0];
         scopes[0].addNamedPart(vnode.name, content); // TODO: removeNamedPart
       }
     }
@@ -3879,7 +3846,7 @@
 
   // src/core/template/drivers/driveProps.js
 
-  function driveProps(target, scopes, newProps, useExpr) {
+  function driveProps(target, scopes, newProps, useExpr, first) {
     var oldProps = target._props;
     var name, desc, value;
 
@@ -3890,8 +3857,8 @@
       }
     }
 
-    // firstly, remove redundant properties, or reset default property values.
-    if (oldProps) { 
+    // remove redundant properties, or reset default property values.
+    if (oldProps && !first) { 
       if (target instanceof Component) {
         for (name in oldProps) {
           if (!newProps || !(name in newProps)) {
@@ -3951,9 +3918,10 @@
     }
   }
 
-  function createContents(vnodes, scopes) {
+  function createContents(vnodes, scopes, target) {
     var i, n, content, contents = [];
     if (vnodes && vnodes.length) { 
+      // vnodes = flattenVNodes(vnodes, null, target.$meta.ns);
       for (i = 0, n = vnodes.length; i < n; ++i) {
         content = createContent(vnodes[i], scopes);
         if (content) {
@@ -3968,10 +3936,9 @@
     var oldShells = target._children || EMPTY_ARRAY;
     var newVNodes = vnodes || EMPTY_ARRAY;
 
-
-    if (newVNodes.length) {
-      newVNodes = flattenVNodes(newVNodes, null, target.$meta.ns);
-    }
+    // if (newVNodes.length) {
+    //   newVNodes = flattenVNodes(newVNodes, null, target.$meta.ns);
+    // }
 
     var contents = new Array(newVNodes.length);
     var content, indices, key, i;
@@ -4083,21 +4050,25 @@
     return array ? array : vnodes;
   }
 
-  function driveChildren(target, scopes, vnodes, useExpr, areContents) {
+  function driveChildren(target, scopes, vnodes, useExpr, forComponent) {
     var contents;
     if (!vnodes) {
       vnodes = EMPTY_ARRAY;
+    } else if (vnodes.length) {
+      vnodes = flattenVNodes(vnodes, null, target.$meta.ns);
     }
-    if (areContents) {
+    if (forComponent) {
       target.accept(vnodes, scopes);
     } else {
       if (useExpr) {
-        if (vnodes.length === 1) {
-          var expr = vnodes[0];
+        if (vnodes.length === 1 && isVNode(vnodes[0]) && (vnodes[0].type === Expression)) {
+          var expr = vnodes[0].expr;
           if (expr instanceof Expression && expr.pattern.target === 'frag') {
             if (target instanceof Component) {
               expr.connect(function(vnodes, scopes) {
-                driveChildren(this, scopes, vnodes, false);
+                // this is target, and this is scopes[0]
+                // driveChildren(this, scopes, vnodes, false);
+                Fragment.prototype.accept.call(this, vnodes, scopes);
               }, target, scopes);
             } else {
               expr.connect('accept', target, scopes);
@@ -4225,17 +4196,17 @@
 
   // src/core/template/drivers/driveContent.js
 
-  function driveContent(content, scopes, vnode) {
+  function driveContent(content, scopes, vnode, first) {
     var useExpr = vnode.useExpr;
     if (vnode.events) {
       driveEvents(content, scopes, vnode.events, useExpr);
     }
     if (vnode.attrs) {
-      driveProps(content, scopes, vnode.attrs, useExpr);
+      driveProps(content, scopes, vnode.attrs, useExpr, first);
     }
     if (useExpr) {
       if (vnode.style) {
-        driveProps(content.style, scopes, vnode.style, useExpr);
+        driveProps(content.style, scopes, vnode.style, useExpr, first);
       }
       if (vnode.classes) {
         driveClasses(content, scopes, vnode.classes);
@@ -4311,7 +4282,7 @@
 
   // src/core/template/drivers/driveComponent.js
 
-  function driveComponent(target, template) {
+  function driveComponent(target, template, first) {
     var scopes = [target];
 
     var useExpr = template.useExpr;
@@ -4321,12 +4292,12 @@
     }
     if (template.attrs) {
       target.$props = new Cache(target);
-      driveProps(target.$props, scopes, template.attrs, useExpr);
+      driveProps(target.$props, scopes, template.attrs, useExpr, first);
     }
     if (useExpr) {
       if (template.style) {
         target.$style = new Cache(target);
-        driveProps(target.$style, scopes, template.style, useExpr);
+        driveProps(target.$style, scopes, template.style, useExpr, first);
       }
       if (template.classes) {
         target.$props = target.$props || new Cache(target);
@@ -5057,12 +5028,17 @@
     if (!contents || !contents.length) {
       return;
     }
+    contents = node.contents = flatten(contents);
+
     var i, type, vnode;
     for (i = contents.length - 1; i >= 0; --i) {
       vnode = contents[i];
       type = typeof vnode;
       if (type === 'object') {
         if (vnode.__extag_node__ === EXTAG_VNODE) {
+          if (node.ns && !vnode.ns) {
+            vnode.ns = node.ns;
+          }
           vnode.useExpr = true;
           vnode.identifiers = node.identifiers;
           parseJsxNode(vnode, prototype);
@@ -5144,12 +5120,11 @@
           throwError('component class is not found.');
         }
       }
-      
     } else {
       throwError('The first argument must be string, function, component class or constructor.');
     }
 
-    if (options != null) {
+    if (options && typeof options === 'object') {
       if (options.xns) {
         node.ns = options.xns;
       }
@@ -5190,11 +5165,10 @@
       node.attrs = attrs;
     }
 
-    if (contents) {
-      if (arguments.length > 3 || Array.isArray(contents)) {
+    if (contents != null) {
+      if (arguments.length > 3) {
         contents = slice.call(arguments, 2);
-        contents = flatten(contents);
-      } else {
+      } else if (!Array.isArray(contents)) {
         contents = [contents];
       }
       node.contents = contents;
@@ -5242,6 +5216,7 @@
 
       if (_node.type) {
         if (_node.type === Fragment) {
+          _node.tag = 'x:frag';
           _node.type = null;
         } else {
           throwError('component can not be used as root tag of another component template.');
@@ -5301,15 +5276,25 @@
                     template.push(text);
                   }
                 }
-                if (expr.charCodeAt(stop + 2) === 123 && expr.charCodeAt(i - 1) === 125) {
-                  // @{{...}}
-                  pattern = DataBindingParser.parse(expr.slice(stop + 3, i - 1), prototype, identifiers);
-                  pattern.target = 'frag';
-                } else {
-                  // @{...}
-                  pattern = DataBindingParser.parse(expr.slice(stop + 2, i), prototype, identifiers);
-                  pattern.target = 'text';
+                
+                try {
+                  if (expr.charCodeAt(stop + 2) === 123 && expr.charCodeAt(i - 1) === 125) {
+                    // @{{...}}
+                    pattern = DataBindingParser.parse(expr.slice(stop + 3, i - 1), prototype, identifiers);
+                    pattern.target = 'frag';
+                  } else {
+                    // @{...}
+                    pattern = DataBindingParser.parse(expr.slice(stop + 2, i), prototype, identifiers);
+                      pattern.target = 'text';
+                  }
+                } catch (e) {
+                  expr = expr.slice(stop, i + 1);
+                  throwError(e, {
+                    code: 1001,
+                    expr: expr
+                  });
                 }
+                
                 template.push(new Expression(pattern.target === 'frag' ? FuncBinding : DataBinding, pattern));
                 start = stop = i + 1;
                 b2 = false;
@@ -5837,7 +5822,7 @@
         // eslint-disable-next-line no-undef
         {
           if (e.code === 1001) {
-            var snapshot = getSnapshot(htmx, BINDING_FORMAT.replace('0', e.expr), parent, start);
+            var snapshot = getSnapshot(htmx, e.expr, parent, start);
             logger.warn((e.desc || e.message) + ' In the template of component ' 
                     + (prototype.constructor.fullname || prototype.constructor.name) + ':\n' 
                     + snapshot[0], snapshot[1], snapshot[2]);
@@ -6131,7 +6116,7 @@
     
 
     // eslint-disable-next-line no-undef
-    version: "0.5.3"
+    version: "0.5.5"
   };
 
   return Extag;
