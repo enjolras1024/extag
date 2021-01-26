@@ -457,10 +457,6 @@ ul > li {
     background-repeat: no-repeat;
   }
 
-  .menu-btn.on {
-    /* background-position: -24px 0; */
-  }
-
   .menu-bar {
     float: none;
     display: none;
@@ -479,17 +475,6 @@ ul > li {
     line-height: normal;
     width: 100%;
   }
-
-  .menu-item:hover, .menu-item:active, .menu-item.active{
-    /* background-color: #111; */
-    /* border-bottom: solid 1px #0af; */
-  }
-
-  .menu-link:hover, .menu-link:active, .menu-link.active{
-    /* background-color: #111;
-    border-bottom: solid 1px #0af; */
-  }
-
 
   .face {
     padding-top: 40px;
@@ -527,6 +512,7 @@ ul > li {
   .main {
     width: 100%;
     margin-left: 0;
+    padding: 0;
   }
 
   .side-bar {
