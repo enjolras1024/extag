@@ -230,6 +230,7 @@ var CodeTabs = Extag.defineClass({
           {text: '类React组件', href: root + '/documents/react-like-component.html'},
           {text: '函数化模板', href: root + '/documents/functional-template.html'},
           {text: 'Portals', href: root + '/documents/portals.html'},
+          {text: 'KeepAlive', href: root + '/documents/keep-alive.html'},
           {text: 'Shadow Mode', href: root + '/documents/shadow-mode.html'}
         ]},
         // {text: 'Tips', href: root + '/documents/tips.html', menus: [

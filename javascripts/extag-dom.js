@@ -1,5 +1,5 @@
 /**
- * ExtagDOM v0.5.5
+ * ExtagDOM v0.5.7
  * (c) 2017-present enjolras.chen
  * Released under the MIT License.
  */

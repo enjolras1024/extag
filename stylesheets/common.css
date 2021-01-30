@@ -190,11 +190,22 @@ ul > li {
 }
 
 .main {
-  padding: 10px 30px 10px 300px;
+  padding-left: 270px;
+}
+
+.main footer {
+  margin: 15px auto 0 auto;
+  padding: 15px 0;
+  text-align: center;
+  border-top: 1px solid #e8e8e8;
+  background-color: #f8f8f8;
+  color:#999;
 }
 
 .article {
   margin: 0 auto;
+  padding: 10px 30px;
+  min-height: 960px;
   max-width: 960px;
 }
 

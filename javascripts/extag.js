@@ -1,5 +1,5 @@
 /**
- * Extag v0.5.5
+ * Extag v0.5.7
  * (c) 2017-present enjolras.chen
  * Released under the MIT License.
  */
@@ -2014,11 +2014,11 @@
   }
 
   var removed = [];
-  var inQueue = false;
+  var inStack = false;
   function collectRemovedChild(child) {
     removed.push(child);
-    if (!inQueue) {
-      inQueue = true;
+    if (!inStack) {
+      inStack = true;
       Schedule.pushCallbackStack(cleanRemovedChildren);
     }
   }
@@ -2030,7 +2030,7 @@
       }
     }
     removed.length = 0;
-    inQueue = false;
+    inStack = false;
   }
 
   defineClass({
@@ -2784,6 +2784,8 @@
         vnodes = EMPTY_ARRAY;
       } else if (!Array.isArray(vnodes)) {
         vnodes = [vnodes];
+      } else {
+        vnodes = flatten(vnodes);
       }
       if (!this._contents && !vnodes.length) {
         return;
@@ -3177,6 +3179,99 @@
     }
   });
 
+  // src/core/shells/KeepAlive.js
+
+  function findFragementByKey(key, fragments) {
+    for (var i = 0; i < fragments.length; ++i) {
+      if (fragments[i] && fragments[i].xkey === key) {
+        return fragments[i];
+      }
+    }
+  }
+
+  function findContentByKey(key, contents) {
+    for (var i = 0; i < contents.length; ++i) {
+      if (contents[i] && contents[i].xkey === key) {
+        return contents[i];
+      }
+    }
+  }
+
+  function checkContents(contents, keepAlive) {
+    var keys = [];
+    for (var i = 0; i < contents.length; ++i) {
+      var content = contents[i];
+      if (content == null || content.xkey == null) {
+        continue;
+      }
+      // if (content.xkey == null) {
+      //   throwError('xkey is required for all contents of ', keepAlive);
+      // }
+      if (keys.indexOf(content.xkey) >= 0) {
+        throwError('duplicated xkey `' + content.xkey + '` for all contents of ', keepAlive);
+      }
+      keys.push(content.xkey); // xkey can be number, string, symbol, function...
+    }
+  }
+
+  function KeepAlive() {
+    Component.apply(this, arguments);
+  }
+
+  defineClass({
+    constructor: KeepAlive, extends: Component,
+    setup: function setup() {
+      this.fragments = [];
+      this.recyclebin = new Fragment();
+      this.on('contents', this.onContents.bind(this));
+      this.on('destroying', this.onDestroying.bind(this));
+    },
+    onContents: function onContents(contents) {
+      var children, content, fragment, i;
+
+      checkContents(contents, this);
+
+      children = this.getChildren();
+      for (i = children.length - 1; i >=0; --i) {
+        fragment = children[i];
+        if (fragment.xkey == null) {
+          continue;
+        }
+        content = findContentByKey(fragment.xkey, contents);
+        if (!content) {
+          // recycle to avoid destroying removed fragment
+          this.removeChild(fragment);
+          this.recyclebin.appendChild(fragment);
+        }
+      }
+
+      children = [];
+      for (i = 0; i < contents.length; ++i) {
+        content = contents[i];
+        if (content == null) {
+          continue;
+        }
+        if (content.xkey != null) {
+          fragment = findFragementByKey(content.xkey, this.fragments);
+          if (!fragment) {
+            fragment = new Fragment();
+            fragment.xkey = content.xkey;
+            this.fragments.push(fragment);
+          } 
+        } else {
+          fragment = new Fragment();
+        }
+        // update the only child of the fragment
+        fragment.accept([content], contents.scopes);
+        children.push(fragment);
+      }
+      this.setChildren(children);
+    },
+    onDestroying: function onDestroying() {
+      this.recyclebin.detach(); // destroying fragments in recyclebin
+    }
+  });
+
   // src/core/bindings/DataBinding.js
 
   var MODES = { ASSIGN: -1, ONE_TIME: 0, ONE_WAY: 1, TWO_WAY: 2, ANY_WAY: 3 };
@@ -3548,7 +3643,8 @@
       }
 
       if (this.mode == null || this.mode === DATA_BINDING_MODES.ASSIGN) {
-        this.execute();
+        var cache = this.evaluate();
+        target.set(property, cache.join(''));
         return;
       }
 
@@ -3575,13 +3671,7 @@
       Dependency.clean(this);
     },
 
-    execute: function execute() {
-      if (this.flag === 0 && this.mode !== DATA_BINDING_MODES.ANY_WAY) {
-        return;
-      }
-
-      Dependency.begin(this);
-
+    evaluate: function evaluate() {
       var i, n, expr, cache = [], pattern = this.pattern;
 
       for (i = 0, n = pattern.length; i < n; ++i) {
@@ -3591,6 +3681,18 @@
         }
         cache.push(expr);
       }
+
+      return cache;
+    },
+
+    execute: function execute() {
+      if (this.flag === 0 && this.mode !== DATA_BINDING_MODES.ANY_WAY) {
+        return;
+      }
+
+      Dependency.begin(this);
+
+      var cache = this.evaluate();
 
       Dependency.end();
 
@@ -3918,10 +4020,9 @@
     }
   }
 
-  function createContents(vnodes, scopes, target) {
+  function createContents(vnodes, scopes) {
     var i, n, content, contents = [];
     if (vnodes && vnodes.length) { 
-      // vnodes = flattenVNodes(vnodes, null, target.$meta.ns);
       for (i = 0, n = vnodes.length; i < n; ++i) {
         content = createContent(vnodes[i], scopes);
         if (content) {
@@ -4021,7 +4122,8 @@
     var i, n = vnodes.length, vnode;
     if (!array) {
       for (i = 0; i < n; ++i) {
-        if (Array.isArray(vnodes[i])) {
+        vnode = vnodes[i];
+        if (vnode == null || Array.isArray(vnode)) {
           array = [];
           break;
         }
@@ -4032,7 +4134,7 @@
         vnode = vnodes[i];
         if (Array.isArray(vnode)) {
           flattenVNodes(vnode, array, ns);
-        } else {
+        } else if (vnode != null) {
           array.push(vnode);
           if (ns && isVNode(vnode) && !vnode.ns) {
             vnode.ns = ns;
@@ -4050,32 +4152,37 @@
     return array ? array : vnodes;
   }
 
-  function driveChildren(target, scopes, vnodes, useExpr, forComponent) {
+  function driveChildren(target, scopes, vnodes, useExpr, forComponentContents) {
     var contents;
     if (!vnodes) {
       vnodes = EMPTY_ARRAY;
     } else if (vnodes.length) {
       vnodes = flattenVNodes(vnodes, null, target.$meta.ns);
     }
-    if (forComponent) {
+    if (useExpr && 
+        vnodes.length === 1 && 
+        isVNode(vnodes[0]) && 
+        vnodes[0].type === Expression
+        ) {
+      // @{{...}} as only child
+      var expr = vnodes[0].expr;
+      if (expr instanceof Expression && expr.pattern.target === 'frag') {
+        if (!forComponentContents && (target instanceof Component)) {
+          expr.connect(function(vnodes, scopes) {
+            // this is target, and this is scopes[0]
+            // driveChildren(this, scopes, vnodes, false);
+            Fragment.prototype.accept.call(this, vnodes, scopes);
+          }, target, scopes);
+        } else {
+          expr.connect('accept', target, scopes);
+        }
+        return;
+      }
+    }
+    if (forComponentContents) {
       target.accept(vnodes, scopes);
     } else {
       if (useExpr) {
-        if (vnodes.length === 1 && isVNode(vnodes[0]) && (vnodes[0].type === Expression)) {
-          var expr = vnodes[0].expr;
-          if (expr instanceof Expression && expr.pattern.target === 'frag') {
-            if (target instanceof Component) {
-              expr.connect(function(vnodes, scopes) {
-                // this is target, and this is scopes[0]
-                // driveChildren(this, scopes, vnodes, false);
-                Fragment.prototype.accept.call(this, vnodes, scopes);
-              }, target, scopes);
-            } else {
-              expr.connect('accept', target, scopes);
-            }
-            return;
-          }
-        }
         contents = createContents(vnodes, scopes);
       } else {
         contents = collectContents(vnodes, scopes, target);
@@ -4126,7 +4233,8 @@
       }
 
       if (this.mode == null || this.mode === DATA_BINDING_MODES$1.ASSIGN) {
-        this.execute();
+        var cache = this.evaluate();
+        target.set(property, cache);
         return;
       }
 
@@ -4153,15 +4261,8 @@
       Dependency.clean(this);
     },
 
-    execute: function execute() {
-      if (this.flag === 0 && this.mode !== DATA_BINDING_MODES$1.ANY_WAY) {
-        return;
-      }
-
-      Dependency.begin(this);
-
+    evaluate: function evaluate() {
       var name, expr, cache = {}, pattern = this.pattern;
-
       for (name in pattern) {
         expr = pattern[name];
         if (expr instanceof Expression) {
@@ -4169,6 +4270,17 @@
         }
         cache[name] = expr;
       }
+      return cache;
+    },
+
+    execute: function execute() {
+      if (this.flag === 0 && this.mode !== DATA_BINDING_MODES$1.ANY_WAY) {
+        return;
+      }
+
+      Dependency.begin(this);
+
+      var cache = this.evaluate();
 
       Dependency.end();
 
@@ -6112,11 +6224,12 @@
     Element: Element, 
     Fragment: Fragment,
     Component: Component,
+    KeepAlive: KeepAlive,
 
     
 
     // eslint-disable-next-line no-undef
-    version: "0.5.5"
+    version: "0.5.7"
   };
 
   return Extag;
