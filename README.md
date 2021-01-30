@@ -70,7 +70,7 @@ class Hello extends Extag.Component {
 ```html
 <ul x:if="items != null">
   <li x:for="item of items">
-    <span>@{ item.text }<span>
+    <span>@{ item.text }</span>
   </li>
 </ul>
 ```

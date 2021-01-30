@@ -21,6 +21,7 @@ import Portal from 'src/core/shells/Portal'
 import Element from 'src/core/shells/Element'
 import Fragment from 'src/core/shells/Fragment'
 import Component from 'src/core/shells/Component'
+import KeepAlive from 'src/core/shells/KeepAlive'
 
 import Binding from 'src/core/bindings/Binding'
 import DataBinding from 'src/core/bindings/DataBinding'
@@ -93,6 +94,7 @@ var Extag = {
   Element: Element, 
   Fragment: Fragment,
   Component: Component,
+  KeepAlive: KeepAlive,
 
   
 
