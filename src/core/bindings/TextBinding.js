@@ -46,7 +46,8 @@ defineClass({
     }
 
     if (this.mode == null || this.mode === DATA_BINDING_MODES.ASSIGN) {
-      this.execute();
+      var cache = this.evaluate();
+      target.set(property, cache.join(''));
       return;
     }
 
@@ -73,13 +74,7 @@ defineClass({
     Dependency.clean(this);
   },
 
-  execute: function execute() {
-    if (this.flag === 0 && this.mode !== DATA_BINDING_MODES.ANY_WAY) {
-      return;
-    }
-
-    Dependency.begin(this);
-
+  evaluate: function evaluate() {
     var i, n, expr, cache = [], pattern = this.pattern;
 
     for (i = 0, n = pattern.length; i < n; ++i) {
@@ -89,6 +84,18 @@ defineClass({
       }
       cache.push(expr);
     }
+
+    return cache;
+  },
+
+  execute: function execute() {
+    if (this.flag === 0 && this.mode !== DATA_BINDING_MODES.ANY_WAY) {
+      return;
+    }
+
+    Dependency.begin(this);
+
+    var cache = this.evaluate();
 
     Dependency.end();
 
