@@ -37,11 +37,11 @@ function flattenChildren(shell, array) {
 }
 
 var removed = [];
-var inQueue = false;
+var inStack = false;
 function collectRemovedChild(child) {
   removed.push(child);
-  if (!inQueue) {
-    inQueue = true;
+  if (!inStack) {
+    inStack = true;
     Schedule.pushCallbackStack(cleanRemovedChildren);
   }
 }
@@ -53,7 +53,7 @@ function cleanRemovedChildren() {
     }
   }
   removed.length = 0;
-  inQueue = false;
+  inStack = false;
 }
 
 defineClass({

@@ -11,6 +11,7 @@ import Binding from 'src/core/bindings/Binding'
 import HTMXEngine from 'src/core/template/HTMXEngine'
 import logger from 'src/share/logger'
 import { 
+  flatten,
   throwError,
   defineProp, 
   defineClass, 
@@ -379,6 +380,8 @@ defineClass({
       vnodes = EMPTY_ARRAY;
     } else if (!Array.isArray(vnodes)) {
       vnodes = [vnodes];
+    } else {
+      vnodes = flatten(vnodes);
     }
     if (!this._contents && !vnodes.length) {
       return;

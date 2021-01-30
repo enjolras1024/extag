@@ -39,10 +39,9 @@ function driveChild(target, vnode, scopes) {
   }
 }
 
-function createContents(vnodes, scopes, target) {
+function createContents(vnodes, scopes) {
   var i, n, content, contents = [];
   if (vnodes && vnodes.length) { 
-    // vnodes = flattenVNodes(vnodes, null, target.$meta.ns);
     for (i = 0, n = vnodes.length; i < n; ++i) {
       content = createContent(vnodes[i], scopes, true);
       if (content) {
@@ -142,7 +141,8 @@ function flattenVNodes(vnodes, array, ns) {
   var i, n = vnodes.length, vnode;
   if (!array) {
     for (i = 0; i < n; ++i) {
-      if (Array.isArray(vnodes[i])) {
+      vnode = vnodes[i];
+      if (vnode == null || Array.isArray(vnode)) {
         array = [];
         break;
       }
@@ -153,7 +153,7 @@ function flattenVNodes(vnodes, array, ns) {
       vnode = vnodes[i];
       if (Array.isArray(vnode)) {
         flattenVNodes(vnode, array, ns);
-      } else {
+      } else if (vnode != null) {
         array.push(vnode);
         if (ns && isVNode(vnode) && !vnode.ns) {
           vnode.ns = ns;
@@ -171,33 +171,38 @@ function flattenVNodes(vnodes, array, ns) {
   return array ? array : vnodes;
 }
 
-function driveChildren(target, scopes, vnodes, useExpr, forComponent) {
+function driveChildren(target, scopes, vnodes, useExpr, forComponentContents) {
   var contents;
   if (!vnodes) {
     vnodes = EMPTY_ARRAY;
   } else if (vnodes.length) {
     vnodes = flattenVNodes(vnodes, null, target.$meta.ns);
   }
-  if (forComponent) {
+  if (useExpr && 
+      vnodes.length === 1 && 
+      isVNode(vnodes[0]) && 
+      vnodes[0].type === Expression
+      ) {
+    // @{{...}} as only child
+    var expr = vnodes[0].expr;
+    if (expr instanceof Expression && expr.pattern.target === 'frag') {
+      if (!forComponentContents && (target instanceof Component)) {
+        expr.connect(function(vnodes, scopes) {
+          // this is target, and this is scopes[0]
+          // driveChildren(this, scopes, vnodes, false);
+          Fragment.prototype.accept.call(this, vnodes, scopes);
+        }, target, scopes);
+      } else {
+        expr.connect('accept', target, scopes);
+      }
+      return;
+    }
+  }
+  if (forComponentContents) {
     target.accept(vnodes, scopes);
   } else {
     if (useExpr) {
-      if (vnodes.length === 1 && isVNode(vnodes[0]) && (vnodes[0].type === Expression)) {
-        var expr = vnodes[0].expr;
-        if (expr instanceof Expression && expr.pattern.target === 'frag') {
-          if (target instanceof Component) {
-            expr.connect(function(vnodes, scopes) {
-              // this is target, and this is scopes[0]
-              // driveChildren(this, scopes, vnodes, false);
-              Fragment.prototype.accept.call(this, vnodes, scopes);
-            }, target, scopes);
-          } else {
-            expr.connect('accept', target, scopes);
-          }
-          return;
-        }
-      }
-      contents = createContents(vnodes, scopes, target);
+      contents = createContents(vnodes, scopes);
     } else {
       contents = collectContents(vnodes, scopes, target);
     }
