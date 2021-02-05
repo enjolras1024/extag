@@ -71,7 +71,8 @@ defineClass({
     var pattern = this.pattern;
 
     if (pattern.mode === MODES.ASSIGN) {
-      this.target.set(this.targetProp, applyEvaluator(pattern, scopes));
+      var value = applyEvaluator(pattern, scopes);
+      this.target.set(this.targetProp, value);
       return;
     }
 

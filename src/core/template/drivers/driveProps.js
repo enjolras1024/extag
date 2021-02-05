@@ -39,12 +39,18 @@ function driveProps(target, scopes, newProps, useExpr, first) {
   }
   // assign new property values
   if (newProps) {
-    for (name in newProps) {
-      value = newProps[name];
-      if (useExpr && value instanceof Expression) {
-        value.connect(name, target, scopes);
-      } else {
-        target.set(name, value);
+    if (useExpr) {
+      for (name in newProps) {
+        value = newProps[name];
+        if (value instanceof Expression) {
+          value.connect(name, target, scopes);
+        } else {
+          target.set(name, value);
+        }
+      }
+    } else {
+      for (name in newProps) {
+        target.set(name, newProps[name]);
       }
     }
   }

@@ -252,7 +252,7 @@ defineClass({
     }
   },
 
-  bind: function(produce, consume) {
+  bind: function bind(produce, consume) {
     return Binding.create(this, produce, consume);
   },
 
@@ -372,7 +372,7 @@ defineClass({
 
   /**
    * accept contents from scopes
-   * @param {Array} vnodes - some virtual nodes created by Extag.node(), not null
+   * @param {VNode|Array} vnodes - some virtual nodes created by Extag.node(), not null
    * @param {Array} scopes 
    */
   accept: function accept(vnodes, scopes) {

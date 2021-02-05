@@ -65,7 +65,7 @@ function parseJsxNode(node, prototype) {
           args = value.args;
           checkExprMode(args[0]);
           attrs[key] = parseJsxExpr(args, node, prototype);
-        } else if (key === 'style') {
+        } else if (key === 'class' || key === 'style') {
           node[key] = parseJsxData(value, node, prototype);
           delete attrs[key];
         }

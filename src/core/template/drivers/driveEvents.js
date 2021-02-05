@@ -9,6 +9,9 @@ function driveEvents(target, scopes, newEvents, useExpr) {
   if (oldEvents) {
     for (type in oldEvents) {
       value = oldEvents[type];
+      if (newEvents && newEvents[type] === value) {
+        continue;
+      }
       if (typeof value === 'function') {
         target.off(type, value);
       } else if (Array.isArray(value)) {
@@ -20,6 +23,9 @@ function driveEvents(target, scopes, newEvents, useExpr) {
   if (newEvents) {
     for (type in newEvents) {
       value = newEvents[type];
+      if (oldEvents && oldEvents[type] === value) {
+        continue;
+      }
       if (useExpr && value instanceof Expression) {
         value.connect(type, target, scopes);
       } else if (typeof value === 'function') {
@@ -28,9 +34,9 @@ function driveEvents(target, scopes, newEvents, useExpr) {
         target.on(type, value[0], value[1]);
       }
     }
-  }
-  if (!useExpr) {
-    target._events = newEvents;
+    if (!useExpr) {
+      target._events = newEvents;
+    }
   }
 }
 

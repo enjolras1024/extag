@@ -29,7 +29,8 @@ defineClass({
     var pattern = this.pattern;
 
     if (pattern.mode === DATABIDING_MODES.ASSIGN) {
-      this.target.set(this.targetProp, applyEvaluator(pattern, scopes));
+      var value = applyEvaluator(pattern, this.scopes);
+      this.method.call(this.target, value, this.scopes);
       return;
     }
 

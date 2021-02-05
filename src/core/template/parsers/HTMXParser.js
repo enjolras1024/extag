@@ -630,16 +630,16 @@ var HTMXParser = {
       throwError('The template of component ' + (constructor.fullname || constructor.name) + ' must have only one root tag.')
     }
     if (root.tag === '!' || root.tag === '#') {
-      throwError('Component template root tag must be a DOM element, instead of: ' + htmx.slice(0, htmx.indexOf('>')));
+      throwError('Component template root tag must be a DOM element, instead of: ' + htmx.slice(0, 1 + htmx.indexOf('>')));
     }
     if (root.tag === 'x:slot' || root.tag === 'x:view') {
-      throwError(root.tag + ' can not be used as root tag of component template: ' + htmx.slice(0, htmx.indexOf('>')));
+      throwError(root.tag + ' can not be used as root tag of component template: ' + htmx.slice(0, 1 + htmx.indexOf('>')));
     }
     if (root.type && root.type.__extag_component_class__) {
-      throwError('component can not be used as root tag of another component template: ' + htmx.slice(0, htmx.indexOf('>')));
+      throwError('component can not be used as root tag of another component template: ' + htmx.slice(0, 1 + htmx.indexOf('>')));
     }
     if (root.xif || root.xfor || root.xkey) {
-      throwError('`x:if`, `x:for`, `x:key` can not be used on root tag of component template: '  + htmx.slice(0, htmx.indexOf('>')));
+      throwError('`x:if`, `x:for`, `x:key` can not be used on root tag of component template: '  + htmx.slice(0, 1 + htmx.indexOf('>')));
     }
 
     return root;
