@@ -4,7 +4,11 @@ import { slice } from 'src/share/functions'
 
 function log(fn, args, prefix) {
   args = slice.call(args, 0);
-  args.unshift(prefix);
+  if (typeof args[0] === 'string') {
+    args[0] = prefix + ' ' + args[0];
+  } else {
+    args.unshift(prefix);
+  }
   fn.apply(console, args);
 }
 

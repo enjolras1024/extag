@@ -33,18 +33,19 @@ defineClass({
     var old = props[key];
     if (val !== old) {
       props[key] = val;
-      this._owner.invalidate(FLAG_CHANGED_CACHE);
       DirtyMarker.check(this, key, val, old);
+      this._owner.invalidate(FLAG_CHANGED_CACHE);
     }
   },
 
   reset: function(props) {
-    var _props = this._props, value, key;
+    var _props = this._props, value, key, diff;
     if (_props) {
       for (key in _props) {
         if (hasOwnProp.call(_props, key)) {
           if (!props || !hasOwnProp.call(props, key)) {
             DirtyMarker.check(this, key, null, _props[key]);
+            diff  = true;
           }
         }
       }
@@ -55,12 +56,16 @@ defineClass({
           value = props[key];
           if (value !== _props[key]) {
             DirtyMarker.check(this, key, value, _props[key]);
+            diff = true;
           }
         }
       }
       this._props = props;
     } else {
       this._props = {};
+    }
+    if (diff) {
+      this._owner.invalidate(FLAG_CHANGED_CACHE);
     }
   }
 });

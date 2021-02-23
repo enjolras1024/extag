@@ -23,6 +23,13 @@ var FLAG_STARTED = 128;
 var FLAG_MOUNTED = 256;
 var FLAG_DESTROYED = 512;
 
+var FLAG_X_ATTRS = 1;
+var FLAG_X_CLASS = 2;
+var FLAG_X_STYLE = 4;
+var FLAG_X_EVENTS = 8;
+var FLAG_X_CONTENTS = 16;
+var FLAG_X_DIRECTIVES = 32;
+
 // symbols
 var EXTAG_VNODE = Object.freeze({});
 
@@ -44,7 +51,7 @@ var BINDING_OPERATORS = {
   TEXT: '#', 
   EVENT: '+', 
   FRAGMENT: '<>',
-  MODIFIER: '::',
+  MODIFIER: '//',
   CONVERTER: '|=', 
   // SCOPE_EVENT: '@', 
   ASSIGN: '!',
@@ -82,6 +89,13 @@ export {
   FLAG_STARTED,
   FLAG_MOUNTED,
   FLAG_DESTROYED,
+
+  FLAG_X_ATTRS,
+  FLAG_X_CLASS,
+  FLAG_X_STYLE,
+  FLAG_X_EVENTS,
+  FLAG_X_CONTENTS,
+  FLAG_X_DIRECTIVES,
 
   EXTAG_VNODE,
   

@@ -30,9 +30,9 @@ import TextBinding from 'src/core/bindings/TextBinding'
 
 
 import Expression from 'src/core/template/Expression'
-import { createContent } from 'src/core/template/drivers/index.js'
-// import JSXEngine from 'src/core/template/engines/JSXEngine'
 import HTMXEngine from 'src/core/template/HTMXEngine'
+import ContentDriver from 'src/core/template/drivers/ContentDriver'
+import ChildrenDriver from 'src/core/template/drivers/ChildrenDriver'
 import JSXParser from 'src/core/template/parsers/JSXParser'
 import HTMXParser from 'src/core/template/parsers/HTMXParser'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
@@ -50,6 +50,10 @@ import {
   defineClass, 
   encodeHTML, 
   decodeHTML } from 'src/share/functions'
+
+
+HTMXEngine.driveContent = ContentDriver.drive;
+HTMXEngine.driveChildren = ChildrenDriver.drive;
 
 
 if (typeof ExtagDOM !== 'undefined') {

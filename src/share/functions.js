@@ -283,6 +283,46 @@ function isVNode(child) {
   return child && typeof child === 'object' && child.__extag_node__ === EXTAG_VNODE;
 }
 
+// refer to styled-components
+var SEED = 5381;
+
+function text2hash(x, h) {
+  var i = x.length;
+
+  if (arguments.length === 1) {
+      h = SEED;
+  }
+
+  while (i) {
+    h = (h * 33) ^ x.charCodeAt(--i);
+  }
+
+  return h;
+}
+
+/* This is the "capacity" of our alphabet i.e. 2x26 for all letters plus their capitalised
+ * counterparts */
+var charsLength = 52;
+
+/* start at 75 for 'a' until 'z' (25) and then start at 65 for capitalised letters */
+function code2char(code) {
+  return String.fromCharCode(code + (code > 25 ? 39 : 97));
+}
+  
+
+/* input a number, usually a hash and convert it to base-52 */
+function hash2sign(code) {
+  var name = '';
+  var x;
+
+  /* get a char and divide by alphabet-length */
+  for (x = Math.abs(code); x > charsLength; x = (x / charsLength) | 0) {
+    name = code2char(x % charsLength) + name;
+  }
+
+  return (code2char(x % charsLength) + name);
+}
+
 export { 
   copy,
   help,
@@ -291,6 +331,8 @@ export {
   append,
   flatten,
   isVNode,
+  text2hash,
+  hash2sign,
   toClasses,
   throwError,
   encodeHTML, 
