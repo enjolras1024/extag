@@ -1,6 +1,9 @@
 import {
   hasOwnProp
 } from 'src/share/functions'
+import { 
+  EMPTY_OBJECT 
+} from 'src/share/constants';
 
 import { 
   toCamelCase,
@@ -46,26 +49,64 @@ function getStylePropName(key, $style) {
   }
 }
 
-function renderStyle($skin, style, dirty) {
+// function renderStyle($skin, style, dirty) {
+//   var key, name, $style = $skin.style;
+//   for (key in dirty) {
+//     if (hasOwnProp.call(dirty, key)) {
+//       if (key[0] !== '-' || key[1] !== '-') {
+//         name = getStylePropName(key, $style);
+//         if (name) {
+//           $style[name] = style[key];
+//         }
+//       } else {
+//         if (style[key] != null) {
+//           $style.setProperty(key, style[key]);
+//         } else {
+//           $style.removeProperty(key);
+//         }
+//       }
+//     }
+//   }
+// }
+
+export function renderStyle($skin, newStyle, oldStyle) {
   var key, name, $style = $skin.style;
-  for (key in dirty) {
-    if (hasOwnProp.call(dirty, key)) {
-      if (key[0] !== '-' || key[1] !== '-') {
-        name = getStylePropName(key, $style);
-        if (name) {
-          $style[name] = style[key];
+  if (oldStyle) {
+    for (name in oldStyle) {
+      if (hasOwnProp.call(newStyle, key)) {
+        if (newStyle && (name in newStyle)) {
+          continue;
         }
-      } else {
-        if (style[key] != null) {
-          $style.setProperty(key, style[key]);
+        if (key[0] !== '-' || key[1] !== '-') {
+          name = getStylePropName(key, $style);
+          if (name) {
+            $style[name] = '';
+          }
         } else {
           $style.removeProperty(key);
         }
       }
     }
   }
-}
-
-export {
-  renderStyle
+  if (newStyle) {
+    for (key in newStyle) {
+      if (hasOwnProp.call(newStyle, key)) {
+        if (oldStyle && oldStyle[key] === newStyle[key]) {
+          continue;
+        }
+        if (key[0] !== '-' || key[1] !== '-') {
+          name = getStylePropName(key, $style);
+          if (name) {
+            $style[name] = newStyle[key];
+          }
+        } else {
+          if (newStyle[key] != null) {
+            $style.setProperty(key, newStyle[key]);
+          } else {
+            $style.removeProperty(key);
+          }
+        }
+      }
+    }
+  }
 }

@@ -15,7 +15,7 @@ import {
 } from './utils'
 
 import { renderProps } from "./props";
-import { renderStyle } from "./style";
+// import { renderStyle } from "./style";
 import { toClassName } from "./classes";
 import { renderChildren } from "./children";
 
@@ -68,37 +68,37 @@ function mergeProps(outerProps, innerProps, mergedDirty) {
   return props;
 }
 
-function mergeStyle(outerStyle, innerStyle) {
-  var outerProps = outerStyle._props;
-  var outerDirty = outerStyle._dirty;
-  var innerProps = innerStyle._props;
-  var innerDirty = innerStyle._dirty;
-  var key, name, style = {};
-  if (outerDirty) {
-    for (key in outerDirty) {
-      if (key[0] !== '-' || key[1] !== '-') {
-        name = toCamelCase(key);
-      } else {
-        name = key;
-      }
-      style[name] = outerProps[key];
-    }
-  }
-  if (innerDirty) {
-    for (key in innerDirty) {
-      if (key[0] !== '-' || key[1] !== '-') {
-        name = toCamelCase(key);
-      } else {
-        name = key;
-      }
-      if ((name in style) || (key in outerProps) || (name in outerProps)) {
-        continue;
-      }
-      style[name] = innerProps[key];
-    }
-  }
-  return style;
-}
+// function mergeStyle(outerStyle, innerStyle) {
+//   var outerProps = outerStyle._props;
+//   var outerDirty = outerStyle._dirty;
+//   var innerProps = innerStyle._props;
+//   var innerDirty = innerStyle._dirty;
+//   var key, name, style = {};
+//   if (outerDirty) {
+//     for (key in outerDirty) {
+//       if (key[0] !== '-' || key[1] !== '-') {
+//         name = toCamelCase(key);
+//       } else {
+//         name = key;
+//       }
+//       style[name] = outerProps[key];
+//     }
+//   }
+//   if (innerDirty) {
+//     for (key in innerDirty) {
+//       if (key[0] !== '-' || key[1] !== '-') {
+//         name = toCamelCase(key);
+//       } else {
+//         name = key;
+//       }
+//       if ((name in style) || (key in outerProps) || (name in outerProps)) {
+//         continue;
+//       }
+//       style[name] = innerProps[key];
+//     }
+//   }
+//   return style;
+// }
 
 function invokeCommands($skin, commands) {
   for (var i = 0, n = commands.length; i < n; ++i) {
@@ -183,31 +183,31 @@ function renderShell($skin, shell) {
     
     var shadowMode = _props && _props['shadow-mode'];
     var children = shell._children;
-    // render style
-    var _style = shell._style;
-    var $style = shell.$style;
-    if (_style && $style) {
-      _props = mergeStyle(_style, $style);
-      if (_props === _style._props) {
-        _dirty = _style._dirty;
-      } else if (_props === $style._props) {
-        _dirty = $style._dirty;
-      } else {
-        _dirty = _props;
-      }
-    } else if (_style) {
-      _props = _style._props;
-      _dirty = _style._dirty;
-    } else if ($style) {
-      _props = $style._props;
-      _dirty = $style._dirty;
-    } else {
-      _props = null;
-      _dirty = null;
-    }
-    if (_props && _dirty) {
-      renderStyle($skin, _props, _dirty);
-    }      
+    // // render style
+    // var _style = shell._style;
+    // var $style = shell.$style;
+    // if (_style && $style) {
+    //   _props = mergeStyle(_style, $style);
+    //   if (_props === _style._props) {
+    //     _dirty = _style._dirty;
+    //   } else if (_props === $style._props) {
+    //     _dirty = $style._dirty;
+    //   } else {
+    //     _dirty = _props;
+    //   }
+    // } else if (_style) {
+    //   _props = _style._props;
+    //   _dirty = _style._dirty;
+    // } else if ($style) {
+    //   _props = $style._props;
+    //   _dirty = $style._dirty;
+    // } else {
+    //   _props = null;
+    //   _dirty = null;
+    // }
+    // if (_props && _dirty) {
+    //   renderStyle($skin, _props, _dirty);
+    // }      
     // render children
     if (children && (shell.$flag & FLAG_CHANGED_CHILDREN)) {
       if (!shadowMode || !$skin.attachShadow) {

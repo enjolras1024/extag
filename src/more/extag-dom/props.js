@@ -6,8 +6,9 @@ import {
   DOM_PROPERTY_DESCRIPTORS,
   namespaceURIs
 } from './config'
-
+import { renderStyle } from "./style";
 import { renderClassName } from "./classes";
+
 
 (function() {
   var desc;
@@ -17,6 +18,9 @@ import { renderClassName } from "./classes";
 
   desc = DOM_PROPERTY_DESCRIPTORS['class'];
   desc.render = renderClassName;
+
+  desc = DOM_PROPERTY_DESCRIPTORS.style;
+  desc.render = renderStyle;
 })();
 
 function renderProps($skin, props, dirty) {
