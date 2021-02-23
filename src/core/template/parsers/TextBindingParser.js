@@ -2,7 +2,6 @@
 
 import DataBindingParser from 'src/core/template/parsers/DataBindingParser'
 import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
-import FuncBinding from 'src/core/bindings/FuncBinding'
 import DataBinding from 'src/core/bindings/DataBinding'
 import Expression from 'src/core/template/Expression'
 import { BINDING_OPERATORS, BINDING_BRACKETS } from 'src/share/constants'
@@ -26,10 +25,10 @@ export default {
    /**
    * parse an fragment expression that contains  `@{...}`
    * @param {string} expr - fragment expression that contains  `@{...}`
-   * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
+   * @param {Object} resources - static resources included in expression.
    * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
    */
-  parse: function parse(expr, prototype, identifiers) {
+  parse: function parse(expr, resources, identifiers) {
     var template = [], start = 0, stop;
     var n = expr.length, i = 0;
     var cc, cb, ct = 0, b2;
@@ -54,11 +53,11 @@ export default {
               try {
                 if (expr.charCodeAt(stop + 2) === 123 && expr.charCodeAt(i - 1) === 125) {
                   // @{{...}}
-                  pattern = DataBindingParser.parse(expr.slice(stop + 3, i - 1), prototype, identifiers);
+                  pattern = DataBindingParser.parse(expr.slice(stop + 3, i - 1), resources, identifiers);
                   pattern.target = 'frag';
                 } else {
                   // @{...}
-                  pattern = DataBindingParser.parse(expr.slice(stop + 2, i), prototype, identifiers);
+                  pattern = DataBindingParser.parse(expr.slice(stop + 2, i), resources, identifiers);
                     pattern.target = 'text';
                 }
               } catch (e) {
@@ -69,7 +68,7 @@ export default {
                 });
               }
               
-              template.push(new Expression(pattern.target === 'frag' ? FuncBinding : DataBinding, pattern));
+              template.push(new Expression(DataBinding, pattern));
               start = stop = i + 1;
               b2 = false;
             }

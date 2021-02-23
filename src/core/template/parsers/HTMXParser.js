@@ -6,7 +6,13 @@ import {
   BINDING_FORMAT,
   CAPITAL_REGEXP,
   BINDING_OPERATORS,
-  WHITE_SPACE_REGEXP
+  WHITE_SPACE_REGEXP,
+
+  FLAG_X_ATTRS,
+  FLAG_X_CLASS,
+  FLAG_X_STYLE,
+  FLAG_X_EVENTS,
+  FLAG_X_CONTENTS
 } from 'src/share/constants'
 import { 
   hasOwnProp,
@@ -21,6 +27,8 @@ import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import DataBinding from 'src/core/bindings/DataBinding'
 import TextBinding  from 'src/core/bindings/TextBinding'
+import ClassBinding from 'src/core/bindings/ClassBinding'
+import StyleBinding from 'src/core/bindings/StyleBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
 import HTMXEngine from 'src/core/template/HTMXEngine'
 import ClassStyleParser from 'src/core/template/parsers/ClassStyleParser'
@@ -111,8 +119,8 @@ function isSelfClosingTag(tagName) {
   return hasOwnProp.call(SELF_CLOSING_TAGS, tagName);
 }
 
-function findComponentClass(expr, prototype) {
-  var ctor = Path.search(expr, prototype.constructor.resources);
+function findComponentClass(expr, resources) {
+  var ctor = Path.search(expr, resources);
   if (typeof ctor === 'function') {
     if (ctor.__extag_component_class__) {
       return ctor;
@@ -131,18 +139,20 @@ function findComponentClass(expr, prototype) {
   } 
 }
 
-function parseDirective(name, expr, node, prototype, identifiers) {
+function parseDirective(name, expr, node, resources, identifiers) {
   var result;
   if (name === 'x:class') {
-    node.classes = ClassStyleParser.parse(expr, prototype, identifiers, false);
+    result = ClassStyleParser.parse(expr, resources, identifiers, false);
+    getGroup(node, 'xattrs')['class'] = new Expression(ClassBinding, result);
   } else if (name === 'x:style') {
-    node.style = ClassStyleParser.parse(expr, prototype, identifiers, true);
+    result = ClassStyleParser.parse(expr, resources, identifiers, true);
+    getGroup(node, 'xattrs')['style'] = new Expression(StyleBinding, result);
   } else if (name === 'x:type') {
-    var ctor = findComponentClass(expr, prototype);
+    var ctor = findComponentClass(expr, resources);
     if (ctor) {
       node.type = ctor;
     } else {
-      result = DataBindingParser.parse(expr, prototype, identifiers);
+      result = DataBindingParser.parse(expr, resources, identifiers);
       node.xtype = new Expression(DataBinding, result);
     }
   } else if (name === 'x:name') {
@@ -150,7 +160,7 @@ function parseDirective(name, expr, node, prototype, identifiers) {
   } else if (name === 'x:slot') {
     node.slot = expr;
   } else if (name === 'x:key') {
-    result = DataBindingParser.parse(expr, prototype, identifiers);
+    result = DataBindingParser.parse(expr, resources, identifiers);
     node.xkey = new Expression(DataBinding, result);
   } else if (name === 'x:for') {
     var pieces = expr.trim().split(FOR_OF_SPLITTER);
@@ -182,7 +192,7 @@ function parseDirective(name, expr, node, prototype, identifiers) {
       }
     }
 
-    result = result && DataBindingParser.parse(result, prototype, identifiers);
+    result = result && DataBindingParser.parse(result, resources, identifiers);
     if (result) {
       node.xfor = [pieces, new Expression(DataBinding, result)];
     } else {
@@ -195,7 +205,7 @@ function parseDirective(name, expr, node, prototype, identifiers) {
     node.identifiers = identifiers.slice(0);
     node.identifiers.push(pieces);
   } else if (name === 'x:if') {
-    result = DataBindingParser.parse(expr, prototype, identifiers);
+    result = DataBindingParser.parse(expr, resources, identifiers);
     if (result) {
       node.xif = new Expression(DataBinding, result);
     } else {
@@ -209,7 +219,7 @@ function parseDirective(name, expr, node, prototype, identifiers) {
   }
 }
 
-function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
+function parseAttribute(attrName, attrValue, node, resources, identifiers) {
   var lastChar = attrName[attrName.length - 1];
   var result, group, key;
 
@@ -220,49 +230,51 @@ function parseAttribute(attrName, attrValue, node, prototype, identifiers) {
   }
 
   if (lastChar === BINDING_OPERATORS.EVENT) { // last char is '+'
-    group = getGroup(node, 'events');
     key = attrName.slice(0, -1);
-    // attrName = attrName.slice(0, -1);
-    // key = index < 0 ? toCamelCase(attrName) : attrName;
-    result = EventBindingParser.parse(attrValue, prototype, identifiers);
+    group = getGroup(node, 'events');
+    result = EventBindingParser.parse(attrValue, resources, identifiers);
     group[key] = new Expression(EventBinding, result);
   } else {
-    group = getGroup(node, 'attrs');
     switch (lastChar) {
       case BINDING_OPERATORS.DATA: // last char is '@'
         key = attrName.slice(0, -1);
         result = PrimitiveLiteralParser.tryParse(attrValue.trim());
         if (result != null) {
+          group = getGroup(node, 'attrs');
           group[key] = result;
         } else {
-          result = DataBindingParser.parse(attrValue, prototype, identifiers);
+          group = getGroup(node, 'xattrs');
+          result = DataBindingParser.parse(attrValue, resources, identifiers);
           group[key] = new Expression(DataBinding, result);
         }
         break;
       case BINDING_OPERATORS.TEXT: // last char is '#'
         key = attrName.slice(0, -1);
-        try {
-          result = TextBindingParser.parse(attrValue, prototype, identifiers);
-        } catch (e) {
-          // eslint-disable-next-line no-undef
-          if (__ENV__ === 'development') {
-            if (e.code === 1001) {
-              e.expr = BINDING_FORMAT.replace('0', e.expr);
-            }
-          }
-          throw e;
-        }
+        // try {
+          result = TextBindingParser.parse(attrValue, resources, identifiers);
+        // } catch (e) {
+        //   // eslint-disable-next-line no-undef
+        //   if (__ENV__ === 'development') {
+        //     if (e.code === 1001) {
+        //       e.expr = BINDING_FORMAT.replace('0', e.expr);
+        //     }
+        //   }
+        //   throw e;
+        // }
         if (result) {
+          group = getGroup(node, 'xattrs');
           if (result.length === 1) {
             group[key] = result[0];
           } else {
             group[key] = new Expression(TextBinding, result);
           }
         } else {
+          group = getGroup(node, 'attrs');
           group[key] = attrValue;
         }
         break;
       default:
+        group = getGroup(node, 'attrs');
         group[attrName] = attrValue;
     }
   }
@@ -293,9 +305,9 @@ function getSnapshot(htmx, expr, node, start) {
   ]
 }
 
-function parseAttributes(htmx, from, node, prototype) {
+function parseAttributes(htmx, from, node, resources) {
   var idx = from, start = from, stop = from, end = htmx.length;
-  var cc, attrName, attrNames;//, operator, attributes = [];
+  var cc, attrName, attrNames;
   while (idx < end) {
     cc = htmx[idx];
     if (attrName) {
@@ -313,17 +325,16 @@ function parseAttributes(htmx, from, node, prototype) {
         if (node) {
           try {
             if (isDirective(attrName)) {
-              parseDirective(attrName, htmx.slice(start, stop), node, prototype, node.identifiers);
+              parseDirective(attrName, htmx.slice(start, stop), node, resources, node.identifiers);
             } else {
-              parseAttribute(attrName, htmx.slice(start, stop), node, prototype, node.identifiers);
+              parseAttribute(attrName, htmx.slice(start, stop), node, resources, node.identifiers);
             }
           } catch(e) {
             // eslint-disable-next-line no-undef
             if (__ENV__ === 'development') {
               if (e.code === 1001) {
                 var snapshot = getSnapshot(htmx, e.expr, node, start);
-                logger.warn((e.desc || e.message) + ' In the template of component ' 
-                  + (prototype.constructor.fullname || prototype.constructor.name) + ':\n' 
+                logger.warn((e.desc || e.message) + ':\n' 
                   + snapshot[0], snapshot[1], snapshot[2]);
               }
             }
@@ -347,8 +358,7 @@ function parseAttributes(htmx, from, node, prototype) {
         while(attrNames.length > 0) {
           attrName = attrNames.shift();
           if (attrName && node) {
-            parseAttribute(attrName, null, node, prototype, node.identifiers);
-            // getGroup(node, 'attrs')[viewEngine.toCamelCase(attrName)] = '';
+            parseAttribute(attrName, null, node, resources, node.identifiers);
           }
         }
       }
@@ -360,8 +370,7 @@ function parseAttributes(htmx, from, node, prototype) {
         while(attrNames.length > 1) {
           attrName = attrNames.shift();
           if (attrName && node) {
-            parseAttribute(attrName, null, node, prototype, node.identifiers);
-            // getGroup(node, 'attrs')[viewEngine.toCamelCase(attrName)] = '';
+            parseAttribute(attrName, null, node, resources, node.identifiers);
           }
         }
         attrName = attrNames.shift();
@@ -378,17 +387,7 @@ function parseAttributes(htmx, from, node, prototype) {
 var LF_IN_BLANK_START = /^\s*\n\s*/;
 var LF_IN_BLANK_END = /\s*\n\s*$/;
 
-function createExprNode(binding, pattern) {
-  return {
-    __extag_node__: EXTAG_VNODE,
-    useExpr: true,
-    type: Expression,
-    expr: pattern instanceof Expression ? 
-          pattern : new Expression(binding, pattern)
-  }
-}
-
-function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
+function parseTextNode(htmx, start, stop, parent, resources, identifiers) {
   var contents = parent.contents || [], result;
   var text = htmx.slice(start, stop);
   text = text.replace(LF_IN_BLANK_START, '').replace(LF_IN_BLANK_END, '');
@@ -398,53 +397,53 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
 
   if (TextBindingParser.like(text)) {
     try {
-      result = TextBindingParser.parse(text, prototype, identifiers);
+      result = TextBindingParser.parse(text, resources, identifiers);
     } catch (e) {
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
         if (e.code === 1001) {
           var snapshot = getSnapshot(htmx, e.expr, parent, start);
-          logger.warn((e.desc || e.message) + ' In the template of component ' 
-                  + (prototype.constructor.fullname || prototype.constructor.name) + ':\n' 
+          logger.warn((e.desc || e.message) + '\n' 
                   + snapshot[0], snapshot[1], snapshot[2]);
         }
       }
       throw e;
     }
     if (result) {
-      if (result.length === 1 && (result[0] instanceof Expression)) {
-        expr = result[0];
-        contents.push(createExprNode(result[0].binding, result[0]));
-      } else {
-        var i = -1, j = 0 , n = result.length;
-        for (; j < n; ++j) {
-          var expr = result[j];
-          if ((expr instanceof Expression) && expr.pattern.target === 'frag') {
-            if (j > i) {
-              if (j - i > 1) {
-                contents.push(createExprNode(TextBinding, result.slice(i, j)));
-              } else if (result[i] instanceof Expression) {
-                contents.push(createExprNode(result[i].binding, result[i]));
-              } else {
-                contents.push(result[i]);
-              }
-            }
-            contents.push(createExprNode(expr.binding, expr));
-            i = -1;
-          } else if (i < 0) {
-            i = j;
-          }
-        }
-        if (i >= 0 && j > i) {
-          if (j - i > 1) {
-            contents.push(createExprNode(TextBinding, result.slice(i, j)));
-          } else if (result[i] instanceof Expression) {
-            contents.push(createExprNode(result[i].binding, result[i]));
-          } else {
-            contents.push(result[i]);
-          }
-        }
-      }
+      parent.xflag |= FLAG_X_CONTENTS;
+      contents.push.apply(contents, result);
+      // if (result.length === 1 && (result[0] instanceof Expression)) {
+      //   contents.push(result[0]);
+      // } else {
+      //   var i = -1, j = 0 , n = result.length;
+      //   for (; j < n; ++j) {
+      //     var expr = result[j];
+      //     if ((expr instanceof Expression) && expr.pattern.target === 'frag') {
+      //       if (j > i) {
+      //         if (j - i > 1) {
+      //           contents.push(createExprNode(TextBinding, result.slice(i, j)));
+      //         } else if (result[i] instanceof Expression) {
+      //           contents.push(createExprNode(result[i].binding, result[i]));
+      //         } else {
+      //           contents.push(result[i]);
+      //         }
+      //       }
+      //       contents.push(createExprNode(expr.binding, expr));
+      //       i = -1;
+      //     } else if (i < 0) {
+      //       i = j;
+      //     }
+      //   }
+      //   if (i >= 0 && j > i) {
+      //     if (j - i > 1) {
+      //       contents.push(createExprNode(TextBinding, result.slice(i, j)));
+      //     } else if (result[i] instanceof Expression) {
+      //       contents.push(createExprNode(result[i].binding, result[i]));
+      //     } else {
+      //       contents.push(result[i]);
+      //     }
+      //   }
+      // }
     } else {
       contents.push(decodeHTML(text));
     }
@@ -454,7 +453,7 @@ function parseTextNode(htmx, start, stop, parent, prototype, identifiers) {
   parent.contents = contents;
 }
 
-function parseHTMX(htmx, prototype) {
+function parseHTMX(htmx, resources, sign) {
   htmx = htmx.trim();
 
   var cc, nc;
@@ -476,7 +475,7 @@ function parseHTMX(htmx, prototype) {
       nc = htmx[idx + 1];
       if (LETTER_REGEXP.test(nc)) {
         if (start < idx) {
-          parseTextNode(htmx, start, idx, parent, prototype, parent.identifiers);
+          parseTextNode(htmx, start, idx, parent, resources, parent.identifiers);
         }
         // tag starts
         start = idx + 1;
@@ -485,28 +484,9 @@ function parseHTMX(htmx, prototype) {
    
         node = {};
         node.tag = tagName;
+        node.xflag = 0;
         node.useExpr = true;
         node.__extag_node__ = EXTAG_VNODE;
-
-        // eslint-disable-next-line no-undef
-        if (__ENV__ === 'development') {
-          node.range = [start-1, -1];
-        }
-        
-        node.identifiers = parent.identifiers;
-
-        if ('>' !== htmx[stop]) {
-          start = stop = stop + 1;
-          stop = parseAttributes(htmx, start, node, prototype, node.identifiers);
-        }
-
-        if (!node.ns) {
-          if (node.attrs && node.attrs.xmlns) {
-            node.ns = toNameSpace(node.attrs.xmlns);
-          } else if (parent.ns) {
-            node.ns = parent.ns;
-          }
-        }
 
         if (node.type == null && node.xtype == null) {
           if (X_TAG_REGEXP.test(tagName)) {
@@ -519,15 +499,63 @@ function parseHTMX(htmx, prototype) {
                 break;
             }
           } else if (CAPITAL_REGEXP.test(tagName)) {
-            var ctor = findComponentClass(tagName, prototype);
+            var ctor = findComponentClass(tagName, resources);
             if (ctor) {
               node.type = ctor;
+            } else {
+              if (__ENV__ === 'development') {
+                (function() {
+                  var snapshot = getSnapshot(htmx, tagName, parent, start);
+                  logger.warn('Component ' + tagName + ' not found.\n' 
+                      + snapshot[0], snapshot[1], snapshot[2]);
+                })();
+              }
+              throwError('Component ' + tagName + ' not found.' );
             }
           }
         }
 
+        // eslint-disable-next-line no-undef
+        if (__ENV__ === 'development') {
+          node.range = [start-1, -1];
+        }
+        
+        node.identifiers = parent.identifiers;
+
+        if ('>' !== htmx[stop]) {
+          start = stop = stop + 1;
+          stop = parseAttributes(htmx, start, node, resources, node.identifiers);
+        }
+
+        if (!node.ns) {
+          if (node.attrs && node.attrs.xmlns) {
+            node.ns = toNameSpace(node.attrs.xmlns);
+          } else if (parent.ns) {
+            node.ns = parent.ns;
+          }
+        }
+
+        if (node.xattrs) {
+          node.xflag |= FLAG_X_ATTRS;
+        }
+        // if (node.xclass) {
+        //   node.xflag |= FLAG_X_CLASS;
+        // }
+        // if (node.xstyle) {
+        //   node.xflag |= FLAG_X_STYLE;
+        // }
+        if (node.events) {
+          node.xflag |= FLAG_X_EVENTS;
+        }
+
         if (parent) {
-          parent.contents = parent.contents || [];
+          if (!parent.contents) {
+            parent.contents = [];
+          }
+          node.key = parent.key ? (parent.contents.length + '.' + parent.key) : sign;
+          if (node.xif || node.xfor || node.xtype) {
+            parent.xflag |= FLAG_X_CONTENTS;
+          }
           parent.contents.push(node);
         }
         
@@ -546,7 +574,7 @@ function parseHTMX(htmx, prototype) {
         continue;
       } else if ('/' === nc && LETTER_REGEXP.test(htmx[idx + 2])) {
         if (start < idx) {
-          parseTextNode(htmx, start, idx, parent, prototype, parent.identifiers);
+          parseTextNode(htmx, start, idx, parent, resources, parent.identifiers);
         }
 
         start = idx + 2;
@@ -556,10 +584,11 @@ function parseHTMX(htmx, prototype) {
         if (tagName !== parent.tag) {
           // eslint-disable-next-line no-undef
           if (__ENV__ === 'development') {
-            var snapshot = getSnapshot(htmx, tagName, parent, start);
-            logger.warn('Unclosed tag `' + parent.tag + '`. In the template of component ' 
-                  + (prototype.constructor.fullname || prototype.constructor.name) + ':\n' 
-                  + snapshot[0], snapshot[1], snapshot[2]);
+            (function() {
+              var snapshot = getSnapshot(htmx, tagName, parent, start);
+              logger.warn('Unclosed tag `' + parent.tag + '`.\n' 
+                    + snapshot[0], snapshot[1], snapshot[2]);
+            })();
           }
           throwError('Unclosed tag ' + parent.tag);
         }
@@ -571,7 +600,6 @@ function parseHTMX(htmx, prototype) {
         // tag closed
         if (parents.length > 1) {
           parents.pop();
-          // check <x:frag>@{{draw()^}}</x:frag>
         } else {
           // if (stop < end) {
           //   throw new Error('');
@@ -589,7 +617,7 @@ function parseHTMX(htmx, prototype) {
       } else if ('!' === nc && '<!--' === htmx.slice(idx, idx + 4)) {
         // comment
         if (start < idx) {
-          parseTextNode(htmx, start, idx, parent, prototype, parent.identifiers);
+          parseTextNode(htmx, start, idx, parent, resources, parent.identifiers);
         }
         start = idx + 4;
         stop = htmx.indexOf('-->', start);
@@ -611,23 +639,20 @@ function parseHTMX(htmx, prototype) {
   }
 
   if (start < end) {
-    parseTextNode(htmx, start, end, parent, prototype, parent.identifiers);
+    parseTextNode(htmx, start, end, parent, resources, parent.identifiers);
   }
 
   return parents;
 }
 
 var HTMXParser = {
-  parse: function(htmx, prototype) {
-    // viewEngine = viewEngine || config.get(VIEW_ENGINE);
-
-    var constructor = prototype.constructor;
-    var nodes = parseHTMX(htmx, prototype);
+  parse: function(htmx, resources, sign) {
+    var nodes = parseHTMX(htmx, resources, sign);
     var contents = nodes[0].contents;
     var root = contents[0];
 
     if (contents.length !== 1) {
-      throwError('The template of component ' + (constructor.fullname || constructor.name) + ' must have only one root tag.')
+      throwError('The template of component must have only one root tag.')
     }
     if (root.tag === '!' || root.tag === '#') {
       throwError('Component template root tag must be a DOM element, instead of: ' + htmx.slice(0, 1 + htmx.indexOf('>')));

@@ -11,33 +11,28 @@ export default {
   /**
    * e.g. click+="close() ::once::stop" change+="this.onClick"
    * @param {string} expr - event handler expression
-   * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
+   * @param {Object} resources - static resources included in expression.
    * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
    */
-  parse: function parse(expr, prototype, identifiers) {
-    var pieces = expr.indexOf(BINDING_OPERATORS.MODIFIER) < 0 ? 
-                  [expr] : expr.split(BINDING_OPERATORS.MODIFIER);
+  parse: function parse(expr, resources, identifiers) {
+    var pattern = {};
+    var evaluator;
+    var index = expr.indexOf(BINDING_OPERATORS.MODIFIER);
+    if (index < 0) {
+      evaluator = expr.trim();
+    } else {
+      evaluator = expr.slice(0, index).trim();
+      pattern.modifiers = expr.slice(index);
+    }
 
-    pieces[0] = pieces[0].trim();
-
-    var template = {};
-
-    if (HANDLER_REGEXP.test(pieces[0])) {
-      template.handler = pieces[0].replace(CONTEXT_REGEXP, ''); 
+    if (HANDLER_REGEXP.test(evaluator)) {
+      pattern.evaluator = evaluator.replace(CONTEXT_REGEXP, ''); 
     }  else {
       identifiers = identifiers.slice(0);
       identifiers.push('$event');
-      template.evaluator = EvaluatorParser.parse(pieces[0], prototype, identifiers);
+      pattern.evaluator = EvaluatorParser.parse(evaluator, resources, identifiers);
     }
 
-    if (pieces.length > 1) {
-      var modifiers = [];
-      for (var i = 1; i < pieces.length; ++i) {
-        modifiers.push(pieces[i].trim());
-      }
-      template.modifiers = modifiers;
-    }
-
-    return template;
+    return pattern;
   }
 };

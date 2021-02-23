@@ -180,10 +180,11 @@ function getPropChainIndices(expr) {
   return indices;
 }
 
-function makeEvaluator(parameters, lines, path, expr) {
+function makeEvaluator(resources, params, lines, path, expr) {
   try {
-    parameters.push(lines.join('\n'));
-    var evaluator = Function.apply(null, parameters);
+    params.push(lines.join('\n'));
+    var func = Function.apply(null, params);
+    var evaluator = func(resources);
     if (path) {
       evaluator.path = path;
     }
@@ -209,12 +210,12 @@ export default {
   /**
    * Parse an evaluator from string
    * @param {string} expr - e.g. "a + b" in @{a + b} or value@="a + b".
-   * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
+   * @param {Object} resources - static resources included in expression.
    * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
    * @param {string} wholeExpr
    * @returns {Function}
    */
-  parse: function parse(expr, prototype, identifiers, wholeExpr) {
+  parse: function parse(expr, resources, identifiers, wholeExpr) {
     var i, j;
     var lines = [];
     var parameters = [];
@@ -228,7 +229,6 @@ export default {
     }
     var varaibles = parameters.slice(0);
 
-    var resources = prototype.constructor.resources;
     var path = Path.parse(expr);
     if (path && path.length) {
       if (!hasOwnProp.call(JS_KEYWORD_MAP, path[0]) || path[0] === 'this') {
@@ -236,7 +236,7 @@ export default {
         path.from = identifierIndexOf(path[0], identifiers);
         if (path.from < 0) {
           if (resources && hasOwnProp.call(resources, path[0])) {
-            lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
+            lines.push('var ' + path[0] + ' = resources.' + path[0] + ';'); 
           } else {
             path.unshift('this');
             path.from = 0;
@@ -246,9 +246,11 @@ export default {
             path.unshift(parameters[path.from]);
           }
         }
+        lines.push('return function(' + parameters.join(', ') + '){')
         lines.push('return ' + path.join('.'));
+        lines.push('}');
         // return new PathEvaluator(path, expr, identifiers);
-        return makeEvaluator(parameters, lines, path, wholeExpr);
+        return makeEvaluator(resources, ['resources'], lines, path, wholeExpr);
       }
     }
 
@@ -267,7 +269,7 @@ export default {
       i = identifierIndexOf(path[0], identifiers);
       if (i < 0) {
         if (resources && hasOwnProp.call(resources, path[0])) {
-          lines.push('var ' + path[0] + ' = this.constructor.resources.' + path[0] + ';'); 
+          lines.push('var ' + path[0] + ' = resources.' + path[0] + ';'); 
           varaibles.push(path[0]);
         } else {
           expr = expr.slice(0, indices[j] + expanded) + 'this.' + piece + expr.slice(indices[j+1] + expanded);
@@ -280,9 +282,11 @@ export default {
       }
     }
 
+    lines.push('return function(' + parameters.join(', ') + '){')
     lines.push('return ' + expr);
+    lines.push('}');
 
-    return makeEvaluator(parameters, lines, null, wholeExpr);
+    return makeEvaluator(resources, ['resources'], lines, null, wholeExpr);
   }
 };
   

@@ -5,19 +5,24 @@ import Slot from 'src/core/shells/Slot'
 import Fragment from 'src/core/shells/Fragment'
 import Expression from 'src/core/template/Expression'
 import HTMXEngine from 'src/core/template/HTMXEngine'
-import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
-import DataBindingParser from "src/core/template/parsers/DataBindingParser";
-import EventBindingParser from "src/core/template/parsers/EventBindingParser";
-import PrimitiveLiteralParser from 'src/core/template/parsers/PrimitiveLiteralParser'
-import FuncBinding from 'src/core/bindings/FuncBinding'
 import DataBinding from 'src/core/bindings/DataBinding'
 import TextBinding from 'src/core/bindings/TextBinding'
 import EventBinding from 'src/core/bindings/EventBinding'
+import ClassBinding from 'src/core/bindings/ClassBinding'
+import StyleBinding from 'src/core/bindings/StyleBinding'
+import EvaluatorParser from 'src/core/template/parsers/EvaluatorParser'
 import { 
   HOOK_ENGINE,
   EXTAG_VNODE,
+  HANDLER_REGEXP,
   BINDING_OPERATORS,
-  WHITE_SPACES_REGEXP
+  WHITE_SPACES_REGEXP,
+
+  FLAG_X_ATTRS,
+  FLAG_X_CLASS,
+  FLAG_X_STYLE,
+  FLAG_X_EVENTS,
+  FLAG_X_CONTENTS
  } from 'src/share/constants'
 import { 
   slice, 
@@ -27,50 +32,72 @@ import {
  } from 'src/share/functions'
  import config from 'src/share/config'
 
- var DATA_BINDING_MODES = DataBinding.MODES;
-
-function checkExprMode(mode) {
-  if (mode !== BINDING_OPERATORS.DATA && mode !== BINDING_OPERATORS.TEXT) {
-    throwError(mode + ' is not allowed in expr() for data binding');
+function checkExpr(name, value) {
+  if (!(value instanceof Expression)) {
+    throwError(name + ': not an expression');
   }
 }
 
-function parseJsxNode(node, prototype) {
-  var attrs = node.attrs, value, key, args;
-  if (node.xif) {
-    args = node.xif.args;
-    checkExprMode(args[0]);
-    node.xif = parseJsxExpr(args, node, prototype);
+function parseJsxExpr(expr, resources, identifiers) {
+  var evaluator = expr.pattern.evaluator;
+  if (typeof evaluator === 'string') {
+    expr.pattern.evaluator = EvaluatorParser.parse(evaluator, resources, identifiers);
   }
-  if (node.xfor) {
-    if (!Array.isArray(node.xfor[0])) {
-      node.xfor[0] = node.xfor[0].replace(WHITE_SPACES_REGEXP, '').split(',');
+  if (expr.binding == null) {
+    expr.binding = DataBinding;
+  }
+  return expr;
+}
+
+function parseJsxData(data, resources, identifiers) {
+  var key, value;
+  for (key in data) {
+    value = data[key];
+    if (value && (value instanceof Expression)) {
+      parseJsxExpr(value, resources, identifiers);
     }
-    args = node.xfor[1].args;
-    checkExprMode(args[0]);
-    node.xfor[1] = parseJsxExpr(args, node, prototype);
-    node.identifiers = node.identifiers.concat([node.xfor[0]]);
   }
-  if (node.xkey) {
-    args = node.xkey.args;
-    checkExprMode(args[0]);
-    node.xkey = parseJsxExpr(args, node, prototype);
-  }
+  return data;
+}
+
+function parseJsxNode(node, resources) {
+  var attrs = node.attrs, value, key, identifiers;
   if (attrs) {
-    // parse expression, and extract style, class
+    var xattrs;
+    identifiers = node.identifiers;
     for (key in attrs) {
       value = attrs[key];
       if (value && typeof value === 'object') {
-        if (value.__extag_expr__ === Expression) {
-          args = value.args;
-          checkExprMode(args[0]);
-          attrs[key] = parseJsxExpr(args, node, prototype);
-        } else if (key === 'class' || key === 'style') {
-          node[key] = parseJsxData(value, node, prototype);
+        if (value instanceof Expression) {
+          // if (value.binding === EventBinding) {
+          //   parseJsxExpr(value, resources, node.identifiers.concat(['$event']));
+          //   (events = events || {})[key] = value;
+          //   delete attrs[key];
+          // } else {
+            parseJsxExpr(value, resources, identifiers);
+            
+            (xattrs = xattrs || {})[key] = value;
+            delete attrs[key];
+          // }
+        } else if (key === 'x-class') {
+          value = parseJsxData(value, resources, identifiers);
+          (xattrs = xattrs || {})['class'] = new Expression(ClassBinding, value);
+          delete attrs[key];
+        } else if (key === 'x-style') {
+          value = parseJsxData(value, resources, identifiers);
+          (xattrs = xattrs || {})['style'] = new Expression(StyleBinding, value);
           delete attrs[key];
         }
       }
     }
+    if (xattrs) {
+      node.xattrs = xattrs;
+      node.xflag |= FLAG_X_ATTRS;
+    }
+    // if (events) {
+    //   node.events = events;
+    //   node.xflag |= FLAG_X_EVENTS;
+    // }
   }
   if (node.type == null && node.xtype == null) {
     switch (node.tag) {
@@ -83,200 +110,67 @@ function parseJsxNode(node, prototype) {
     }
   }
   if (node.events) {
-    parseJsxEvents(node, prototype);
-  }
-}
-
-function parseEvaluater(expr, prototype, identifiers) {
-  var type = typeof expr;
-  if (type === 'string') {
-    return EvaluatorParser.parse(expr, prototype, identifiers);
-  } else if (type === 'function') {
-    return expr;
-  } else {
-    throwError('evaluator must be string or function');
-  }
-}
-
-function parseConverters(exprs, prototype, identifiers) {
-  var converters = [], converter;
-  for (var i = 0; i < exprs.length; ++i) {
-    converter = parseEvaluater(
-      exprs[i], 
-      prototype, 
-      identifiers
-    );
-    converters.push(converter);
-  }
-  return converters;
-}
-
-function parseJsxData(data, node, prototype) {
-  var key, value;
-  for (key in data) {
-    value = data[key];
-    if (value && typeof value === 'object') {
-      if (value.__extag_expr__ === Expression) {
-        data[key] = parseJsxExpr(value.args, node, prototype);
-      }
-    }
-  }
-  return data;
-}
-function parseJsxExpr(args, node, prototype) {
-  if (args.length < 2) {
-    throwError('Unexpected arguments for expr()');
-  }
-  var mode = args[0];
-  var expr = args[1];
-  var type = typeof expr;
-  var target, pattern, result;
-  if (mode === BINDING_OPERATORS.DATA 
-      || mode === BINDING_OPERATORS.FRAGMENT) {
-    if (mode === BINDING_OPERATORS.FRAGMENT) {
-      target = 'frag';
-    }
-    if (args.length === 2 && type === 'string') {
-      if (!target && expr[0] === BINDING_OPERATORS.TWO_WAY) {
-        if (!Path.test(expr.slice(1))) {
-          throwError('Invalid two-way binding expression!', {
-            code: 1001,
-            expr: arguments[0],
-            desc: '`' + arguments[0] + '` is not a valid two-way binding expression. Must be a property name or path.'
-          });
+    var events = node.events;
+    identifiers = node.identifiers.concat(['$event']);
+    for (key in events) {
+      value = events[key];
+      if (value instanceof Expression) {
+        value.binding = EventBinding;
+        if (!HANDLER_REGEXP.test(value.pattern.evaluator)) {
+          parseJsxExpr(value, resources, identifiers);
         }
-        pattern = {
-          mode: DATA_BINDING_MODES.TWO_WAY,
-          evaluator: parseEvaluater(expr.slice(1), prototype, node.identifiers)
-        };
-        return new Expression(DataBinding, pattern);
-      }
-      result = PrimitiveLiteralParser.tryParse(expr.trim());
-      if (result != null) {
-        return result;
-      }
-      pattern = DataBindingParser.parse(expr, prototype, node.identifiers);
-      pattern.target = target;
-      return new Expression(target === 'frag' ? FuncBinding : DataBinding, pattern);
-    } else {
-      switch (args[args.length - 1]) {
-        case BINDING_OPERATORS.ASSIGN:
-          mode = DATA_BINDING_MODES.ASSIGN;
-          args = args.slice(0, -1);
-          break;
-        case BINDING_OPERATORS.ANY_WAY:
-          mode = DATA_BINDING_MODES.ANY_WAY;
-          args = args.slice(0, -1);
-          break;
-        case BINDING_OPERATORS.ONE_TIME:
-          mode = DATA_BINDING_MODES.ONE_TIME;
-          args = args.slice(0, -1);
-          break;
-        default:
-          mode = DATA_BINDING_MODES.ONE_WAY;
-          break;
-      }
-
-      pattern = {
-        mode: mode,
-        target: target,
-        evaluator: parseEvaluater(expr, prototype, node.identifiers),
-        converters: args.length <= 2 ? null :
-                      parseConverters(args.slice(2), prototype, node.identifiers)
-      };
-      return new Expression(target === 'frag' ? FuncBinding : DataBinding, pattern);
-    }
-  } else if (mode === BINDING_OPERATORS.EVENT) {
-    if (type === 'string' && args.length === 2) {
-      pattern = EventBindingParser.parse(expr, prototype, node.identifiers);
-    } else if (type === 'function') {
-      pattern = {
-        evaluator: parseEvaluater(expr, prototype, node.identifiers),
-        modifiers: args.length > 2 ? args.slice(2) : null
-      };
-    } else {
-      throwError('Unexpected arguments for expr()');
-    }
-    return new Expression(EventBinding, pattern);
-  } else if (mode === BINDING_OPERATORS.TEXT) {
-    pattern = [];
-    for (var i = 1; i < args.length; ++i) {
-      expr = args[i];
-      if (expr && typeof expr === 'object' && expr.__extag_expr__) {
-        expr = parseJsxExpr(expr.args, node, prototype);
-      }
-      pattern.push(expr);
-    }
-    return new Expression(TextBinding, pattern);
-  } else {
-    throwError('The first argument of expr() should be one of "@", "+", "#", "{}"');
-  }
-
-}
-
-function parseJsxEvents(node, prototype) {
-  var evt, expr, args, value, events = node.events;
-  for (evt in events) {
-    value = events[evt];
-    if (value && typeof value === 'object' && value.__extag_expr__ === Expression) {
-      args = value.args;
-      if (args[0] !== BINDING_OPERATORS.EVENT) {
-        throwError(args[0] + ' is not allowed in expr() for event binding');
-      }
-      expr = parseJsxExpr(args, node, prototype);
-      if (expr) {
-        events[evt] = expr;
       }
     }
   }
 }
 
-function parseJsxContents(node, prototype) {
-  var contents = node.contents;
+function parseJsxContents(vnode, resources) {
+  var contents = vnode.contents;
   if (!contents || !contents.length) {
     return;
   }
-  contents = node.contents = flatten(contents);
+  contents = vnode.contents = flatten(contents);
+  var identifiers = vnode.identifiers;
+  if (vnode.xfor) {
+    identifiers = identifiers.slice(0);
+    identifiers.push(vnode.xfor[0]);
+  }
 
-  var i, type, vnode;
+  var i, type, value;
   for (i = contents.length - 1; i >= 0; --i) {
-    vnode = contents[i];
-    type = typeof vnode;
-    if (type === 'object') {
-      if (vnode.__extag_node__ === EXTAG_VNODE) {
-        if (node.ns && !vnode.ns) {
-          vnode.ns = node.ns;
-        }
-        vnode.useExpr = true;
-        vnode.identifiers = node.identifiers;
-        parseJsxNode(vnode, prototype);
-        parseJsxContents(vnode, prototype);
-        continue;
-      } else if (vnode.__extag_expr__ === Expression) {
-        var mode = vnode.args[0];
-        if (mode !== BINDING_OPERATORS.DATA && 
-            mode !== BINDING_OPERATORS.FRAGMENT) {
-          throwError(mode + ' is not allowed in expr() for text or fragment binding');
-        }
-        contents[i] = {
-          __extag_node__: EXTAG_VNODE,
-          useExpr: true,
-          type: Expression,
-          expr: parseJsxExpr(vnode.args, node, prototype)
-        };
+    value = contents[i];
+    type = typeof value;
+    if (type !== 'object') {
+      continue;
+    }
+    if (value.__extag_node__ === EXTAG_VNODE) {
+      if (vnode.ns && !value.ns) {
+        value.ns = vnode.ns;
       }
+      value.xflag = 0;
+      value.key = i + '.' + vnode.key;
+      value.identifiers = identifiers;
+      parseJsxNode(value, resources);
+      parseJsxContents(value, resources);
+
+      if (value.xif || value.xfor || value.xtype) {
+        vnode.xflag |= FLAG_X_CONTENTS;
+      }
+    } else if (value instanceof Expression) {
+      parseJsxExpr(value, resources, identifiers);
+      vnode.xflag |= FLAG_X_CONTENTS;
     }
   }
 }
 
 var RESERVED_PARAMS = {
-  xns: true,
-  xif: true,
-  xfor: true,
-  xkey: true,
-  xname: true,
-  xslot: true,
-  xtype: true,
+  'x-ns': true,
+  'x-if': true,
+  'x-for': true,
+  'x-key': true,
+  'x-name': true,
+  'x-slot': true,
+  'x-type': true,
   events: true
 };
 
@@ -333,29 +227,34 @@ function node(type, options, contents) {
   }
 
   if (options && typeof options === 'object') {
-    if (options.xns) {
-      node.ns = options.xns;
+    if (options['x-ns']) {
+      node.ns = options['x-ns'];
     }
-    if (options.xif) {
-      node.xif = options.xif;
+    if (options['x-if']) {
+      node.xif = options['x-if'];
+      checkExpr('x-if', node.xif);
     }
-    if (options.xfor) {
-      node.xfor = options.xfor;
+    if (options['x-for']) {
+      node.xfor = options['x-for'];
+      checkExpr('x-for', node.xfor[0]);
+      if (!Array.isArray(node.xfor[0])) {
+        node.xfor[0] = node.xfor[0].replace(WHITE_SPACES_REGEXP, '').split(',');
+      }
     }
-    if (options.xkey) {
-      node.xkey = options.xkey;
+    if (options['x-key']) {
+      node.xkey = options['x-key'];
     }
-    if (options.xname) {
-      node.name = options.xname;
+    if (options['x-name']) {
+      node.name = options['x-name'];
     }
-    if (options.xslot) {
-      node.slot = options.xslot;
+    if (options['x-slot']) {
+      node.slot = options['x-slot'];
     }
-    if (options.xtype) {
-      if (options.xtype instanceof Expression) {
-        node.xtype = options.xtype;
+    if (options['x-type']) {
+      if (options['x-type'] instanceof Expression) {
+        node.xtype = options['x-type'];
       } else {
-        node.type = options.xtype;
+        node.type = options['x-type'];
       }
     }
 
@@ -379,7 +278,7 @@ function node(type, options, contents) {
     } else if (!Array.isArray(contents)) {
       contents = [contents];
     }
-    node.contents = contents;
+    node.contents = flatten(contents);
   }
 
   return node;
@@ -395,32 +294,77 @@ function node(type, options, contents) {
  * a function followed by more functions as converters: expr(function(){return this.title}, upper, '?')
  * a event handler function followed by more strings as modifiers: expr(function(){return this.title}, 'once')
  */
-function expr() {
-  return {
-    args: slice.call(arguments, 0),
-    __extag_expr__: Expression
-  };
+// function expr(type, statement, modifiers) {
+//   switch (type) {
+//     case '@':
+//       // if (typeof statement === 'function') {
+//       //   return new Expression(DataBinding, {
+//       //     evaluator: statement,
+//       //     modifiers: modifiers
+//       //   });
+//       // } else if (typeof statement === 'string') {
+//       //   // statement = statement.slice(1);
+//       //   // if (!Path.test(statement)) {
+//       //   //   throwError('Invalid two-way binding expression: ' + statement);
+//       //   // }
+//       //   // return new Expression(DataBinding, {
+//       //   //   mode: DataBinding.MODES.TWO_WAY,
+//       //   //   path: Path.parse(statement)
+//       //   // });
+//       //   return new Expression(DataBinding, {
+//       //     statement: statement,
+//       //     modifiers: modifiers
+//       //   });
+//       // } else {
+//       //   return throwError('Unexpected statement: ', statement);
+//       // }
+//       return new Expression(DataBinding, {
+//         evaluator: statement,
+//         modifiers: modifiers
+//       });
+//     case '+':
+//       return new Expression(EventBinding, {
+//         handler: statement,
+//         modifiers: modifiers
+//       })
+//     case '#':
+//       return new Expression(TextBinding, slice.call(arguments, 1));
+//     default:
+//       return throwError('Unsopported binding type: ' + type);
+//   }
+// }
+
+function expr(evaluator, modifiers) {
+  var type = typeof evaluator;
+  if (type === 'function' || type === 'string') {
+    return new Expression(null, {
+      evaluator: evaluator,
+      modifiers: modifiers
+    })
+  } else if (Array.isArray(evaluator)) {
+    return new Expression(TextBinding, evaluator);
+  }
 }
 
 var JSXParser = {
   node: node,
   expr: expr,
   /**
-   * Parse the template created by node(), connect to prototype
-   * @param {Object} template 
-   * @param {Object} prototype 
+   * Parse the template
+   * @param {function} template 
    */
-  parse: function(template, prototype) {
+  parse: function(template, resources, sign) {
     var _node = template(node, expr);
 
     if (_node.__extag_node__ !== EXTAG_VNODE) {
       throwError('template root must be a tag node');
     }
 
-    _node.useExpr = true;
+    _node.key = sign;
+    _node.xflag = 0;
     _node.identifiers = ['this'];
-    parseJsxNode(_node, prototype);
-    parseJsxContents(_node, prototype);
+    parseJsxNode(_node, resources);
+    parseJsxContents(_node, resources);
 
     if (_node.type) {
       if (_node.type === Fragment) {

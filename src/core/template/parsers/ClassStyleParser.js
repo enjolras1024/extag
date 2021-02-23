@@ -22,11 +22,11 @@ export default {
    * parse x:class="..." and x:style="..."
    * @param {string} expr - e.g. "a b; c@: active;" for x:class, 
    *                              and "display: none; font-size#:@{fontSize}px;" for x:style
-   * @param {Object} prototype - component prototype, for checking if a variable name belongs it or its resources.
+   * @param {Object} resources - static resources included in expression.
    * @param {Array} identifiers - like ['this', 'item'], 'item' is from x:for expression.
    * @param {boolean} forStyle  - 
    */
-  parse: function parse(expr, prototype, identifiers, forStyle) {
+  parse: function parse(expr, resources, identifiers, forStyle) {
     var group = {};
     var pieces = expr.split(STYLE_DELIMITER); 
     var result, piece, name, names, n, i, j, k;
@@ -57,21 +57,21 @@ export default {
         });
       }
 
-      try {
+      // try {
         if (!TextBindingParser.like(expr)) {
           group[name] = forStyle ? expr : PrimitiveLiteralParser.tryParse(expr);
           continue;
         }
-        result = TextBindingParser.parse(expr, prototype, identifiers);
-      } catch (e) {
-        // eslint-disable-next-line no-undef
-        {
-          if (e.code === 1001) {
-            e.expr = BINDING_FORMAT.replace('0', e.expr);
-          }
-        }
-        throw e;
-      }
+        result = TextBindingParser.parse(expr, resources, identifiers);
+      // } catch (e) {
+      //   // eslint-disable-next-line no-undef
+      //   {
+      //     if (e.code === 1001) {
+      //       e.expr = BINDING_FORMAT.replace('0', e.expr);
+      //     }
+      //   }
+      //   throw e;
+      // }
       if (result) {
         if (result.length === 1) {
           group[name] = result[0];
