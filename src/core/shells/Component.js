@@ -12,6 +12,8 @@ import HTMXEngine from 'src/core/template/HTMXEngine'
 import logger from 'src/share/logger'
 import { 
   flatten,
+  text2hash,
+  hash2sign,
   throwError,
   defineProp, 
   defineClass, 
@@ -36,7 +38,7 @@ import captureError from 'src/core/captureError'
 var KEYS_PRESERVED = [
   '$meta', '$flag', '$skin', '$props', '$style',
   'style', 'contents', 'children', 'context',
-  '_dirty', '_props', '_style', '_children', '_contents', '_bindings'
+  '_dirty', '_props', '_style', '_children', '_contents', '_binding', '_bindings'
 ];
 var METHODS_PRESERVED = [
   'on', 'off', 'emit',
@@ -77,7 +79,16 @@ defineClass({
       var attributes = constructor.attributes;
       var _template = constructor.__extag_template__;
 
+      
       component.__extag_scopes__ = scopes;
+
+      var binding = component._binding = {};
+      binding.invalidate = function(key) {
+        if ((component.$flag & FLAG_WAITING_UPDATING) === 0 && 
+            binding.keys.indexOf(key) >= 0) {
+          component.invalidate();
+        }
+      };
 
       // eslint-disable-next-line no-undef
       if (__ENV__ === 'development') {
@@ -115,20 +126,24 @@ defineClass({
       // });
       component._props = Accessor.getAttributeDefaultValues(component);
 
+      
+      
+      
       // parsing template once and only once.
       if (!_template) {
         try {
           if (!constructor.template) {
             if (typeof prototype.render === 'function') {
-              constructor.template = '<x:frag>@{{this.render(this._props) ^}}</x:frag>';
+              constructor.template = '<x:frag>@{{this.render(this._props)}}</x:frag>';
             } else {
               constructor.template = '<x:frag></x:frag>';
             }
           }
+          var sign = hash2sign(text2hash(constructor.fullname || constructor.name)); 
           if (typeof constructor.template === 'string') {
-            _template = HTMXEngine.parseHTMX(constructor.template, prototype);
+            _template = HTMXEngine.parseHTMX(constructor.template, constructor.resources, sign);
           } else if (typeof constructor.template === 'function') {
-            _template = HTMXEngine.parseJSX(constructor.template, prototype);
+            _template = HTMXEngine.parseJSX(constructor.template, constructor.resources, sign);
           } else {
             throwError('The static template must be string or function');
           }
@@ -276,21 +291,25 @@ defineClass({
 
     this.emit('updating');
 
+    Dependency.begin(this._binding);
+    var _template = this.constructor.__extag_template__;
     if ((this.$flag & FLAG_STARTED) === 0) {
-      var _template = this.constructor.__extag_template__;
-      HTMXEngine.driveComponent(this, _template, true);
+      HTMXEngine.driveContent(this, [this], _template, true);
       this.$flag |= FLAG_STARTED;
       if (this._actions && this._actions.started) {
         this.emit('started');
       }
-    } 
-
-    var type = this.$meta.type;
-    if (type !== 0) {
-      if ((this.$flag & FLAG_CHANGED_CACHE) !== 0) {
-        HTMXEngine.transferProps(this);
-      }
+    } else {
+      HTMXEngine.driveContent(this, [this], _template, false);
     }
+    Dependency.end();
+
+    // var type = this.$meta.type;
+    // if (type !== 0) {
+    //   if ((this.$flag & FLAG_CHANGED_CACHE) !== 0) {
+    //     HTMXEngine.transProps(this);
+    //   }
+    // }
 
     if (this._contents) {
       if (this._contents.length) {
@@ -303,7 +322,7 @@ defineClass({
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       // If this type is 0, we should ask its parent to render parent's children,
       // since its children are belong to its parent actually.
-      if (type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
+      if (this.$meta.type === 0 && this._parent && (this.$flag & FLAG_CHANGED_CHILDREN)) {
         var parent = this.getParent(true);
         parent.$flag |= FLAG_CHANGED_CHILDREN;
         if ((parent.$flag & FLAG_WAITING_DIGESTING) === 0) {
@@ -332,8 +351,8 @@ defineClass({
       DirtyMarker.clean(this);
       
   
-      this._style && DirtyMarker.clean(this._style);
-      this.$style && DirtyMarker.clean(this.$style);
+      // this._style && DirtyMarker.clean(this._style);
+      // this.$style && DirtyMarker.clean(this.$style);
       this.$props && DirtyMarker.clean(this.$props);
 
       if (this._commands) {

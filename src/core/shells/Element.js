@@ -90,9 +90,9 @@ defineClass({
       return false;
     }
 
-    if ((this.$flag & FLAG_CHANGED_CACHE) !== 0) {
-      HTMXEngine.transferProps(this);
-    }
+    // if ((this.$flag & FLAG_CHANGED_CACHE) !== 0) {
+    //   HTMXEngine.transProps(this);
+    // }
     
     if ((this.$flag & FLAG_WAITING_DIGESTING) === 0) {
       this.$flag |= FLAG_WAITING_DIGESTING;

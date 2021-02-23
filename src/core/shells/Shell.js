@@ -316,18 +316,18 @@ defineClass({
   }
 });
 
-defineProp(Shell.prototype, 'style', {
-  get: function() {
-    if (!this._style) {
-      this._style = new Cache(this);
-      // defineProp(this, '_style', {
-      //   value: new Cache(this), 
-      //   configurable: true
-      // });
-    }
-    return this._style;
-  }//,
-  // set: function(value) {
-  //   resetCache(this.style, value);
-  // }
-});
+// defineProp(Shell.prototype, 'style', {
+//   get: function() {
+//     if (!this._style) {
+//       this._style = new Cache(this);
+//       // defineProp(this, '_style', {
+//       //   value: new Cache(this), 
+//       //   configurable: true
+//       // });
+//     }
+//     return this._style;
+//   }//,
+//   // set: function(value) {
+//   //   resetCache(this.style, value);
+//   // }
+// });
