@@ -1,7 +1,7 @@
 // src/template/Expression.js
 
 import { defineClass } from 'src/share/functions'
-import Binding from 'src/core/bindings/Binding'
+import logger from 'src/share/logger'
 
 /**
  * Expression parsed from some piece, like 'title@="title"' or '@{label}', in the component template.
@@ -27,5 +27,9 @@ defineClass({
   connect: function(property, target, scopes) {
     var binding = this.binding.create(this.pattern);
     binding.connect(property, target, scopes);
+  },
+
+  evaluate: function evaluate(scopes) {
+    return this.binding.evaluate(this.pattern, scopes);
   }
 });
